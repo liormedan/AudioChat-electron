@@ -194,3 +194,14 @@ class RecentFilesList(QWidget):
     def get_files(self):
         """החזרת רשימת הקבצים"""
         return self.files.copy()
+        
+    def load_recent_files(self, files=None):
+        """
+        טעינת קבצים אחרונים
+        
+        Args:
+            files (List[FileInfo], optional): רשימת קבצים לטעינה. אם לא מסופק, הרשימה תישאר ריקה.
+        """
+        if files:
+            self.files = files.copy()
+            self._update_list()

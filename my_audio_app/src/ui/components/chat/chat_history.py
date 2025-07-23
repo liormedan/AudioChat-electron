@@ -8,6 +8,7 @@ class ChatHistory(QScrollArea):
     
     # אותות
     message_clicked = pyqtSignal(int)  # אות שנשלח כאשר לוחצים על הודעה
+    load_more_requested = pyqtSignal()  # אות שנשלח כאשר המשתמש מבקש לטעון עוד הודעות
     
     def __init__(self, parent=None):
         """
@@ -72,6 +73,25 @@ class ChatHistory(QScrollArea):
         self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.setSpacing(10)
         
+        # כפתור "טען עוד"
+        self.load_more_button = QPushButton("טען הודעות קודמות")
+        self.load_more_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2d2d2d;
+                color: white;
+                border: 1px solid #444;
+                border-radius: 4px;
+                padding: 5px;
+                margin: 5px 0;
+            }
+            QPushButton:hover {
+                background-color: #3d3d3d;
+            }
+        """)
+        self.load_more_button.clicked.connect(self.on_load_more_clicked)
+        self.load_more_button.setVisible(False)
+        self.layout.addWidget(self.load_more_button)
+        
         # מצב ריק
         self.empty_label = QLabel("אין הודעות להצגה. התחל שיחה חדשה!")
         # בגרסאות שונות של PyQt6 יש שמות שונים לקבועים
@@ -92,6 +112,45 @@ class ChatHistory(QScrollArea):
         # מעקב אחר הודעות
         self.messages = []
         self.is_empty = True
+        
+        # מידע על עימוד
+        self.pagination = {
+            "page": 1,
+            "page_size": 50,
+            "total_messages": 0,
+            "total_pages": 1
+        }
+        
+        # חיבור אירוע גלילה לבדיקת הגעה לראש הצ'אט
+        self.verticalScrollBar().valueChanged.connect(self.check_scroll_position)
+    
+    def check_scroll_position(self, value):
+        """בדיקת מיקום הגלילה והצגת כפתור 'טען עוד' בהתאם"""
+        # אם הגענו לראש הצ'אט ויש עוד הודעות לטעון
+        if value == 0 and self.pagination["page"] < self.pagination["total_pages"]:
+            self.load_more_button.setVisible(True)
+        else:
+            self.load_more_button.setVisible(False)
+    
+    def on_load_more_clicked(self):
+        """טיפול בלחיצה על כפתור 'טען עוד'"""
+        # שליחת אות לטעינת עוד הודעות
+        self.load_more_requested.emit()
+        
+    def set_pagination(self, pagination_data):
+        """
+        הגדרת מידע על עימוד
+        
+        Args:
+            pagination_data (dict): מידע על עימוד
+        """
+        self.pagination = pagination_data
+        
+        # הצגת כפתור 'טען עוד' אם יש עוד עמודים
+        if self.pagination["page"] < self.pagination["total_pages"]:
+            self.load_more_button.setVisible(True)
+        else:
+            self.load_more_button.setVisible(False)
     
     def add_user_message(self, text, timestamp=None):
         """
@@ -174,11 +233,33 @@ class ChatHistory(QScrollArea):
         """גלילה לתחתית הצ'אט"""
         self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
     
-    def clear_history(self):
-        """ניקוי היסטוריית הצ'אט"""
+    def clear_history(self, confirm=True):
+        """
+        ניקוי היסטוריית הצ'אט
+        
+        Args:
+            confirm (bool, optional): האם להציג דיאלוג אישור
+        
+        Returns:
+            bool: האם הניקוי בוצע
+        """
+        if confirm:
+            # הצגת דיאלוג אישור
+            from PyQt6.QtWidgets import QMessageBox
+            reply = QMessageBox.question(
+                self,
+                "אישור ניקוי היסטוריה",
+                "האם אתה בטוח שברצונך לנקות את היסטוריית הצ'אט?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply != QMessageBox.StandardButton.Yes:
+                return False
+        
         # הסרת כל ההודעות
-        while self.layout.count() > 1:  # שמירה על המרווח בסוף
-            item = self.layout.takeAt(0)
+        while self.layout.count() > 2:  # שמירה על כפתור 'טען עוד' והמרווח בסוף
+            item = self.layout.takeAt(1)  # דילוג על כפתור 'טען עוד'
             if item.widget():
                 item.widget().deleteLater()
         
@@ -187,8 +268,21 @@ class ChatHistory(QScrollArea):
         
         # הצגת תווית ריקה
         self.empty_label.setVisible(True)
-        self.layout.insertWidget(0, self.empty_label)
+        self.layout.insertWidget(1, self.empty_label)  # הוספה אחרי כפתור 'טען עוד'
         self.is_empty = True
+        
+        # הסתרת כפתור 'טען עוד'
+        self.load_more_button.setVisible(False)
+        
+        # איפוס מידע על עימוד
+        self.pagination = {
+            "page": 1,
+            "page_size": 50,
+            "total_messages": 0,
+            "total_pages": 1
+        }
+        
+        return True
     
     def get_message_count(self):
         """

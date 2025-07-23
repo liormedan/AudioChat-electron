@@ -10,7 +10,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 class ChatMessage:
     """מודל להודעת צ'אט"""
     
-    def __init__(self, text: str, sender: str, timestamp: Optional[datetime] = None):
+    def __init__(self, text: str, sender: str, timestamp: Optional[datetime] = None, message_id: Optional[str] = None):
         """
         יוצר הודעת צ'אט חדשה
         
@@ -18,27 +18,84 @@ class ChatMessage:
             text (str): תוכן ההודעה
             sender (str): שולח ההודעה ("user", "ai", או "system")
             timestamp (datetime, optional): זמן שליחת ההודעה
+            message_id (str, optional): מזהה ייחודי להודעה
         """
         self.text = text
         self.sender = sender
         self.timestamp = timestamp or datetime.now()
+        self.message_id = message_id or f"{int(datetime.now().timestamp())}-{id(self)}"
+        self.is_read = True
+        self.reactions = []
+        self.attachments = []
     
     def to_dict(self) -> Dict[str, Any]:
         """המרת ההודעה למילון"""
         return {
             "text": self.text,
             "sender": self.sender,
-            "timestamp": self.timestamp.isoformat()
+            "timestamp": self.timestamp.isoformat(),
+            "message_id": self.message_id,
+            "is_read": self.is_read,
+            "reactions": self.reactions,
+            "attachments": self.attachments
         }
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ChatMessage':
         """יצירת הודעה ממילון"""
-        return cls(
+        message = cls(
             text=data["text"],
             sender=data["sender"],
-            timestamp=datetime.fromisoformat(data["timestamp"])
+            timestamp=datetime.fromisoformat(data["timestamp"]),
+            message_id=data.get("message_id")
         )
+        
+        # טעינת שדות נוספים אם קיימים
+        if "is_read" in data:
+            message.is_read = data["is_read"]
+        if "reactions" in data:
+            message.reactions = data["reactions"]
+        if "attachments" in data:
+            message.attachments = data["attachments"]
+            
+        return message
+    
+    def add_reaction(self, reaction: str) -> None:
+        """
+        הוספת תגובה להודעה
+        
+        Args:
+            reaction (str): תגובה להוספה (אימוג'י)
+        """
+        if reaction not in self.reactions:
+            self.reactions.append(reaction)
+    
+    def remove_reaction(self, reaction: str) -> None:
+        """
+        הסרת תגובה מההודעה
+        
+        Args:
+            reaction (str): תגובה להסרה
+        """
+        if reaction in self.reactions:
+            self.reactions.remove(reaction)
+    
+    def add_attachment(self, attachment: Dict[str, Any]) -> None:
+        """
+        הוספת קובץ מצורף להודעה
+        
+        Args:
+            attachment (Dict[str, Any]): מידע על הקובץ המצורף
+        """
+        self.attachments.append(attachment)
+    
+    def mark_as_read(self) -> None:
+        """סימון ההודעה כנקראה"""
+        self.is_read = True
+    
+    def mark_as_unread(self) -> None:
+        """סימון ההודעה כלא נקראה"""
+        self.is_read = False
 
 
 class ChatSession:
@@ -58,11 +115,21 @@ class ChatSession:
         self.messages = messages or []
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
+        self.pagination = {
+            "page": 1,
+            "page_size": 50,
+            "total_messages": len(self.messages),
+            "total_pages": 1
+        }
     
     def add_message(self, message: ChatMessage) -> None:
         """הוספת הודעה לסשן"""
         self.messages.append(message)
         self.updated_at = datetime.now()
+        
+        # עדכון מידע על עימוד
+        self.pagination["total_messages"] += 1
+        self.pagination["total_pages"] = (self.pagination["total_messages"] + self.pagination["page_size"] - 1) // self.pagination["page_size"]
     
     def to_dict(self) -> Dict[str, Any]:
         """המרת הסשן למילון"""
@@ -71,7 +138,8 @@ class ChatSession:
             "title": self.title,
             "messages": [message.to_dict() for message in self.messages],
             "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat()
+            "updated_at": self.updated_at.isoformat(),
+            "pagination": self.pagination
         }
     
     @classmethod
@@ -84,6 +152,11 @@ class ChatSession:
         )
         session.created_at = datetime.fromisoformat(data["created_at"])
         session.updated_at = datetime.fromisoformat(data["updated_at"])
+        
+        # טעינת מידע על עימוד אם קיים
+        if "pagination" in data:
+            session.pagination = data["pagination"]
+        
         return session
 
 
@@ -193,12 +266,14 @@ class ChatService(QObject):
         # שליחת אות
         self.session_saved.emit(session.session_id)
     
-    def load_session(self, session_id: str) -> Optional[ChatSession]:
+    def load_session(self, session_id: str, page: int = 1, page_size: int = 50) -> Optional[ChatSession]:
         """
-        טעינת סשן ממסד הנתונים
+        טעינת סשן ממסד הנתונים עם תמיכה בעימוד
         
         Args:
             session_id (str): מזהה הסשן
+            page (int, optional): מספר העמוד לטעינה (ברירת מחדל: 1)
+            page_size (int, optional): גודל העמוד (מספר הודעות מקסימלי, ברירת מחדל: 50)
         
         Returns:
             Optional[ChatSession]: הסשן שנטען, או None אם לא נמצא
@@ -219,6 +294,35 @@ class ChatService(QObject):
         
         # המרת ה-JSON למילון ואז לסשן
         session_data = json.loads(row[0])
+        
+        # חישוב עימוד אם נדרש
+        if page > 1 or page_size < len(session_data["messages"]):
+            # חישוב אינדקסים
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+            
+            # שמירת כל ההודעות המקוריות
+            all_messages = session_data["messages"]
+            
+            # עדכון רשימת ההודעות לפי העימוד
+            session_data["messages"] = all_messages[start_idx:end_idx]
+            
+            # שמירת מידע על העימוד
+            session_data["pagination"] = {
+                "page": page,
+                "page_size": page_size,
+                "total_messages": len(all_messages),
+                "total_pages": (len(all_messages) + page_size - 1) // page_size
+            }
+        else:
+            # אין צורך בעימוד
+            session_data["pagination"] = {
+                "page": 1,
+                "page_size": page_size,
+                "total_messages": len(session_data["messages"]),
+                "total_pages": 1
+            }
+        
         session = ChatSession.from_dict(session_data)
         
         # הגדרת הסשן הנוכחי
@@ -328,3 +432,33 @@ class ChatService(QObject):
             Optional[ChatSession]: הסשן הנוכחי, או None אם אין סשן נוכחי
         """
         return self.current_session
+        
+    def get_session_message_count(self, session_id: str) -> int:
+        """
+        קבלת מספר ההודעות בסשן
+        
+        Args:
+            session_id (str): מזהה הסשן
+        
+        Returns:
+            int: מספר ההודעות בסשן, או 0 אם הסשן לא נמצא
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # טעינת הסשן
+        cursor.execute('''
+        SELECT data FROM chat_sessions WHERE session_id = ?
+        ''', (session_id,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row is None:
+            return 0
+        
+        # המרת ה-JSON למילון
+        session_data = json.loads(row[0])
+        
+        # החזרת מספר ההודעות
+        return len(session_data["messages"])

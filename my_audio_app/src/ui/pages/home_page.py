@@ -7,6 +7,7 @@ import os
 from ui.components.chat import ChatHistory, ChatMessage, ChatInput
 from ui.components.file_upload import FileUploader, RecentFilesList, FileInfo
 from services.chat_service import ChatService
+from services.file_service import FileService
 
 
 class HomePage(QWidget):
@@ -16,8 +17,9 @@ class HomePage(QWidget):
         super().__init__(parent)
         self.setObjectName("homePage")
         
-        # יצירת שירות צ'אט
+        # יצירת שירותים
         self.chat_service = ChatService()
+        self.file_service = FileService()
         
         # סגנון כללי לדף - רקע שחור וטקסט לבן
         self.setStyleSheet("""
@@ -134,6 +136,7 @@ class HomePage(QWidget):
         # אזור הודעות - רכיב ChatHistory
         self.chat_history = ChatHistory()
         self.chat_history.message_clicked.connect(self.on_message_clicked)
+        self.chat_history.load_more_requested.connect(self.on_load_more_messages)
         layout.addWidget(self.chat_history, 1)  # stretch factor 1
         
         # טעינת היסטוריית צ'אט
@@ -184,10 +187,28 @@ class HomePage(QWidget):
         self.recent_files_list.file_delete_requested.connect(self.on_file_delete_requested)
         layout.addWidget(self.recent_files_list, 1)  # stretch factor 1
         
+        # טעינת קבצים אחרונים מהמסד נתונים
+        self._load_recent_files()
+        
         return panel
+        
+    def _load_recent_files(self):
+        """טעינת קבצים אחרונים מהמסד נתונים"""
+        # קבלת רשימת קבצים אחרונים מהשירות
+        recent_files = self.file_service.get_recent_files(limit=10)
+        
+        # הוספת הקבצים לרשימה
+        for file_info in recent_files:
+            self.recent_files_list.add_file(file_info)
     
-    def _load_chat_history(self):
-        """טעינת היסטוריית צ'אט"""
+    def _load_chat_history(self, page=1, page_size=50):
+        """
+        טעינת היסטוריית צ'אט
+        
+        Args:
+            page (int, optional): מספר העמוד לטעינה (ברירת מחדל: 1)
+            page_size (int, optional): גודל העמוד (מספר הודעות מקסימלי, ברירת מחדל: 50)
+        """
         # טעינת סשן נוכחי
         current_session = self.chat_service.get_current_session()
         
@@ -196,7 +217,11 @@ class HomePage(QWidget):
             sessions = self.chat_service.get_all_sessions()
             if sessions:
                 # טען את הסשן האחרון
-                current_session = self.chat_service.load_session(sessions[0][0])
+                current_session = self.chat_service.load_session(sessions[0][0], page=page, page_size=page_size)
+        elif page > 1:
+            # אם יש סשן נוכחי וביקשנו עמוד מסוים, טען אותו
+            session_id = current_session.session_id
+            current_session = self.chat_service.load_session(session_id, page=page, page_size=page_size)
         
         # אם עדיין אין סשן, צור סשן חדש
         if current_session is None:
@@ -205,21 +230,41 @@ class HomePage(QWidget):
             self.chat_service.add_message("ברוכים הבאים ל-Audio Chat Studio! במה אוכל לעזור לך היום?", "system")
         
         # הצג את ההודעות בצ'אט
-        self._display_chat_messages(current_session)
+        self._display_chat_messages(current_session, page > 1)
     
-    def _display_chat_messages(self, session):
-        """הצגת הודעות צ'אט מסשן"""
-        # ניקוי היסטוריית צ'אט
-        self.chat_history.clear_history()
+    def _display_chat_messages(self, session, append=False):
+        """
+        הצגת הודעות צ'אט מסשן
+        
+        Args:
+            session (ChatSession): סשן הצ'אט להצגה
+            append (bool, optional): האם להוסיף את ההודעות לקיימות או להחליף אותן
+        """
+        # אם לא מוסיפים הודעות, נקה את ההיסטוריה
+        if not append:
+            self.chat_history.clear_history(confirm=False)
+        
+        # הגדרת מידע על עימוד
+        if hasattr(session, 'pagination'):
+            self.chat_history.set_pagination(session.pagination)
         
         # הוספת הודעות מהסשן
         for message in session.messages:
+            timestamp = QDateTime.fromString(message.timestamp.isoformat(), Qt.DateFormat.ISODate)
+            
             if message.sender == "user":
-                self.chat_history.add_user_message(message.text, QDateTime.fromString(message.timestamp.isoformat(), Qt.DateFormat.ISODate))
+                self.chat_history.add_user_message(message.text, timestamp)
             elif message.sender == "ai":
-                self.chat_history.add_ai_message(message.text, QDateTime.fromString(message.timestamp.isoformat(), Qt.DateFormat.ISODate))
+                self.chat_history.add_ai_message(message.text, timestamp)
             elif message.sender == "system":
-                self.chat_history.add_system_message(message.text, QDateTime.fromString(message.timestamp.isoformat(), Qt.DateFormat.ISODate))
+                self.chat_history.add_system_message(message.text, timestamp)
+        
+        # אם מוסיפים הודעות, גלול למיקום הנוכחי
+        if append:
+            # שמירת המיקום הנוכחי
+            current_position = self.chat_history.verticalScrollBar().value()
+            # גלילה למיקום הנוכחי אחרי הוספת ההודעות
+            QTimer.singleShot(50, lambda: self.chat_history.verticalScrollBar().setValue(current_position))
     
     def _show_chat_menu(self):
         """הצגת תפריט צ'אט"""
@@ -266,21 +311,10 @@ class HomePage(QWidget):
     
     def _clear_chat(self):
         """ניקוי שיחה נוכחית"""
-        # שאלת אישור
-        reply = QMessageBox.question(
-            self,
-            "אישור ניקוי",
-            "האם אתה בטוח שברצונך לנקות את השיחה הנוכחית?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
+        # ניקוי היסטוריית צ'אט עם אישור
+        if self.chat_history.clear_history(confirm=True):
             # ניקוי הסשן הנוכחי
             self.chat_service.clear_current_session()
-            
-            # ניקוי היסטוריית צ'אט
-            self.chat_history.clear_history()
             
             # הוספת הודעת ברוכים הבאים
             welcome_msg = "השיחה נוקתה. במה אוכל לעזור לך?"
@@ -341,7 +375,17 @@ class HomePage(QWidget):
         """טיפול בלחיצה על הודעה"""
         message = self.chat_history.get_message(message_index)
         if message:
-            print(f"נלחצה הודעה: {message.text}")  
+            print(f"נלחצה הודעה: {message.text}")
+    
+    def on_load_more_messages(self):
+        """טיפול בבקשה לטעינת הודעות נוספות"""
+        # קבלת מידע על עימוד נוכחי
+        current_page = self.chat_history.pagination["page"]
+        page_size = self.chat_history.pagination["page_size"]
+        
+        # טעינת העמוד הקודם
+        if current_page > 1:
+            self._load_chat_history(page=current_page - 1, page_size=page_size)
   def on_file_upload_started(self, file_path):
         """טיפול בהתחלת העלאת קובץ"""
         self.chat_history.add_system_message(f"מתחיל להעלות את הקובץ: {os.path.basename(file_path)}")
@@ -353,6 +397,9 @@ class HomePage(QWidget):
     
     def on_file_upload_completed(self, file_info):
         """טיפול בסיום העלאת קובץ"""
+        # שמירת מידע על הקובץ במסד הנתונים
+        self.file_service.save_file_info(file_info)
+        
         # הוספת הקובץ לרשימת הקבצים האחרונים
         self.recent_files_list.add_file(file_info)
         
@@ -412,7 +459,9 @@ class HomePage(QWidget):
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            # מחיקת הקובץ
+            # מחיקת הקובץ ממסד הנתונים
+            self.file_service.delete_file(file_info.path)
+            
             # בפרויקט אמיתי, כאן היינו מוחקים את הקובץ מהשרת או מהדיסק
             # os.remove(file_info.path)
             
