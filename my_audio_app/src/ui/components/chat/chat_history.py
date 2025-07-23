@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QLabel
+from PyQt6.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore import Qt, QTimer, QDateTime, pyqtSignal
 from .chat_message import ChatMessage
 
@@ -9,6 +9,7 @@ class ChatHistory(QScrollArea):
     # אותות
     message_clicked = pyqtSignal(int)  # אות שנשלח כאשר לוחצים על הודעה
     load_more_requested = pyqtSignal()  # אות שנשלח כאשר המשתמש מבקש לטעון עוד הודעות
+    file_attachment_clicked = pyqtSignal(dict)  # אות שנשלח כאשר לוחצים על קובץ מצורף
     
     def __init__(self, parent=None):
         """
@@ -152,46 +153,49 @@ class ChatHistory(QScrollArea):
         else:
             self.load_more_button.setVisible(False)
     
-    def add_user_message(self, text, timestamp=None):
+    def add_user_message(self, text, timestamp=None, attachments=None):
         """
         הוספת הודעת משתמש
         
         Args:
             text (str): תוכן ההודעה
             timestamp (QDateTime, optional): זמן שליחת ההודעה
+            attachments (list, optional): רשימת קבצים מצורפים
         
         Returns:
             ChatMessage: הודעת הצ'אט שנוצרה
         """
-        message = ChatMessage(text, "user", timestamp=timestamp)
+        message = ChatMessage(text, "user", timestamp=timestamp, attachments=attachments)
         return self._add_message(message)
     
-    def add_ai_message(self, text, timestamp=None):
+    def add_ai_message(self, text, timestamp=None, attachments=None):
         """
         הוספת הודעת AI
         
         Args:
             text (str): תוכן ההודעה
             timestamp (QDateTime, optional): זמן שליחת ההודעה
+            attachments (list, optional): רשימת קבצים מצורפים
         
         Returns:
             ChatMessage: הודעת הצ'אט שנוצרה
         """
-        message = ChatMessage(text, "ai", timestamp=timestamp)
+        message = ChatMessage(text, "ai", timestamp=timestamp, attachments=attachments)
         return self._add_message(message)
     
-    def add_system_message(self, text, timestamp=None):
+    def add_system_message(self, text, timestamp=None, attachments=None):
         """
         הוספת הודעת מערכת
         
         Args:
             text (str): תוכן ההודעה
             timestamp (QDateTime, optional): זמן שליחת ההודעה
+            attachments (list, optional): רשימת קבצים מצורפים
         
         Returns:
             ChatMessage: הודעת הצ'אט שנוצרה
         """
-        message = ChatMessage(text, "system", timestamp=timestamp)
+        message = ChatMessage(text, "system", timestamp=timestamp, attachments=attachments)
         return self._add_message(message)
     
     def _add_message(self, message):
@@ -221,6 +225,9 @@ class ChatHistory(QScrollArea):
         message_index = len(self.messages) - 1
         message.mousePressEvent = lambda event, idx=message_index: self.message_clicked.emit(idx)
         
+        # חיבור אות לחיצה על קובץ מצורף
+        message.file_clicked.connect(self.on_file_attachment_clicked)
+        
         # הוספת מרווח מחדש
         self.layout.addStretch()
         
@@ -228,6 +235,21 @@ class ChatHistory(QScrollArea):
         QTimer.singleShot(50, self.scroll_to_bottom)
         
         return message
+        
+    def on_file_attachment_clicked(self, attachment):
+        """
+        טיפול בלחיצה על קובץ מצורף
+        
+        Args:
+            attachment (dict): מידע על הקובץ המצורף
+        """
+        # כאן אנחנו יכולים להעביר את האירוע לרכיב ההורה
+        # לדוגמה, אם היינו מוסיפים אות file_attachment_clicked
+        # היינו יכולים לשלוח אותו כך:
+        # self.file_attachment_clicked.emit(attachment)
+        
+        # כרגע נדפיס את המידע על הקובץ
+        print(f"נלחץ קובץ מצורף: {attachment.get('name', 'קובץ לא ידוע')}")
     
     def scroll_to_bottom(self):
         """גלילה לתחתית הצ'אט"""

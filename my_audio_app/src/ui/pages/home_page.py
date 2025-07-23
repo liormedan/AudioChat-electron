@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                            QSplitter, QFrame, QScrollArea, QTextEdit, QPushButton,
                            QMessageBox, QMenu, QAction)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QDateTime, QTimer, QEvent
-from PyQt6.QtGui import QFont, QCursor
+from PyQt6.QtGui import QFont, QCursor, QIcon
 import os
 from ui.components.chat import ChatHistory, ChatMessage, ChatInput
 from ui.components.file_upload import FileUploader, RecentFilesList, FileInfo
@@ -147,6 +147,7 @@ class HomePage(QWidget):
         self.chat_input.message_sent.connect(self.on_message_sent)
         self.chat_input.typing_started.connect(self.on_typing_started)
         self.chat_input.typing_stopped.connect(self.on_typing_stopped)
+        self.chat_input.file_reference_requested.connect(self.on_file_reference_requested)
         layout.addWidget(self.chat_input)
         
         return panel
@@ -226,8 +227,17 @@ class HomePage(QWidget):
         # אם עדיין אין סשן, צור סשן חדש
         if current_session is None:
             current_session = self.chat_service.create_session()
-            # הוסף הודעת ברוכים הבאים
-            self.chat_service.add_message("ברוכים הבאים ל-Audio Chat Studio! במה אוכל לעזור לך היום?", "system")
+            # הוסף הודעת ברוכים הבאים מורחבת
+            welcome_message = (
+                "ברוכים הבאים ל-Audio Chat Studio! 🎵\n\n"
+                "אני כאן כדי לעזור לך עם קבצי האודיו שלך. הנה כמה דברים שאני יכול לעשות:\n\n"
+                "• **העלאת קבצים** - השתמש בפאנל הימני כדי להעלות קבצי אודיו\n"
+                "• **ניתוח קבצים** - אוכל לנתח את הקבצים שלך ולספק מידע מפורט\n"
+                "• **תמלול** - אוכל לתמלל את תוכן הקבצים שלך\n"
+                "• **עריכה** - אוכל להציע כלים לעריכת הקבצים שלך\n\n"
+                "כדי להתחיל, פשוט העלה קובץ או שאל אותי שאלה!"
+            )
+            self.chat_service.add_message(welcome_message, "system")
         
         # הצג את ההודעות בצ'אט
         self._display_chat_messages(current_session, page > 1)
@@ -351,11 +361,69 @@ class HomePage(QWidget):
         """טיפול בסיום הקלדה"""
         # כאן ניתן להוסיף לוגיקה כמו הסתרת "המשתמש מקליד..."
         pass
+        
+    def on_file_reference_requested(self):
+        """טיפול בבקשה להוספת התייחסות לקובץ"""
+        # קבלת רשימת קבצים אחרונים
+        recent_files = self.file_service.get_recent_files(limit=5)
+        
+        if not recent_files:
+            # אם אין קבצים אחרונים, הצג הודעה בצ'אט
+            self.chat_history.add_system_message("אין קבצים אחרונים להתייחסות. העלה קובץ קודם.")
+            return
+        
+        # יצירת תפריט עם הקבצים האחרונים
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #1e1e1e;
+                color: white;
+                border: 1px solid #333;
+            }
+            QMenu::item {
+                padding: 5px 20px;
+            }
+            QMenu::item:selected {
+                background-color: #2c3e50;
+            }
+        """)
+        
+        # הוספת כותרת
+        title_action = QAction("בחר קובץ להתייחסות:", self)
+        title_action.setEnabled(False)
+        menu.addAction(title_action)
+        menu.addSeparator()
+        
+        # הוספת הקבצים האחרונים
+        for file_info in recent_files:
+            action = QAction(file_info.name, self)
+            action.triggered.connect(lambda checked=False, f=file_info: self.chat_input.insert_file_reference(f))
+            menu.addAction(action)
+        
+        # הצגת התפריט
+        menu.exec(QCursor.pos())
     
     def _simulate_ai_response(self, user_text):
         """סימולציה של תשובת AI"""
-        # תשובות פשוטות לפי תוכן ההודעה
-        if "שלום" in user_text or "היי" in user_text:
+        # בדיקה אם יש התייחסות לקובץ בהודעה
+        file_reference = None
+        if "[קובץ:" in user_text and "]" in user_text:
+            start_idx = user_text.find("[קובץ:") + 6
+            end_idx = user_text.find("]", start_idx)
+            if start_idx > 6 and end_idx > start_idx:
+                file_name = user_text[start_idx:end_idx].strip()
+                # חיפוש הקובץ במסד הנתונים
+                recent_files = self.file_service.get_recent_files(limit=10)
+                for file_info in recent_files:
+                    if file_info.name == file_name:
+                        file_reference = file_info
+                        break
+        
+        # תשובות לפי תוכן ההודעה והקובץ המצורף
+        if file_reference:
+            # אם יש התייחסות לקובץ, נתח אותו
+            response = self._analyze_audio_file(file_reference, user_text)
+        elif "שלום" in user_text or "היי" in user_text:
             response = "שלום! איך אני יכול לעזור לך היום?"
         elif "תודה" in user_text:
             response = "בשמחה! אם תצטרך עזרה נוספת, אני כאן."
@@ -365,11 +433,112 @@ class HomePage(QWidget):
             response = "יש לי מגוון כלי עריכה לקבצי אודיו, כולל הסרת רעשים, חיתוך, שינוי מהירות, והוספת אפקטים. מה תרצה לעשות?"
         elif "תמלול" in user_text or "לתמלל" in user_text:
             response = "אני יכול לתמלל קבצי אודיו למגוון שפות. פשוט העלה את הקובץ ואתחיל בתמלול."
+        elif "ניתוח" in user_text or "לנתח" in user_text:
+            response = "אני יכול לנתח קבצי אודיו ולספק מידע על איכות הקול, עוצמה, תדרים ועוד. העלה קובץ או התייחס לקובץ קיים כדי שאוכל לנתח אותו."
         else:
             response = "אני מבין. האם תרצה להעלות קובץ אודיו כדי שאוכל לעזור לך לעבוד עליו?"
         
         # הוספת תשובת AI אחרי השהייה קצרה
         QTimer.singleShot(800, lambda: self._add_ai_response(response))
+    
+    def _analyze_audio_file(self, file_info, user_text):
+        """
+        ניתוח קובץ אודיו והחזרת תשובה מתאימה
+        
+        Args:
+            file_info: מידע על הקובץ לניתוח
+            user_text: טקסט ההודעה של המשתמש
+            
+        Returns:
+            str: תשובת AI מבוססת על הניתוח
+        """
+        # בדיקה מה המשתמש רוצה לעשות עם הקובץ
+        if "נתח" in user_text or "ניתוח" in user_text or "אנליזה" in user_text:
+            # ניתוח הקובץ
+            return self._generate_audio_analysis(file_info)
+        elif "תמלל" in user_text or "תמלול" in user_text:
+            # תמלול הקובץ
+            return f"אני מתחיל בתמלול הקובץ {file_info.name}. תהליך התמלול עשוי לקחת מספר דקות, בהתאם לאורך הקובץ.\n\nאעדכן אותך כשהתמלול יהיה מוכן."
+        elif "ערוך" in user_text or "עריכה" in user_text:
+            # עריכת הקובץ
+            return f"אילו פעולות עריכה תרצה לבצע על הקובץ {file_info.name}?\n\n- הסרת רעשי רקע\n- חיתוך הקובץ\n- שינוי עוצמת הקול\n- הוספת אפקטים\n- שינוי קצב הנגינה"
+        elif "המר" in user_text or "המרה" in user_text:
+            # המרת פורמט
+            return f"לאיזה פורמט תרצה להמיר את הקובץ {file_info.name}?\n\n- MP3\n- WAV\n- FLAC\n- OGG\n- M4A"
+        else:
+            # תשובה כללית
+            return f"אני רואה שאתה מתייחס לקובץ {file_info.name}. זהו קובץ {file_info.format.upper()} באורך {file_info.duration_formatted}. מה תרצה לעשות עם הקובץ?\n\n- ניתוח הקובץ\n- תמלול הקובץ\n- עריכת הקובץ\n- המרת פורמט"
+    
+    def _generate_audio_analysis(self, file_info):
+        """
+        יצירת ניתוח מדומה לקובץ אודיו
+        
+        Args:
+            file_info: מידע על הקובץ לניתוח
+            
+        Returns:
+            str: ניתוח מדומה של הקובץ
+        """
+        # בפרויקט אמיתי, כאן היינו מנתחים את הקובץ באמת
+        # כרגע נחזיר ניתוח מדומה
+        
+        # יצירת ערכים מדומים
+        import random
+        
+        # ערכים מדומים לניתוח
+        sample_rate = random.choice([44100, 48000, 96000])
+        bit_depth = random.choice([16, 24, 32])
+        channels = random.choice([1, 2])
+        bitrate = random.choice([128, 192, 256, 320])
+        
+        # יצירת הניתוח
+        analysis = f"# ניתוח הקובץ {file_info.name}\n\n"
+        analysis += f"## מידע בסיסי\n"
+        analysis += f"- **פורמט**: {file_info.format.upper()}\n"
+        analysis += f"- **גודל**: {file_info.size_formatted}\n"
+        
+        if file_info.duration > 0:
+            analysis += f"- **אורך**: {file_info.duration_formatted}\n"
+        
+        analysis += f"- **תאריך העלאה**: {file_info.upload_date_formatted}\n\n"
+        
+        analysis += f"## מידע טכני\n"
+        analysis += f"- **קצב דגימה**: {sample_rate} Hz\n"
+        analysis += f"- **עומק סיביות**: {bit_depth} bit\n"
+        analysis += f"- **ערוצים**: {channels} ({'מונו' if channels == 1 else 'סטריאו'})\n"
+        
+        if file_info.format.lower() in ['mp3', 'ogg', 'm4a', 'aac']:
+            analysis += f"- **קצב סיביות**: {bitrate} kbps\n\n"
+        
+        analysis += f"## איכות הקול\n"
+        
+        # איכות מדומה בהתאם לפורמט
+        if file_info.format.lower() in ['wav', 'flac']:
+            quality = "גבוהה"
+            dynamic_range = random.uniform(60, 90)
+            noise_level = random.uniform(-80, -60)
+        else:
+            quality = "בינונית"
+            dynamic_range = random.uniform(40, 60)
+            noise_level = random.uniform(-60, -40)
+        
+        analysis += f"- **איכות כללית**: {quality}\n"
+        analysis += f"- **טווח דינמי**: {dynamic_range:.1f} dB\n"
+        analysis += f"- **רמת רעש**: {noise_level:.1f} dB\n\n"
+        
+        analysis += f"## המלצות\n"
+        
+        # המלצות בהתאם לפורמט ולאיכות
+        if file_info.format.lower() in ['mp3', 'ogg', 'm4a'] and bitrate < 256:
+            analysis += f"- שקול להשתמש בקצב סיביות גבוה יותר לאיכות טובה יותר\n"
+        
+        if noise_level > -60:
+            analysis += f"- הקובץ מכיל רמת רעש גבוהה יחסית, מומלץ להשתמש בכלי להפחתת רעשים\n"
+        
+        if file_info.duration > 300:  # אם הקובץ ארוך מ-5 דקות
+            analysis += f"- הקובץ ארוך יחסית, שקול לחלק אותו לקטעים קצרים יותר לעבודה יעילה יותר\n"
+        
+        return analysis
     
     def on_message_clicked(self, message_index):
         """טיפול בלחיצה על הודעה"""
@@ -403,10 +572,23 @@ class HomePage(QWidget):
         # הוספת הקובץ לרשימת הקבצים האחרונים
         self.recent_files_list.add_file(file_info)
         
-        # הודעה בצ'אט
+        # הודעה בצ'אט עם קובץ מצורף
         system_msg = f"הקובץ {file_info.name} הועלה בהצלחה"
-        self.chat_service.add_message(system_msg, "system")
-        self.chat_history.add_system_message(system_msg)
+        
+        # יצירת מידע על הקובץ המצורף
+        attachment = {
+            "type": "audio_file",
+            "name": file_info.name,
+            "path": file_info.path,
+            "size": file_info.size,
+            "format": file_info.format,
+            "duration": file_info.duration,
+            "upload_date": file_info.upload_date.isoformat() if hasattr(file_info.upload_date, 'isoformat') else str(file_info.upload_date)
+        }
+        
+        # הוספת הודעה עם קובץ מצורף
+        self.chat_service.add_message(system_msg, "system", file_info)
+        self.chat_history.add_system_message(system_msg, attachments=[attachment])
         
         # הצעת פעולות על הקובץ
         ai_msg = (f"הקובץ {file_info.name} הועלה בהצלחה. מה תרצה לעשות עם הקובץ?\n\n"
@@ -426,8 +608,21 @@ class HomePage(QWidget):
     def on_file_selected(self, file_info):
         """טיפול בבחירת קובץ מהרשימה"""
         system_msg = f"נבחר הקובץ: {file_info.name}"
-        self.chat_service.add_message(system_msg, "system")
-        self.chat_history.add_system_message(system_msg)
+        
+        # יצירת מידע על הקובץ המצורף
+        attachment = {
+            "type": "audio_file",
+            "name": file_info.name,
+            "path": file_info.path,
+            "size": file_info.size,
+            "format": file_info.format,
+            "duration": file_info.duration,
+            "upload_date": file_info.upload_date.isoformat() if hasattr(file_info.upload_date, 'isoformat') else str(file_info.upload_date)
+        }
+        
+        # הוספת הודעה עם קובץ מצורף
+        self.chat_service.add_message(system_msg, "system", file_info)
+        self.chat_history.add_system_message(system_msg, attachments=[attachment])
         
         # הצעת פעולות על הקובץ
         ai_msg = (f"מה תרצה לעשות עם הקובץ {file_info.name}?\n\n"

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QLabel
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QLabel, QMenu, QAction
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QSize
 from PyQt6.QtGui import QIcon, QKeyEvent, QTextCursor
 
@@ -10,6 +10,7 @@ class ChatInput(QWidget):
     message_sent = pyqtSignal(str)  # אות שנשלח כאשר שולחים הודעה
     typing_started = pyqtSignal()   # אות שנשלח כאשר המשתמש מתחיל להקליד
     typing_stopped = pyqtSignal()   # אות שנשלח כאשר המשתמש מפסיק להקליד
+    file_reference_requested = pyqtSignal()  # אות שנשלח כאשר המשתמש מבקש להוסיף התייחסות לקובץ
     
     def __init__(self, parent=None, placeholder="הקלד הודעה..."):
         """
@@ -64,7 +65,7 @@ class ChatInput(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(5)
         
-        # לייאאוט לתיבת הקלט וכפתור השליחה
+        # לייאאוט לתיבת הקלט וכפתורים
         input_layout = QHBoxLayout()
         input_layout.setContentsMargins(0, 0, 0, 0)
         input_layout.setSpacing(10)
@@ -77,12 +78,25 @@ class ChatInput(QWidget):
         self.text_edit.installEventFilter(self)  # התקנת מסנן אירועים לתפיסת מקש Enter
         input_layout.addWidget(self.text_edit)
         
+        # לייאאוט לכפתורים
+        buttons_layout = QVBoxLayout()
+        buttons_layout.setContentsMargins(0, 0, 0, 0)
+        buttons_layout.setSpacing(5)
+        
         # כפתור שליחה
         self.send_button = QPushButton("שלח")
         self.send_button.setMinimumWidth(80)
         self.send_button.setEnabled(False)  # מבוטל בהתחלה כי אין טקסט
         self.send_button.clicked.connect(self.send_message)
-        input_layout.addWidget(self.send_button)
+        buttons_layout.addWidget(self.send_button)
+        
+        # כפתור הוספת קובץ
+        self.attach_button = QPushButton("הוסף קובץ")
+        self.attach_button.setMinimumWidth(80)
+        self.attach_button.clicked.connect(self._show_file_menu)
+        buttons_layout.addWidget(self.attach_button)
+        
+        input_layout.addLayout(buttons_layout)
         
         self.layout.addLayout(input_layout)
         
@@ -197,3 +211,26 @@ class ChatInput(QWidget):
     def is_empty(self):
         """בדיקה האם תיבת הקלט ריקה"""
         return len(self.text_edit.toPlainText().strip()) == 0
+        
+    def _show_file_menu(self):
+        """הצגת תפריט להוספת קובץ"""
+        # שליחת אות לבקשת התייחסות לקובץ
+        self.file_reference_requested.emit()
+    
+    def insert_file_reference(self, file_info):
+        """
+        הוספת התייחסות לקובץ בתיבת הקלט
+        
+        Args:
+            file_info: מידע על הקובץ להוספה
+        """
+        # הוספת התייחסות לקובץ בפורמט מיוחד
+        file_reference = f"[קובץ: {file_info.name}]"
+        
+        # הוספת הטקסט לתיבת הקלט
+        current_text = self.text_edit.toPlainText()
+        if current_text and not current_text.endswith(" "):
+            file_reference = " " + file_reference
+        
+        self.text_edit.insertPlainText(file_reference)
+        self.text_edit.setFocus()

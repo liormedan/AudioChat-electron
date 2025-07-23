@@ -392,13 +392,14 @@ class ChatService(QObject):
         
         return success
     
-    def add_message(self, text: str, sender: str) -> ChatMessage:
+    def add_message(self, text: str, sender: str, file_info=None) -> ChatMessage:
         """
         הוספת הודעה לסשן הנוכחי
         
         Args:
             text (str): תוכן ההודעה
             sender (str): שולח ההודעה ("user", "ai", או "system")
+            file_info (FileInfo, optional): מידע על קובץ מצורף
         
         Returns:
             ChatMessage: ההודעה שנוספה
@@ -409,6 +410,19 @@ class ChatService(QObject):
         
         # יצירת הודעה
         message = ChatMessage(text=text, sender=sender)
+        
+        # הוספת קובץ מצורף אם יש
+        if file_info:
+            attachment = {
+                "type": "audio_file",
+                "name": file_info.name,
+                "path": file_info.path,
+                "size": file_info.size,
+                "format": file_info.format,
+                "duration": file_info.duration,
+                "upload_date": file_info.upload_date.isoformat() if hasattr(file_info.upload_date, 'isoformat') else str(file_info.upload_date)
+            }
+            message.add_attachment(attachment)
         
         # הוספת ההודעה לסשן
         self.current_session.add_message(message)
