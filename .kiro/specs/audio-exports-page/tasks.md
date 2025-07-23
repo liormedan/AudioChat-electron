@@ -11,9 +11,9 @@
   - Create unit tests for the model
   - _Requirements: 1.2, 4.1, 4.3_
 
-- [ ] 2. Implement ExportService for database operations
+- [*] 2. Implement ExportService for database operations
 
-
+    **DONE - AND APDATED GITHUB*
 
   - Create database schema for exports
   - Implement CRUD operations (create, read, update, delete)

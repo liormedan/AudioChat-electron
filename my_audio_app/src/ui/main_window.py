@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt
 from .widgets.sidebar import Sidebar
 from .pages.file_stats_page import FileStatsPage
 from .pages.home_page import HomePage
+from .pages.audio_export_page import AudioExportPage
 
 
 class MainWindow(QMainWindow):
@@ -31,10 +32,10 @@ class MainWindow(QMainWindow):
 
         # Pages
         self.pages = {}
-        self._register_page("home", HomePage())  # דף הבית החדש
+        self._register_page("home", HomePage())
         self._register_page("audio_actions", self._create_dummy_page("⚡ AI Audio Actions"))
-        self._register_page("exports", self._create_dummy_page("📤 Audio Exports"))
-        self._register_page("file_stats", FileStatsPage())  # דף סטטיסטיקות חדש
+        self._register_page("exports", AudioExportPage())
+        self._register_page("file_stats", FileStatsPage())
         self._register_page("terminal", self._create_dummy_page("🧠 AI Terminal"))
         self._register_page("llm_management", self._create_dummy_page("🧬 LLM Management"))
         self._register_page("auth", self._create_dummy_page("🔐 Auth Settings"))
