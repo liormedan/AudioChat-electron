@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                            QSplitter, QFrame, QScrollArea, QTextEdit, QPushButton)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QDateTime, QTimer, QEvent
 from PyQt6.QtGui import QFont
-from ui.components.chat import ChatHistory, ChatMessage
+from ui.components.chat import ChatHistory, ChatMessage, ChatInput
 
 
 class HomePage(QWidget):
@@ -100,21 +100,12 @@ class HomePage(QWidget):
         # הוספת הודעות דוגמה
         self._add_sample_messages()
         
-        # אזור קלט
-        input_layout = QHBoxLayout()
-        
-        self.chat_input = QTextEdit()
-        self.chat_input.setPlaceholderText("הקלד הודעה...")
-        self.chat_input.setMaximumHeight(80)
-        self.chat_input.installEventFilter(self)  # התקנת מסנן אירועים לתפיסת מקש Enter
-        input_layout.addWidget(self.chat_input)
-        
-        self.send_button = QPushButton("שלח")
-        self.send_button.setMinimumWidth(80)
-        self.send_button.clicked.connect(self.send_message)
-        input_layout.addWidget(self.send_button)
-        
-        layout.addLayout(input_layout)
+        # אזור קלט - רכיב ChatInput
+        self.chat_input = ChatInput(placeholder="הקלד הודעה כאן...")
+        self.chat_input.message_sent.connect(self.on_message_sent)
+        self.chat_input.typing_started.connect(self.on_typing_started)
+        self.chat_input.typing_stopped.connect(self.on_typing_stopped)
+        layout.addWidget(self.chat_input)
         
         return panel
     
@@ -203,50 +194,24 @@ class HomePage(QWidget):
         self.chat_history.add_user_message("האם אתה יכול לתמלל קובץ אודיו?")
         self.chat_history.add_ai_message("כן, אני יכול לתמלל קבצי אודיו. פשוט העלה את הקובץ ואשתמש במודל תמלול מתקדם כדי להמיר את האודיו לטקסט. האם תרצה לנסות זאת עכשיו?")
     
-    def eventFilter(self, obj, event):
-        """סינון אירועים לתפיסת מקש Enter"""
-        # בגרסאות שונות של PyQt6 יש שמות שונים לקבועים
-        key_press_event = None
-        try:
-            key_press_event = QEvent.KeyPress
-        except AttributeError:
-            try:
-                key_press_event = QEvent.Type.KeyPress
-            except AttributeError:
-                key_press_event = 6  # KeyPress = 6
-                
-        if obj is self.chat_input and event.type() == key_press_event:
-            # בגרסאות שונות של PyQt6 יש שמות שונים לקבועים
-            key_return = None
-            shift_modifier = None
-            try:
-                key_return = Qt.Key_Return
-                shift_modifier = Qt.ShiftModifier
-            except AttributeError:
-                try:
-                    key_return = Qt.Key.Key_Return
-                    shift_modifier = Qt.KeyboardModifier.ShiftModifier
-                except AttributeError:
-                    key_return = 0x01000004  # Key_Return = 0x01000004
-                    shift_modifier = 0x02000000  # ShiftModifier = 0x02000000
-                    
-            if event.key() == key_return and not event.modifiers() & shift_modifier:
-                self.send_message()
-                return True
-        return super().eventFilter(obj, event)
-    
-    def send_message(self):
-        """שליחת הודעה מהמשתמש"""
-        text = self.chat_input.toPlainText().strip()
+    def on_message_sent(self, text):
+        """טיפול בשליחת הודעה מהמשתמש"""
         if text:
             # הוספת הודעת משתמש
             self.chat_history.add_user_message(text)
             
-            # ניקוי תיבת הקלט
-            self.chat_input.clear()
-            
             # סימולציה של תשובת AI
             self._simulate_ai_response(text)
+    
+    def on_typing_started(self):
+        """טיפול בהתחלת הקלדה"""
+        # כאן ניתן להוסיף לוגיקה כמו הצגת "המשתמש מקליד..."
+        pass
+    
+    def on_typing_stopped(self):
+        """טיפול בסיום הקלדה"""
+        # כאן ניתן להוסיף לוגיקה כמו הסתרת "המשתמש מקליד..."
+        pass
     
     def _simulate_ai_response(self, user_text):
         """סימולציה של תשובת AI"""
