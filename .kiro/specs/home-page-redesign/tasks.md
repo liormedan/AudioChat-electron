@@ -57,6 +57,7 @@
 
 
 
+
   - Create FileUploader class for uploading audio files
   - Implement drag and drop functionality
   - Add file selection dialog
@@ -64,7 +65,8 @@
   - Add file type validation
   - _Requirements: 1.3, 1.5, 2.3_
 
-- [ ] 7. Implement RecentFilesList component
+- [x] 7. Implement RecentFilesList component
+
   - Create RecentFilesList class for displaying uploaded files
   - Design list item layout with file information
   - Add file selection functionality
@@ -72,7 +74,10 @@
   - Connect signals to HomePage
   - _Requirements: 1.3, 1.5, 4.2_
 
-- [ ] 8. Implement chat history persistence
+- [x] 8. Implement chat history persistence
+
+
+
   - Create data model for chat messages
   - Implement methods to save chat history
   - Add functionality to load previous chat history

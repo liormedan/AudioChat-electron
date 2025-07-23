@@ -1,11 +1,12 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                            QSplitter, QFrame, QScrollArea, QTextEdit, QPushButton,
-                           QMessageBox)
+                           QMessageBox, QMenu, QAction)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QDateTime, QTimer, QEvent
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QCursor
 import os
 from ui.components.chat import ChatHistory, ChatMessage, ChatInput
 from ui.components.file_upload import FileUploader, RecentFilesList, FileInfo
+from services.chat_service import ChatService
 
 
 class HomePage(QWidget):
@@ -14,6 +15,9 @@ class HomePage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("homePage")
+        
+        # יצירת שירות צ'אט
+        self.chat_service = ChatService()
         
         # סגנון כללי לדף - רקע שחור וטקסט לבן
         self.setStyleSheet("""
@@ -44,6 +48,17 @@ class HomePage(QWidget):
             }
             QPushButton:hover {
                 background-color: #444;
+            }
+            QMenu {
+                background-color: #1e1e1e;
+                color: white;
+                border: 1px solid #333;
+            }
+            QMenu::item {
+                padding: 5px 20px;
+            }
+            QMenu::item:selected {
+                background-color: #2c3e50;
             }
         """)
         
@@ -84,11 +99,32 @@ class HomePage(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         
-        # כותרת
+        # כותרת עם תפריט
+        title_layout = QHBoxLayout()
+        
         title = QLabel("צ'אט")
         title.setObjectName("panelTitle")
         title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px;")
-        layout.addWidget(title)
+        title_layout.addWidget(title)
+        
+        # כפתור תפריט
+        menu_button = QPushButton("⋮")
+        menu_button.setFixedSize(30, 30)
+        menu_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #333;
+            }
+        """)
+        menu_button.clicked.connect(self._show_chat_menu)
+        title_layout.addWidget(menu_button)
+        
+        layout.addLayout(title_layout)
         
         # תיאור
         description = QLabel("שוחח עם ה-AI או העלה קבצי אודיו לניתוח")
@@ -100,8 +136,8 @@ class HomePage(QWidget):
         self.chat_history.message_clicked.connect(self.on_message_clicked)
         layout.addWidget(self.chat_history, 1)  # stretch factor 1
         
-        # הוספת הודעות דוגמה
-        self._add_sample_messages()
+        # טעינת היסטוריית צ'אט
+        self._load_chat_history()
         
         # אזור קלט - רכיב ChatInput
         self.chat_input = ChatInput(placeholder="הקלד הודעה כאן...")
@@ -150,28 +186,123 @@ class HomePage(QWidget):
         
         return panel
     
-    def _add_sample_messages(self):
-        """הוספת הודעות דוגמה לצ'אט"""
-        # יצירת הודעות עם תאריכים שונים
-        yesterday = QDateTime.currentDateTime().addDays(-1)
+    def _load_chat_history(self):
+        """טעינת היסטוריית צ'אט"""
+        # טעינת סשן נוכחי
+        current_session = self.chat_service.get_current_session()
         
-        # הודעת ברוכים הבאים
-        self.chat_history.add_system_message("ברוכים הבאים ל-Audio Chat Studio! במה אוכל לעזור לך היום?")
+        # אם אין סשן נוכחי, בדוק אם יש סשנים קודמים
+        if current_session is None:
+            sessions = self.chat_service.get_all_sessions()
+            if sessions:
+                # טען את הסשן האחרון
+                current_session = self.chat_service.load_session(sessions[0][0])
         
-        # הודעות דוגמה מאתמול
-        self.chat_history.add_user_message("אני רוצה לערוך קובץ אודיו", yesterday)
-        self.chat_history.add_ai_message("בשמחה! תוכל להעלות קובץ אודיו ואעזור לך לערוך אותו. אילו שינויים תרצה לבצע?", yesterday)
-        self.chat_history.add_user_message("אני רוצה להסיר רעשי רקע", yesterday)
-        self.chat_history.add_ai_message("אוכל לעזור לך להסיר רעשי רקע. העלה את הקובץ ואשתמש באלגוריתם לסינון רעשים.", yesterday)
+        # אם עדיין אין סשן, צור סשן חדש
+        if current_session is None:
+            current_session = self.chat_service.create_session()
+            # הוסף הודעת ברוכים הבאים
+            self.chat_service.add_message("ברוכים הבאים ל-Audio Chat Studio! במה אוכל לעזור לך היום?", "system")
         
-        # הודעות דוגמה מהיום
-        self.chat_history.add_user_message("האם אתה יכול לתמלל קובץ אודיו?")
-        self.chat_history.add_ai_message("כן, אני יכול לתמלל קבצי אודיו. פשוט העלה את הקובץ ואשתמש במודל תמלול מתקדם כדי להמיר את האודיו לטקסט. האם תרצה לנסות זאת עכשיו?")
+        # הצג את ההודעות בצ'אט
+        self._display_chat_messages(current_session)
+    
+    def _display_chat_messages(self, session):
+        """הצגת הודעות צ'אט מסשן"""
+        # ניקוי היסטוריית צ'אט
+        self.chat_history.clear_history()
+        
+        # הוספת הודעות מהסשן
+        for message in session.messages:
+            if message.sender == "user":
+                self.chat_history.add_user_message(message.text, QDateTime.fromString(message.timestamp.isoformat(), Qt.DateFormat.ISODate))
+            elif message.sender == "ai":
+                self.chat_history.add_ai_message(message.text, QDateTime.fromString(message.timestamp.isoformat(), Qt.DateFormat.ISODate))
+            elif message.sender == "system":
+                self.chat_history.add_system_message(message.text, QDateTime.fromString(message.timestamp.isoformat(), Qt.DateFormat.ISODate))
+    
+    def _show_chat_menu(self):
+        """הצגת תפריט צ'אט"""
+        menu = QMenu(self)
+        
+        # פעולות תפריט
+        new_chat_action = QAction("שיחה חדשה", self)
+        new_chat_action.triggered.connect(self._new_chat)
+        menu.addAction(new_chat_action)
+        
+        clear_chat_action = QAction("נקה שיחה נוכחית", self)
+        clear_chat_action.triggered.connect(self._clear_chat)
+        menu.addAction(clear_chat_action)
+        
+        # הוספת מפריד
+        menu.addSeparator()
+        
+        # טעינת סשנים קודמים
+        sessions = self.chat_service.get_all_sessions()
+        if sessions:
+            load_menu = QMenu("טען שיחה", self)
+            menu.addMenu(load_menu)
+            
+            for session_id, title, updated_at in sessions:
+                # הצגת תאריך בפורמט קריא
+                date_str = updated_at.strftime("%d/%m/%Y %H:%M")
+                action = QAction(f"{title} ({date_str})", self)
+                action.triggered.connect(lambda checked, sid=session_id: self._load_chat_session(sid))
+                load_menu.addAction(action)
+        
+        # הצגת התפריט
+        menu.exec(QCursor.pos())
+    
+    def _new_chat(self):
+        """יצירת שיחה חדשה"""
+        # יצירת סשן חדש
+        session = self.chat_service.create_session()
+        
+        # הוספת הודעת ברוכים הבאים
+        self.chat_service.add_message("ברוכים הבאים ל-Audio Chat Studio! במה אוכל לעזור לך היום?", "system")
+        
+        # הצגת הודעות
+        self._display_chat_messages(session)
+    
+    def _clear_chat(self):
+        """ניקוי שיחה נוכחית"""
+        # שאלת אישור
+        reply = QMessageBox.question(
+            self,
+            "אישור ניקוי",
+            "האם אתה בטוח שברצונך לנקות את השיחה הנוכחית?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # ניקוי הסשן הנוכחי
+            self.chat_service.clear_current_session()
+            
+            # ניקוי היסטוריית צ'אט
+            self.chat_history.clear_history()
+            
+            # הוספת הודעת ברוכים הבאים
+            welcome_msg = "השיחה נוקתה. במה אוכל לעזור לך?"
+            self.chat_service.add_message(welcome_msg, "system")
+            self.chat_history.add_system_message(welcome_msg)
+    
+    def _load_chat_session(self, session_id):
+        """טעינת סשן צ'אט"""
+        # טעינת הסשן
+        session = self.chat_service.load_session(session_id)
+        
+        if session:
+            # הצגת הודעות
+            self._display_chat_messages(session)
     
     def on_message_sent(self, text):
         """טיפול בשליחת הודעה מהמשתמש"""
         if text:
-            # הוספת הודעת משתמש
+            # הוספת הודעת משתמש לשירות הצ'אט
+            self.chat_service.add_message(text, "user")
+            
+            # הוספת הודעת משתמש לממשק
             self.chat_history.add_user_message(text)
             
             # סימולציה של תשובת AI
@@ -204,7 +335,7 @@ class HomePage(QWidget):
             response = "אני מבין. האם תרצה להעלות קובץ אודיו כדי שאוכל לעזור לך לעבוד עליו?"
         
         # הוספת תשובת AI אחרי השהייה קצרה
-        QTimer.singleShot(800, lambda: self.chat_history.add_ai_message(response))
+        QTimer.singleShot(800, lambda: self._add_ai_response(response))
     
     def on_message_clicked(self, message_index):
         """טיפול בלחיצה על הודעה"""
@@ -226,38 +357,44 @@ class HomePage(QWidget):
         self.recent_files_list.add_file(file_info)
         
         # הודעה בצ'אט
-        self.chat_history.add_system_message(f"הקובץ {file_info.name} הועלה בהצלחה")
+        system_msg = f"הקובץ {file_info.name} הועלה בהצלחה"
+        self.chat_service.add_message(system_msg, "system")
+        self.chat_history.add_system_message(system_msg)
         
         # הצעת פעולות על הקובץ
-        QTimer.singleShot(1000, lambda: self.chat_history.add_ai_message(
-            f"הקובץ {file_info.name} הועלה בהצלחה. מה תרצה לעשות עם הקובץ?\n\n"
-            f"- ניתוח הקובץ\n"
-            f"- תמלול הקובץ\n"
-            f"- עריכת הקובץ (הסרת רעשים, חיתוך, וכו')\n"
-            f"- המרה לפורמט אחר"
-        ))
+        ai_msg = (f"הקובץ {file_info.name} הועלה בהצלחה. מה תרצה לעשות עם הקובץ?\n\n"
+                 f"- ניתוח הקובץ\n"
+                 f"- תמלול הקובץ\n"
+                 f"- עריכת הקובץ (הסרת רעשים, חיתוך, וכו')\n"
+                 f"- המרה לפורמט אחר")
+        QTimer.singleShot(1000, lambda: self._add_ai_response(ai_msg))
     
     def on_file_upload_failed(self, file_path, error):
         """טיפול בכישלון העלאת קובץ"""
         file_name = os.path.basename(file_path)
-        self.chat_history.add_system_message(f"העלאת הקובץ {file_name} נכשלה: {error}")
+        system_msg = f"העלאת הקובץ {file_name} נכשלה: {error}"
+        self.chat_service.add_message(system_msg, "system")
+        self.chat_history.add_system_message(system_msg)
     
     def on_file_selected(self, file_info):
         """טיפול בבחירת קובץ מהרשימה"""
-        self.chat_history.add_system_message(f"נבחר הקובץ: {file_info.name}")
+        system_msg = f"נבחר הקובץ: {file_info.name}"
+        self.chat_service.add_message(system_msg, "system")
+        self.chat_history.add_system_message(system_msg)
         
         # הצעת פעולות על הקובץ
-        QTimer.singleShot(500, lambda: self.chat_history.add_ai_message(
-            f"מה תרצה לעשות עם הקובץ {file_info.name}?\n\n"
-            f"- ניתוח הקובץ\n"
-            f"- תמלול הקובץ\n"
-            f"- עריכת הקובץ (הסרת רעשים, חיתוך, וכו')\n"
-            f"- המרה לפורמט אחר"
-        ))
+        ai_msg = (f"מה תרצה לעשות עם הקובץ {file_info.name}?\n\n"
+                 f"- ניתוח הקובץ\n"
+                 f"- תמלול הקובץ\n"
+                 f"- עריכת הקובץ (הסרת רעשים, חיתוך, וכו')\n"
+                 f"- המרה לפורמט אחר")
+        QTimer.singleShot(500, lambda: self._add_ai_response(ai_msg))
     
     def on_file_play_requested(self, file_info):
         """טיפול בבקשה לנגן קובץ"""
-        self.chat_history.add_system_message(f"מנגן את הקובץ: {file_info.name}")
+        system_msg = f"מנגן את הקובץ: {file_info.name}"
+        self.chat_service.add_message(system_msg, "system")
+        self.chat_history.add_system_message(system_msg)
         
         # כאן היינו מוסיפים קוד לנגינת הקובץ
         # לדוגמה:
@@ -283,4 +420,13 @@ class HomePage(QWidget):
             self.recent_files_list.remove_file(file_info)
             
             # הודעה בצ'אט
-            self.chat_history.add_system_message(f"הקובץ {file_info.name} נמחק בהצלחה")
+            system_msg = f"הקובץ {file_info.name} נמחק בהצלחה"
+            self.chat_service.add_message(system_msg, "system")
+            self.chat_history.add_system_message(system_msg)    def
+ _add_ai_response(self, text):
+        """הוספת תשובת AI לצ'אט ולשירות"""
+        # הוספת הודעת AI לשירות הצ'אט
+        self.chat_service.add_message(text, "ai")
+        
+        # הוספת הודעת AI לממשק
+        self.chat_history.add_ai_message(text)
