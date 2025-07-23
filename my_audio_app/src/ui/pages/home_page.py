@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                            QSplitter, QFrame, QScrollArea, QTextEdit, QPushButton,
-                           QMessageBox, QMenu, QAction)
+                           QMessageBox, QMenu)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QDateTime, QTimer, QEvent
-from PyQt6.QtGui import QFont, QCursor, QIcon
+from PyQt6.QtGui import QFont, QCursor, QIcon, QAction
 import os
 from ui.components.chat import ChatHistory, ChatMessage, ChatInput
 from ui.components.file_upload import FileUploader, RecentFilesList, FileInfo
@@ -555,7 +555,8 @@ class HomePage(QWidget):
         # טעינת העמוד הקודם
         if current_page > 1:
             self._load_chat_history(page=current_page - 1, page_size=page_size)
-  def on_file_upload_started(self, file_path):
+    
+    def on_file_upload_started(self, file_path):
         """טיפול בהתחלת העלאת קובץ"""
         self.chat_history.add_system_message(f"מתחיל להעלות את הקובץ: {os.path.basename(file_path)}")
     
@@ -666,8 +667,9 @@ class HomePage(QWidget):
             # הודעה בצ'אט
             system_msg = f"הקובץ {file_info.name} נמחק בהצלחה"
             self.chat_service.add_message(system_msg, "system")
-            self.chat_history.add_system_message(system_msg)    def
- _add_ai_response(self, text):
+            self.chat_history.add_system_message(system_msg)
+    
+    def _add_ai_response(self, text):
         """הוספת תשובת AI לצ'אט ולשירות"""
         # הוספת הודעת AI לשירות הצ'אט
         self.chat_service.add_message(text, "ai")

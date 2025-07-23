@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QLabel, QMenu, QAction
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, QPushButton, QLabel, QMenu
 from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QSize
-from PyQt6.QtGui import QIcon, QKeyEvent, QTextCursor
+from PyQt6.QtGui import QIcon, QKeyEvent, QTextCursor, QAction
 
 
 class ChatInput(QWidget):
