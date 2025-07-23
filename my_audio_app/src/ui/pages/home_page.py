@@ -1,8 +1,11 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                           QSplitter, QFrame, QScrollArea, QTextEdit, QPushButton)
+                           QSplitter, QFrame, QScrollArea, QTextEdit, QPushButton,
+                           QMessageBox)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QDateTime, QTimer, QEvent
 from PyQt6.QtGui import QFont
+import os
 from ui.components.chat import ChatHistory, ChatMessage, ChatInput
+from ui.components.file_upload import FileUploader, RecentFilesList, FileInfo
 
 
 class HomePage(QWidget):
@@ -130,49 +133,20 @@ class HomePage(QWidget):
         description.setStyleSheet("color: #aaa; margin-bottom: 15px;")
         layout.addWidget(description)
         
-        # אזור העלאה (פלייסהולדר)
-        upload_area = QLabel("גרור קבצי אודיו לכאן או לחץ לבחירה")
-        # בגרסאות שונות של PyQt6 יש שמות שונים לקבועים
-        try:
-            upload_area.setAlignment(Qt.AlignCenter)
-        except AttributeError:
-            try:
-                upload_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            except AttributeError:
-                # אם שום דבר לא עובד, נשתמש בערכים מספריים
-                upload_area.setAlignment(0x0004 | 0x0080)  # AlignCenter = AlignHCenter | AlignVCenter
-        upload_area.setStyleSheet("""
-            border: 2px dashed #555;
-            border-radius: 8px;
-            padding: 30px;
-            background-color: #1e1e1e;
-            color: white;
-        """)
-        upload_area.setMinimumHeight(120)
-        layout.addWidget(upload_area)
+        # אזור העלאת קבצים
+        self.file_uploader = FileUploader()
+        self.file_uploader.file_upload_started.connect(self.on_file_upload_started)
+        self.file_uploader.file_upload_progress.connect(self.on_file_upload_progress)
+        self.file_uploader.file_upload_completed.connect(self.on_file_upload_completed)
+        self.file_uploader.file_upload_failed.connect(self.on_file_upload_failed)
+        layout.addWidget(self.file_uploader)
         
-        # רשימת קבצים אחרונים (פלייסהולדר)
-        recent_files_title = QLabel("קבצים אחרונים")
-        recent_files_title.setStyleSheet("font-weight: bold; margin-top: 20px; color: white;")
-        layout.addWidget(recent_files_title)
-        
-        recent_files_area = QScrollArea()
-        recent_files_area.setWidgetResizable(True)
-        recent_files_content = QWidget()
-        recent_files_layout = QVBoxLayout(recent_files_content)
-        # בגרסאות שונות של PyQt6 יש שמות שונים לקבועים
-        try:
-            recent_files_layout.setAlignment(Qt.AlignTop)
-        except AttributeError:
-            try:
-                recent_files_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-            except AttributeError:
-                # אם שום דבר לא עובד, נשתמש בערכים מספריים
-                recent_files_layout.setAlignment(0x0001)  # AlignTop = 0x0001
-        recent_files_layout.addWidget(QLabel("אין קבצים אחרונים להצגה"))
-        
-        recent_files_area.setWidget(recent_files_content)
-        layout.addWidget(recent_files_area, 1)  # stretch factor 1
+        # רשימת קבצים אחרונים
+        self.recent_files_list = RecentFilesList(max_files=10)
+        self.recent_files_list.file_selected.connect(self.on_file_selected)
+        self.recent_files_list.file_play_requested.connect(self.on_file_play_requested)
+        self.recent_files_list.file_delete_requested.connect(self.on_file_delete_requested)
+        layout.addWidget(self.recent_files_list, 1)  # stretch factor 1
         
         return panel
     
@@ -236,4 +210,77 @@ class HomePage(QWidget):
         """טיפול בלחיצה על הודעה"""
         message = self.chat_history.get_message(message_index)
         if message:
-            print(f"נלחצה הודעה: {message.text}")
+            print(f"נלחצה הודעה: {message.text}")  
+  def on_file_upload_started(self, file_path):
+        """טיפול בהתחלת העלאת קובץ"""
+        self.chat_history.add_system_message(f"מתחיל להעלות את הקובץ: {os.path.basename(file_path)}")
+    
+    def on_file_upload_progress(self, file_path, progress):
+        """טיפול בהתקדמות העלאת קובץ"""
+        # אפשר להוסיף כאן לוגיקה להצגת התקדמות העלאה
+        pass
+    
+    def on_file_upload_completed(self, file_info):
+        """טיפול בסיום העלאת קובץ"""
+        # הוספת הקובץ לרשימת הקבצים האחרונים
+        self.recent_files_list.add_file(file_info)
+        
+        # הודעה בצ'אט
+        self.chat_history.add_system_message(f"הקובץ {file_info.name} הועלה בהצלחה")
+        
+        # הצעת פעולות על הקובץ
+        QTimer.singleShot(1000, lambda: self.chat_history.add_ai_message(
+            f"הקובץ {file_info.name} הועלה בהצלחה. מה תרצה לעשות עם הקובץ?\n\n"
+            f"- ניתוח הקובץ\n"
+            f"- תמלול הקובץ\n"
+            f"- עריכת הקובץ (הסרת רעשים, חיתוך, וכו')\n"
+            f"- המרה לפורמט אחר"
+        ))
+    
+    def on_file_upload_failed(self, file_path, error):
+        """טיפול בכישלון העלאת קובץ"""
+        file_name = os.path.basename(file_path)
+        self.chat_history.add_system_message(f"העלאת הקובץ {file_name} נכשלה: {error}")
+    
+    def on_file_selected(self, file_info):
+        """טיפול בבחירת קובץ מהרשימה"""
+        self.chat_history.add_system_message(f"נבחר הקובץ: {file_info.name}")
+        
+        # הצעת פעולות על הקובץ
+        QTimer.singleShot(500, lambda: self.chat_history.add_ai_message(
+            f"מה תרצה לעשות עם הקובץ {file_info.name}?\n\n"
+            f"- ניתוח הקובץ\n"
+            f"- תמלול הקובץ\n"
+            f"- עריכת הקובץ (הסרת רעשים, חיתוך, וכו')\n"
+            f"- המרה לפורמט אחר"
+        ))
+    
+    def on_file_play_requested(self, file_info):
+        """טיפול בבקשה לנגן קובץ"""
+        self.chat_history.add_system_message(f"מנגן את הקובץ: {file_info.name}")
+        
+        # כאן היינו מוסיפים קוד לנגינת הקובץ
+        # לדוגמה:
+        # self.audio_player.play(file_info.path)
+    
+    def on_file_delete_requested(self, file_info):
+        """טיפול בבקשה למחוק קובץ"""
+        # שאלת אישור
+        reply = QMessageBox.question(
+            self,
+            "אישור מחיקה",
+            f"האם אתה בטוח שברצונך למחוק את הקובץ {file_info.name}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # מחיקת הקובץ
+            # בפרויקט אמיתי, כאן היינו מוחקים את הקובץ מהשרת או מהדיסק
+            # os.remove(file_info.path)
+            
+            # הסרת הקובץ מהרשימה
+            self.recent_files_list.remove_file(file_info)
+            
+            # הודעה בצ'אט
+            self.chat_history.add_system_message(f"הקובץ {file_info.name} נמחק בהצלחה")

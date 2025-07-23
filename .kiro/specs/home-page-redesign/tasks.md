@@ -43,7 +43,9 @@
   - Connect signals to HomePage
   - _Requirements: 1.2, 1.4, 4.2_
 
-- [ ] 5. Implement ChatMessage component
+- [x] 5. Implement ChatMessage component
+
+
   - Create ChatMessage class for individual messages
   - Design different styles for user, AI, and system messages
   - Add timestamp display
@@ -51,7 +53,10 @@
   - Test with different message lengths
   - _Requirements: 1.2, 1.4, 4.2_
 
-- [ ] 6. Implement FileUploader component
+- [x] 6. Implement FileUploader component
+
+
+
   - Create FileUploader class for uploading audio files
   - Implement drag and drop functionality
   - Add file selection dialog
