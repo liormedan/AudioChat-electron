@@ -1,13 +1,19 @@
 import os
 import json
 import sqlite3
+from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from PyQt6.QtCore import QDateTime
+from ..utils.file_utils import get_file_metadata, extract_audio_duration
 
-from ui.components.file_upload.file_info import FileInfo
-from utils.file_utils import get_file_metadata, extract_audio_duration, create_file_info_from_path
-
+@dataclass
+class FileInfo:
+    name: str
+    path: str
+    size: int
+    format: str
+    duration: int
+    upload_date: datetime
 
 class FileService:
     """שירות לניהול מידע על קבצי אודיו"""
@@ -247,34 +253,6 @@ class FileService:
             print(f"שגיאה בטעינת מידע על קובץ: {e}")
             return None
     
-    def extract_file_info(self, file_path: str) -> Optional[FileInfo]:
-        """
-        חילוץ מידע על קובץ אודיו
-        
-        Args:
-            file_path (str): נתיב הקובץ
-            
-        Returns:
-            Optional[FileInfo]: אובייקט FileInfo או None אם הקובץ לא קיים או לא ניתן לחלץ מידע
-        """
-        try:
-            # שימוש בפונקציית העזר לחילוץ מידע מורחב
-            file_info = create_file_info_from_path(file_path)
-            
-            if file_info:
-                # חילוץ מטא-דאטה נוסף
-                metadata = get_file_metadata(file_path)
-                
-                # עדכון משך הקובץ אם יש
-                duration = extract_audio_duration(file_path)
-                if duration is not None:
-                    file_info.duration = duration
-            
-            return file_info
-        
-        except Exception as e:
-            print(f"שגיאה בחילוץ מידע על קובץ: {e}")
-            return None
     
     def test_with_sample_files(self, sample_files: List[str]) -> Dict[str, Any]:
         """

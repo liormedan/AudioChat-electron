@@ -6,9 +6,14 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
+import sys
 
-from services.export_service import ExportService
-from models.audio_export import AudioExport
+# Add project root to the Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+sys.path.insert(0, project_root)
+
+from my_audio_app.src.services.export_service import ExportService
+from my_audio_app.src.models.audio_export import AudioExport
 
 
 class TestExportService(unittest.TestCase):
@@ -51,17 +56,16 @@ class TestExportService(unittest.TestCase):
         # מחיקת תיקיית הבדיקות
         shutil.rmtree(self.test_dir)
     
-    def test_create_export(self):
+    @patch('my_audio_app.src.services.file_service.FileService', new_callable=MagicMock)
+    def test_create_export(self, mock_file_service):
         """בדיקת יצירת ייצוא"""
-        # יצירת קובץ מקור לדוגמה
-        source_path = os.path.join(self.test_dir, "source_file.mp3")
-        with open(source_path, "wb") as f:
-            f.write(b"Test audio content")
-        
+        # הגדרת המוק
+        mock_file_service.return_value.get_file_info.return_value = self.file_service_mock.get_file_info.return_value
+
         # יצירת ייצוא
         settings = {"bitrate": "320", "sample_rate": "44.1"}
         export = self.export_service.create_export(
-            source_file_id=source_path,  # שימוש בנתיב הקובץ במקום במזהה
+            source_file_id="source-123",
             format="mp3",
             settings=settings,
             name="test_export.mp3"
@@ -71,7 +75,7 @@ class TestExportService(unittest.TestCase):
         self.assertIsNotNone(export)
         self.assertEqual(export.name, "test_export.mp3")
         self.assertEqual(export.format, "mp3")
-        self.assertEqual(export.source_file_id, source_path)
+        self.assertEqual(export.source_file_id, "source-123")
         self.assertEqual(export.status, "processing")
         self.assertEqual(export.settings, settings)
         

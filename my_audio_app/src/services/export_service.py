@@ -8,7 +8,7 @@ import random
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 
-from models.audio_export import AudioExport
+from ..models.audio_export import AudioExport
 
 
 class ExportService:
@@ -255,7 +255,7 @@ class ExportService:
         # בפרויקט אמיתי, כאן היינו משתמשים בשירות הקבצים
         # אבל בבדיקות אנחנו משתמשים במוק
         try:
-            from services.file_service import FileService
+            from .file_service import FileService
             file_service = FileService()
             source_file = file_service.get_file_info(source_file_id)
         except (ImportError, AttributeError):
