@@ -1,0 +1,12 @@
+<!-- Placeholder for custom light theme -->
+<theme>
+    <name>Custom Light</name>
+    <author>Cline</author>
+    <version>1.0</version>
+    <colors>
+        <primary>#FFFFFF</primary>
+        <secondary>#F0F0F0</secondary>
+        <accent>#007BFF</accent>
+        <text>#000000</text>
+    </colors>
+</theme>
