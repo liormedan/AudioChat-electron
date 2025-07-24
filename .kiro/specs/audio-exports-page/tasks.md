@@ -31,7 +31,7 @@
   - _Requirements: 1.1, 2.1, 5.1, 5.3_
 
 - [-] 4. Implement ExportsList component
-
+     **DONE - AND APDATED GITHUB*
   - Create table view for displaying exports
   - Add columns for key information (name, format, duration, size, date, status)
   - Implement sorting and filtering
@@ -39,8 +39,11 @@
   - Implement empty state display
   - _Requirements: 1.1, 1.2, 1.4, 1.5, 5.3_
 
-- [ ] 5. Implement ExportDetails component
+- [x] 5. Implement ExportDetails component
 
+
+
+    **DONE - AND APDATED GITHUB*
   - Create form layout for displaying export details
   - Add waveform visualization placeholder
   - Implement export settings display

@@ -8,7 +8,7 @@ import random
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 
-from ..models.audio_export import AudioExport
+from models.audio_export import AudioExport
 
 
 class ExportService:

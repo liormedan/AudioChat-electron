@@ -1,7 +1,15 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                            QListWidget, QListWidgetItem, QPushButton, QComboBox,
-                           QGroupBox, QFormLayout, QSpinBox, QCheckBox)
-from PyQt6.QtCore import Qt, pyqtSignal
+                           QGroupBox, QFormLayout, QSpinBox, QCheckBox, QSplitter,
+                           QMessageBox, QFileDialog)
+from PyQt6.QtCore import Qt, pyqtSignal, QSize
+from PyQt6.QtGui import QIcon, QPixmap
+import os
+from datetime import datetime
+
+from ui.components.exports import ExportDetails
+from models.audio_export import AudioExport
+from services.export_service import ExportService
 
 
 class AudioExportPage(QWidget):
@@ -59,6 +67,9 @@ class AudioExportPage(QWidget):
             }
         """)
         
+        # יצירת שירותים
+        self.export_service = ExportService()
+        
         # יצירת הלייאאוט הראשי
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
@@ -74,31 +85,32 @@ class AudioExportPage(QWidget):
         description.setStyleSheet("color: #aaa; margin-bottom: 15px;")
         main_layout.addWidget(description)
         
-        # יצירת לייאאוט לשני חלקים
-        content_layout = QHBoxLayout()
-        content_layout.setSpacing(20)
+        # יצירת ספליטר לחלוקת המסך
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
         
         # חלק שמאלי - רשימת קבצים לייצוא
-        content_layout.addWidget(self._create_files_list(), 1)
+        self.splitter.addWidget(self._create_files_list())
         
-        # חלק ימני - הגדרות ייצוא
-        content_layout.addWidget(self._create_export_settings(), 1)
+        # חלק ימני - פרטי ייצוא
+        self.export_details = ExportDetails()
+        self.export_details.export_updated.connect(self._on_export_updated)
+        self.export_details.export_deleted.connect(self._on_export_deleted)
+        self.export_details.export_downloaded.connect(self._on_export_downloaded)
+        self.splitter.addWidget(self.export_details)
         
-        main_layout.addLayout(content_layout)
+        # הגדרת יחס גדלים התחלתי (60% לרשימה, 40% לפרטים)
+        self.splitter.setSizes([600, 400])
+        
+        main_layout.addWidget(self.splitter)
         
         # כפתורי פעולה
         actions_layout = QHBoxLayout()
         actions_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
         
-        # כפתור ביטול
-        cancel_button = QPushButton("Cancel")
-        cancel_button.setFixedWidth(120)
-        actions_layout.addWidget(cancel_button)
-        
-        # כפתור ייצוא
-        export_button = QPushButton("Export Files")
-        export_button.setFixedWidth(120)
-        export_button.setStyleSheet("""
+        # כפתור יצירת ייצוא חדש
+        new_export_button = QPushButton("New Export")
+        new_export_button.setFixedWidth(120)
+        new_export_button.setStyleSheet("""
             QPushButton {
                 background-color: #2196F3;
                 color: white;
@@ -111,129 +123,220 @@ class AudioExportPage(QWidget):
                 background-color: #1976D2;
             }
         """)
-        actions_layout.addWidget(export_button)
+        new_export_button.clicked.connect(self._on_new_export_clicked)
+        actions_layout.addWidget(new_export_button)
         
         main_layout.addLayout(actions_layout)
         
-        # מרווח בסוף
-        main_layout.addStretch()
+        # טעינת ייצואים לדוגמה
+        self._load_sample_exports()
     
     def _create_files_list(self):
-        """יצירת רשימת קבצים לייצוא"""
-        group_box = QGroupBox("Files to Export")
+        """יצירת רשימת ייצואים"""
+        group_box = QGroupBox("Exports")
         
         layout = QVBoxLayout(group_box)
         
-        # רשימת קבצים
-        self.files_list = QListWidget()
+        # סרגל חיפוש
+        search_layout = QHBoxLayout()
+        search_label = QLabel("Search:")
+        self.search_input = QComboBox()
+        self.search_input.setEditable(True)
+        self.search_input.setPlaceholderText("Search exports...")
+        self.search_input.setMinimumWidth(200)
         
-        # הוספת קבצי דוגמה
-        sample_files = [
-            "Interview_001.mp3",
-            "Voice_Note_123.wav",
-            "Meeting_Recording.flac",
-            "Audio_Book_Ch1.mp3",
-            "Podcast_Episode5.mp3",
-        ]
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.search_input, 1)
         
-        for file in sample_files:
-            item = QListWidgetItem(file)
-            item.setCheckState(Qt.CheckState.Checked)
-            self.files_list.addItem(item)
+        layout.addLayout(search_layout)
         
-        layout.addWidget(self.files_list)
+        # רשימת ייצואים
+        self.exports_list = QListWidget()
+        self.exports_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.exports_list.itemClicked.connect(self._on_export_selected)
+        
+        layout.addWidget(self.exports_list, 1)  # stretch factor 1
         
         # כפתורי פעולה
         buttons_layout = QHBoxLayout()
         
-        add_button = QPushButton("Add Files")
-        select_all_button = QPushButton("Select All")
-        clear_button = QPushButton("Clear")
+        refresh_button = QPushButton("Refresh")
+        refresh_button.clicked.connect(self._load_sample_exports)
         
-        buttons_layout.addWidget(add_button)
-        buttons_layout.addWidget(select_all_button)
-        buttons_layout.addWidget(clear_button)
+        filter_button = QPushButton("Filter")
+        filter_button.setCheckable(True)
+        
+        buttons_layout.addWidget(refresh_button)
+        buttons_layout.addWidget(filter_button)
+        buttons_layout.addStretch()
         
         layout.addLayout(buttons_layout)
         
         return group_box
+        
+    def _on_export_updated(self, export_id):
+        """
+        טיפול בעדכון ייצוא
+        
+        Args:
+            export_id (str): מזהה הייצוא שעודכן
+        """
+        # בפרויקט אמיתי, כאן היינו מעדכנים את הייצוא במסד הנתונים
+        print(f"Export updated: {export_id}")
     
-    def _create_export_settings(self):
-        """יצירת הגדרות ייצוא"""
-        group_box = QGroupBox("Export Settings")
+    def _on_export_deleted(self, export_id):
+        """
+        טיפול במחיקת ייצוא
         
-        layout = QVBoxLayout(group_box)
+        Args:
+            export_id (str): מזהה הייצוא שנמחק
+        """
+        # מחיקת הייצוא מהשירות
+        success = self.export_service.delete_export(export_id)
         
-        # טופס הגדרות
-        form_layout = QFormLayout()
+        if success:
+            # הצגת הודעת הצלחה
+            QMessageBox.information(
+                self,
+                "Export Deleted",
+                "The export has been successfully deleted."
+            )
+            
+            # רענון רשימת הייצואים
+            self._load_sample_exports()
+            
+            # בדיקה אם יש ייצואים נוספים
+            exports = self.export_service.get_all_exports()
+            if exports:
+                # בחירת הייצוא הראשון
+                self.export_details.set_export(exports[0])
+            else:
+                # אין ייצואים, ניקוי פרטי הייצוא
+                self.export_details.set_export(None)
+        else:
+            # הצגת הודעת שגיאה
+            QMessageBox.critical(
+                self,
+                "Delete Failed",
+                "Failed to delete the export. It may be in processing state or no longer exists."
+            )
+    
+    def _on_export_downloaded(self, export_id):
+        """
+        טיפול בהורדת ייצוא
         
-        # פורמט ייצוא
-        self.format_combo = QComboBox()
-        self.format_combo.addItems(["MP3", "WAV", "FLAC", "OGG", "M4A"])
-        form_layout.addRow("Export Format:", self.format_combo)
+        Args:
+            export_id (str): מזהה הייצוא שהורד
+        """
+        # בפרויקט אמיתי, כאן היינו מעדכנים סטטיסטיקות הורדה וכו'
+        print(f"Export downloaded: {export_id}")
+    
+    def _on_new_export_clicked(self):
+        """טיפול בלחיצה על כפתור יצירת ייצוא חדש"""
+        # הצגת הודעה שהפונקציונליות תיושם בעתיד (משימה 6)
+        QMessageBox.information(
+            self,
+            "Coming Soon",
+            "The Export Dialog functionality will be implemented in the next phase (Task 6).\n\n"
+            "This will allow you to select source files and configure export settings."
+        )
+    
+    def _on_export_selected(self, item):
+        """
+        טיפול בבחירת ייצוא מהרשימה
         
-        # איכות
-        self.quality_combo = QComboBox()
-        self.quality_combo.addItems(["Low", "Medium", "High", "Very High"])
-        self.quality_combo.setCurrentIndex(2)  # High by default
-        form_layout.addRow("Quality:", self.quality_combo)
+        Args:
+            item (QListWidgetItem): הפריט שנבחר
+        """
+        # קבלת מזהה הייצוא מהפריט
+        export_id = item.data(Qt.ItemDataRole.UserRole)
         
-        # קצב סיביות
-        self.bitrate_combo = QComboBox()
-        self.bitrate_combo.addItems(["128 kbps", "192 kbps", "256 kbps", "320 kbps"])
-        self.bitrate_combo.setCurrentIndex(2)  # 256 kbps by default
-        form_layout.addRow("Bitrate:", self.bitrate_combo)
+        # קבלת הייצוא מהשירות
+        export = self.export_service.get_export_by_id(export_id)
         
-        # קצב דגימה
-        self.sample_rate_combo = QComboBox()
-        self.sample_rate_combo.addItems(["44.1 kHz", "48 kHz", "96 kHz"])
-        self.sample_rate_combo.setCurrentIndex(1)  # 48 kHz by default
-        form_layout.addRow("Sample Rate:", self.sample_rate_combo)
+        # הצגת פרטי הייצוא
+        if export:
+            self.export_details.set_export(export)
+    
+    def _load_sample_exports(self):
+        """טעינת ייצואים לדוגמה"""
+        # קבלת כל הייצואים מהשירות
+        exports = self.export_service.get_all_exports()
         
-        # ערוצים
-        self.channels_combo = QComboBox()
-        self.channels_combo.addItems(["Mono (1)", "Stereo (2)"])
-        self.channels_combo.setCurrentIndex(1)  # Stereo by default
-        form_layout.addRow("Channels:", self.channels_combo)
+        # אם אין ייצואים, יצירת ייצואים לדוגמה
+        if not exports:
+            self._create_sample_exports()
+            exports = self.export_service.get_all_exports()
         
-        layout.addLayout(form_layout)
+        # עדכון רשימת הייצואים
+        self.exports_list.clear()
         
-        # הגדרות נוספות
-        additional_settings = QGroupBox("Additional Settings")
-        additional_layout = QVBoxLayout(additional_settings)
+        for export in exports:
+            item = QListWidgetItem()
+            item.setText(f"{export.name} ({export.format.upper()})")
+            item.setData(Qt.ItemDataRole.UserRole, export.id)
+            
+            # הוספת סטטוס לטקסט
+            status_symbol = "✓" if export.status == "completed" else "⏳" if export.status == "processing" else "❌"
+            item.setText(f"{status_symbol} {export.name} ({export.format.upper()})")
+            
+            # הוספת מידע נוסף כטולטיפ
+            item.setToolTip(
+                f"Name: {export.name}\n"
+                f"Format: {export.format.upper()}\n"
+                f"Size: {export.size_formatted}\n"
+                f"Duration: {export.duration_formatted}\n"
+                f"Created: {export.created_at_formatted}\n"
+                f"Status: {export.status.capitalize()}"
+            )
+            
+            self.exports_list.addItem(item)
         
-        # נרמול עוצמה
-        self.normalize_check = QCheckBox("Normalize Volume")
-        self.normalize_check.setChecked(True)
-        additional_layout.addWidget(self.normalize_check)
+        # בחירת ייצוא ראשון להצגה
+        if exports and self.exports_list.count() > 0:
+            self.exports_list.setCurrentRow(0)
+            self.export_details.set_export(exports[0])
+    
+    def _create_sample_exports(self):
+        """יצירת ייצואים לדוגמה"""
+        # יצירת ייצוא MP3
+        self.export_service.create_export(
+            source_file_id="sample1",
+            format="mp3",
+            name="Interview_001.mp3",
+            settings={
+                "bitrate": "320 kbps",
+                "sample_rate": "48 kHz",
+                "channels": "Stereo (2)",
+                "normalize": True,
+                "noise_reduction": False
+            }
+        )
         
-        # הסרת רעשים
-        self.noise_reduction_check = QCheckBox("Apply Noise Reduction")
-        additional_layout.addWidget(self.noise_reduction_check)
+        # יצירת ייצוא WAV
+        self.export_service.create_export(
+            source_file_id="sample2",
+            format="wav",
+            name="Voice_Note_123.wav",
+            settings={
+                "bitrate": "N/A",
+                "sample_rate": "44.1 kHz",
+                "channels": "Mono (1)",
+                "normalize": False,
+                "noise_reduction": True
+            }
+        )
         
-        # הוספת מטא-דאטה
-        self.metadata_check = QCheckBox("Include Metadata")
-        self.metadata_check.setChecked(True)
-        additional_layout.addWidget(self.metadata_check)
-        
-        # יצירת תיקיות לפי תאריך
-        self.folders_check = QCheckBox("Create Date-based Folders")
-        additional_layout.addWidget(self.folders_check)
-        
-        layout.addWidget(additional_settings)
-        
-        # תיקיית יעד
-        destination_layout = QHBoxLayout()
-        destination_layout.addWidget(QLabel("Destination:"))
-        
-        destination_path = QLabel("C:/Users/User/Music/Exports")
-        destination_path.setStyleSheet("color: #aaa;")
-        destination_layout.addWidget(destination_path, 1)
-        
-        browse_button = QPushButton("Browse...")
-        browse_button.setFixedWidth(100)
-        destination_layout.addWidget(browse_button)
-        
-        layout.addLayout(destination_layout)
-        
-        return group_box
+        # יצירת ייצוא FLAC
+        self.export_service.create_export(
+            source_file_id="sample3",
+            format="flac",
+            name="Meeting_Recording.flac",
+            settings={
+                "bitrate": "N/A",
+                "sample_rate": "96 kHz",
+                "channels": "Stereo (2)",
+                "normalize": True,
+                "noise_reduction": True
+            }
+        )
