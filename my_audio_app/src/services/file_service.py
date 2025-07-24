@@ -1,9 +1,10 @@
 import os
 import json
 import sqlite3
+import shutil
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from utils.file_utils import get_file_metadata, extract_audio_duration
 from ui.components.file_upload.file_info import FileInfo
 
@@ -331,6 +332,167 @@ class FileService:
         
         return results
         
+    def copy_file(self, source_path: str, destination_path: str) -> bool:
+        """
+        העתקת קובץ ממיקום אחד לאחר
+        
+        Args:
+            source_path (str): נתיב הקובץ המקורי
+            destination_path (str): נתיב היעד
+            
+        Returns:
+            bool: האם ההעתקה הצליחה
+        """
+        try:
+            # וידוא שתיקיית היעד קיימת
+            destination_dir = os.path.dirname(destination_path)
+            if destination_dir and not os.path.exists(destination_dir):
+                os.makedirs(destination_dir, exist_ok=True)
+            
+            # העתקת הקובץ
+            shutil.copy2(source_path, destination_path)
+            return True
+        
+        except Exception as e:
+            print(f"שגיאה בהעתקת קובץ: {e}")
+            return False
+    
+    def rename_file(self, file_path: str, new_name: str) -> Tuple[bool, str]:
+        """
+        שינוי שם קובץ
+        
+        Args:
+            file_path (str): נתיב הקובץ הנוכחי
+            new_name (str): השם החדש (ללא נתיב)
+            
+        Returns:
+            Tuple[bool, str]: האם השינוי הצליח והנתיב החדש
+        """
+        try:
+            if not os.path.exists(file_path):
+                return False, ""
+            
+            # שמירת הסיומת המקורית
+            _, ext = os.path.splitext(file_path)
+            
+            # וידוא שהשם החדש כולל סיומת
+            if not os.path.splitext(new_name)[1]:
+                new_name = f"{new_name}{ext}"
+            
+            # יצירת נתיב חדש
+            directory = os.path.dirname(file_path)
+            new_path = os.path.join(directory, new_name)
+            
+            # בדיקה אם הקובץ החדש כבר קיים
+            if os.path.exists(new_path) and new_path != file_path:
+                return False, ""
+            
+            # שינוי שם הקובץ
+            os.rename(file_path, new_path)
+            return True, new_path
+        
+        except Exception as e:
+            print(f"שגיאה בשינוי שם קובץ: {e}")
+            return False, ""
+    
+    def delete_file_from_disk(self, file_path: str) -> bool:
+        """
+        מחיקת קובץ מהדיסק
+        
+        Args:
+            file_path (str): נתיב הקובץ למחיקה
+            
+        Returns:
+            bool: האם המחיקה הצליחה
+        """
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                return True
+            return False
+        
+        except Exception as e:
+            print(f"שגיאה במחיקת קובץ: {e}")
+            return False
+    
+    def validate_file_name(self, file_name: str) -> Tuple[bool, str]:
+        """
+        בדיקת תקינות שם קובץ
+        
+        Args:
+            file_name (str): שם הקובץ לבדיקה
+            
+        Returns:
+            Tuple[bool, str]: האם השם תקין והודעת שגיאה אם לא
+        """
+        # בדיקה ששם הקובץ לא ריק
+        if not file_name or file_name.strip() == "":
+            return False, "File name cannot be empty"
+        
+        # בדיקת תווים אסורים
+        invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+        for char in invalid_chars:
+            if char in file_name:
+                return False, f"File name contains invalid characters: {', '.join(invalid_chars)}"
+        
+        # בדיקת אורך מקסימלי
+        if len(file_name) > 255:
+            return False, "File name is too long (maximum 255 characters)"
+        
+        return True, ""
+    
+    def batch_operation(self, file_paths: List[str], operation: str, **kwargs) -> Dict[str, Any]:
+        """
+        ביצוע פעולה על מספר קבצים
+        
+        Args:
+            file_paths (List[str]): רשימת נתיבי קבצים
+            operation (str): סוג הפעולה ('copy', 'delete', 'rename')
+            **kwargs: פרמטרים נוספים לפעולה
+            
+        Returns:
+            Dict[str, Any]: תוצאות הפעולה
+        """
+        results = {
+            "success_count": 0,
+            "failed_count": 0,
+            "errors": []
+        }
+        
+        for file_path in file_paths:
+            try:
+                if operation == "copy":
+                    destination = kwargs.get("destination", "")
+                    if not destination:
+                        results["errors"].append(f"No destination specified for {file_path}")
+                        results["failed_count"] += 1
+                        continue
+                    
+                    # יצירת נתיב יעד מלא
+                    dest_path = os.path.join(destination, os.path.basename(file_path))
+                    if self.copy_file(file_path, dest_path):
+                        results["success_count"] += 1
+                    else:
+                        results["failed_count"] += 1
+                        results["errors"].append(f"Failed to copy {file_path}")
+                
+                elif operation == "delete":
+                    if self.delete_file_from_disk(file_path):
+                        results["success_count"] += 1
+                    else:
+                        results["failed_count"] += 1
+                        results["errors"].append(f"Failed to delete {file_path}")
+                
+                else:
+                    results["failed_count"] += 1
+                    results["errors"].append(f"Unknown operation: {operation}")
+            
+            except Exception as e:
+                results["failed_count"] += 1
+                results["errors"].append(f"Error processing {file_path}: {str(e)}")
+        
+        return results
+
     def test_with_various_formats(self) -> Dict[str, Any]:
         """
         בדיקת השירות עם מגוון פורמטים של קבצי אודיו

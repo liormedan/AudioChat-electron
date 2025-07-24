@@ -1,15 +1,17 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                            QListWidget, QListWidgetItem, QPushButton, QComboBox,
                            QGroupBox, QFormLayout, QSpinBox, QCheckBox, QSplitter,
-                           QMessageBox, QFileDialog)
-from PyQt6.QtCore import Qt, pyqtSignal, QSize
-from PyQt6.QtGui import QIcon, QPixmap
+                           QMessageBox, QFileDialog, QMenu, QDialog, QProgressDialog)
+from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint
+from PyQt6.QtGui import QIcon, QPixmap, QAction
 import os
 from datetime import datetime
+from typing import List, Dict, Any
 
 from ui.components.exports import ExportDetails, ExportDialog
 from models.audio_export import AudioExport
 from services.export_service import ExportService
+from services.file_service import FileService
 
 
 class AudioExportPage(QWidget):
@@ -65,10 +67,22 @@ class AudioExportPage(QWidget):
                 width: 16px;
                 height: 16px;
             }
+            QMenu {
+                background-color: #1e1e1e;
+                color: white;
+                border: 1px solid #333;
+            }
+            QMenu::item {
+                padding: 5px 20px 5px 20px;
+            }
+            QMenu::item:selected {
+                background-color: #2196F3;
+            }
         """)
         
         # יצירת שירותים
         self.export_service = ExportService()
+        self.file_service = FileService()
         
         # יצירת הלייאאוט הראשי
         main_layout = QVBoxLayout(self)
@@ -152,7 +166,7 @@ class AudioExportPage(QWidget):
         
         # רשימת ייצואים
         self.exports_list = QListWidget()
-        self.exports_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        self.exports_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)  # אפשר בחירה מרובה
         self.exports_list.itemClicked.connect(self._on_export_selected)
         
         layout.addWidget(self.exports_list, 1)  # stretch factor 1
@@ -166,9 +180,15 @@ class AudioExportPage(QWidget):
         filter_button = QPushButton("Filter")
         filter_button.setCheckable(True)
         
+        # כפתורי פעולות מרובות
+        self.batch_actions_button = QPushButton("Batch Actions ▼")
+        self.batch_actions_button.setEnabled(False)  # מושבת בהתחלה
+        self.batch_actions_button.clicked.connect(self._show_batch_actions)
+        
         buttons_layout.addWidget(refresh_button)
         buttons_layout.addWidget(filter_button)
         buttons_layout.addStretch()
+        buttons_layout.addWidget(self.batch_actions_button)
         
         layout.addLayout(buttons_layout)
         
@@ -276,15 +296,26 @@ class AudioExportPage(QWidget):
         Args:
             item (QListWidgetItem): הפריט שנבחר
         """
-        # קבלת מזהה הייצוא מהפריט
-        export_id = item.data(Qt.ItemDataRole.UserRole)
+        # בדיקה אם יש פריטים נבחרים
+        selected_items = self.exports_list.selectedItems()
         
-        # קבלת הייצוא מהשירות
-        export = self.export_service.get_export_by_id(export_id)
+        # הפעלת/השבתת כפתור פעולות מרובות
+        self.batch_actions_button.setEnabled(len(selected_items) > 1)
         
-        # הצגת פרטי הייצוא
-        if export:
-            self.export_details.set_export(export)
+        # אם נבחר פריט אחד בלבד, הצג את פרטיו
+        if len(selected_items) == 1:
+            # קבלת מזהה הייצוא מהפריט
+            export_id = item.data(Qt.ItemDataRole.UserRole)
+            
+            # קבלת הייצוא מהשירות
+            export = self.export_service.get_export_by_id(export_id)
+            
+            # הצגת פרטי הייצוא
+            if export:
+                self.export_details.set_export(export)
+        else:
+            # אם נבחרו מספר פריטים, נקה את פרטי הייצוא
+            self.export_details.set_export(None)
     
     def _load_sample_exports(self):
         """טעינת ייצואים לדוגמה"""
@@ -324,6 +355,184 @@ class AudioExportPage(QWidget):
         if exports and self.exports_list.count() > 0:
             self.exports_list.setCurrentRow(0)
             self.export_details.set_export(exports[0])
+    
+    def _show_batch_actions(self):
+        """הצגת תפריט פעולות מרובות"""
+        # יצירת תפריט
+        menu = QMenu(self)
+        
+        # הוספת פעולות
+        download_action = QAction("Download Selected", self)
+        download_action.triggered.connect(self._batch_download)
+        
+        delete_action = QAction("Delete Selected", self)
+        delete_action.triggered.connect(self._batch_delete)
+        
+        # הוספת הפעולות לתפריט
+        menu.addAction(download_action)
+        menu.addAction(delete_action)
+        
+        # הצגת התפריט
+        menu.exec(self.batch_actions_button.mapToGlobal(
+            QPoint(0, self.batch_actions_button.height())
+        ))
+    
+    def _get_selected_exports(self) -> List[AudioExport]:
+        """
+        קבלת רשימת הייצואים הנבחרים
+        
+        Returns:
+            List[AudioExport]: רשימת אובייקטי הייצוא הנבחרים
+        """
+        selected_items = self.exports_list.selectedItems()
+        exports = []
+        
+        for item in selected_items:
+            export_id = item.data(Qt.ItemDataRole.UserRole)
+            export = self.export_service.get_export_by_id(export_id)
+            if export:
+                exports.append(export)
+        
+        return exports
+    
+    def _batch_download(self):
+        """הורדת מספר ייצואים בבת אחת"""
+        # קבלת הייצואים הנבחרים
+        exports = self._get_selected_exports()
+        
+        if not exports:
+            return
+        
+        # בחירת תיקיית יעד
+        destination_dir = QFileDialog.getExistingDirectory(
+            self,
+            "Select Destination Folder",
+            os.path.expanduser("~"),
+            QFileDialog.Option.ShowDirsOnly
+        )
+        
+        if not destination_dir:
+            return
+        
+        # יצירת דיאלוג התקדמות
+        progress = QProgressDialog("Downloading exports...", "Cancel", 0, len(exports), self)
+        progress.setWindowTitle("Batch Download")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        
+        # העתקת הקבצים
+        success_count = 0
+        failed_exports = []
+        
+        for i, export in enumerate(exports):
+            # עדכון דיאלוג ההתקדמות
+            progress.setValue(i)
+            progress.setLabelText(f"Downloading {export.name}...")
+            
+            # בדיקה אם המשתמש ביטל
+            if progress.wasCanceled():
+                break
+            
+            # יצירת נתיב יעד
+            dest_path = os.path.join(destination_dir, export.name)
+            
+            # העתקת הקובץ
+            if self.file_service.copy_file(export.path, dest_path):
+                success_count += 1
+            else:
+                failed_exports.append(export.name)
+        
+        # סיום דיאלוג ההתקדמות
+        progress.setValue(len(exports))
+        
+        # הצגת סיכום
+        if failed_exports:
+            QMessageBox.warning(
+                self,
+                "Download Summary",
+                f"Downloaded {success_count} of {len(exports)} exports.\n\n"
+                f"Failed to download:\n{', '.join(failed_exports)}"
+            )
+        else:
+            QMessageBox.information(
+                self,
+                "Download Complete",
+                f"Successfully downloaded {success_count} exports to:\n{destination_dir}"
+            )
+    
+    def _batch_delete(self):
+        """מחיקת מספר ייצואים בבת אחת"""
+        # קבלת הייצואים הנבחרים
+        exports = self._get_selected_exports()
+        
+        if not exports:
+            return
+        
+        # אישור מחיקה
+        reply = QMessageBox.question(
+            self,
+            "Confirm Delete",
+            f"Are you sure you want to delete {len(exports)} exports?\n\nThis will permanently delete the files from disk.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        
+        # יצירת דיאלוג התקדמות
+        progress = QProgressDialog("Deleting exports...", "Cancel", 0, len(exports), self)
+        progress.setWindowTitle("Batch Delete")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        
+        # מחיקת הקבצים
+        success_count = 0
+        failed_exports = []
+        
+        for i, export in enumerate(exports):
+            # עדכון דיאלוג ההתקדמות
+            progress.setValue(i)
+            progress.setLabelText(f"Deleting {export.name}...")
+            
+            # בדיקה אם המשתמש ביטל
+            if progress.wasCanceled():
+                break
+            
+            # מחיקת הקובץ מהדיסק
+            file_deleted = self.file_service.delete_file_from_disk(export.path)
+            
+            # מחיקת הרשומה ממסד הנתונים
+            db_deleted = self.export_service.delete_export(export.id)
+            
+            if file_deleted and db_deleted:
+                success_count += 1
+            else:
+                failed_exports.append(export.name)
+        
+        # סיום דיאלוג ההתקדמות
+        progress.setValue(len(exports))
+        
+        # רענון רשימת הייצואים
+        self._load_sample_exports()
+        
+        # ניקוי פרטי הייצוא
+        self.export_details.set_export(None)
+        
+        # הצגת סיכום
+        if failed_exports:
+            QMessageBox.warning(
+                self,
+                "Delete Summary",
+                f"Deleted {success_count} of {len(exports)} exports.\n\n"
+                f"Failed to delete:\n{', '.join(failed_exports)}"
+            )
+        else:
+            QMessageBox.information(
+                self,
+                "Delete Complete",
+                f"Successfully deleted {success_count} exports."
+            )
     
     def _create_sample_exports(self):
         """יצירת ייצואים לדוגמה"""

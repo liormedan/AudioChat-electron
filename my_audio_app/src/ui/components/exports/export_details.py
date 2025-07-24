@@ -1,14 +1,16 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                            QFormLayout, QPushButton, QGroupBox, QFrame,
-                           QScrollArea, QMessageBox, QFileDialog)
+                           QScrollArea, QMessageBox, QFileDialog, QInputDialog)
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtGui import QIcon, QPixmap
 
 import os
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from models.audio_export import AudioExport
+from services.file_service import FileService
+from services.export_service import ExportService
 
 
 class WaveformVisualization(QFrame):
@@ -56,6 +58,10 @@ class ExportDetails(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("exportDetails")
+        
+        # שירותים
+        self.file_service = FileService()
+        self.export_service = ExportService()
         
         # סגנון כללי
         self.setStyleSheet("""
@@ -328,11 +334,8 @@ class ExportDetails(QWidget):
         if not file_path:
             return
         
-        try:
-            # העתקת הקובץ
-            import shutil
-            shutil.copy2(self._current_export.path, file_path)
-            
+        # העתקת הקובץ באמצעות FileService
+        if self.file_service.copy_file(self._current_export.path, file_path):
             # שליחת אות
             self.export_downloaded.emit(self._current_export.id)
             
@@ -342,13 +345,12 @@ class ExportDetails(QWidget):
                 "Download Successful",
                 f"The export has been saved to:\n{file_path}"
             )
-        
-        except Exception as e:
+        else:
             # הצגת הודעת שגיאה
             QMessageBox.critical(
                 self,
                 "Download Failed",
-                f"Failed to save the export:\n{str(e)}"
+                f"Failed to save the export to {file_path}.\nPlease check file permissions and disk space."
             )
     
     def _on_rename_clicked(self):
@@ -357,7 +359,6 @@ class ExportDetails(QWidget):
             return
         
         # בקשת שם חדש
-        from PyQt6.QtWidgets import QInputDialog
         new_name, ok = QInputDialog.getText(
             self,
             "Rename Export",
@@ -368,13 +369,52 @@ class ExportDetails(QWidget):
         if not ok or not new_name:
             return
         
-        # שליחת אות עדכון
-        self.export_updated.emit(self._current_export.id)
+        # בדיקת תקינות השם
+        is_valid, error_message = self.file_service.validate_file_name(new_name)
+        if not is_valid:
+            QMessageBox.warning(
+                self,
+                "Invalid Name",
+                error_message
+            )
+            return
         
-        # עדכון הממשק
-        self._current_export.name = new_name
-        self.name_label.setText(new_name)
-        self.title.setText(f"Export: {new_name}")
+        # שינוי שם הקובץ בדיסק
+        success, new_path = self.file_service.rename_file(self._current_export.path, new_name)
+        
+        if success:
+            # עדכון הייצוא במסד הנתונים
+            old_name = self._current_export.name
+            self._current_export.name = new_name
+            self._current_export.path = new_path
+            
+            # עדכון הייצוא בשירות
+            if self.export_service.update_export(self._current_export):
+                # עדכון הממשק
+                self.name_label.setText(new_name)
+                self.title.setText(f"Export: {new_name}")
+                
+                # שליחת אות עדכון
+                self.export_updated.emit(self._current_export.id)
+                
+                # הצגת הודעת הצלחה
+                QMessageBox.information(
+                    self,
+                    "Rename Successful",
+                    f"Export renamed from '{old_name}' to '{new_name}'."
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Rename Partially Failed",
+                    f"The file was renamed, but the database update failed.\nPlease refresh the exports list."
+                )
+        else:
+            QMessageBox.critical(
+                self,
+                "Rename Failed",
+                f"Failed to rename the export.\nPlease check file permissions and ensure the name is not already in use."
+            )
     
     def _on_delete_clicked(self):
         """טיפול בלחיצה על כפתור מחיקה"""
@@ -385,7 +425,7 @@ class ExportDetails(QWidget):
         reply = QMessageBox.question(
             self,
             "Confirm Delete",
-            f"Are you sure you want to delete the export '{self._current_export.name}'?",
+            f"Are you sure you want to delete the export '{self._current_export.name}'?\n\nThis will permanently delete the file from disk.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -393,9 +433,36 @@ class ExportDetails(QWidget):
         if reply != QMessageBox.StandardButton.Yes:
             return
         
-        # שליחת אות מחיקה
-        self.export_deleted.emit(self._current_export.id)
+        # מחיקת הקובץ מהדיסק
+        file_deleted = self.file_service.delete_file_from_disk(self._current_export.path)
         
-        # ניקוי הממשק
-        self._current_export = None
-        self._show_empty_state()
+        # מחיקת הרשומה ממסד הנתונים
+        db_deleted = self.export_service.delete_export(self._current_export.id)
+        
+        if file_deleted and db_deleted:
+            # שליחת אות מחיקה
+            self.export_deleted.emit(self._current_export.id)
+            
+            # ניקוי הממשק
+            self._current_export = None
+            self._show_empty_state()
+            
+            # הצגת הודעת הצלחה
+            QMessageBox.information(
+                self,
+                "Delete Successful",
+                "The export has been successfully deleted."
+            )
+        else:
+            # הצגת הודעת שגיאה
+            error_message = ""
+            if not file_deleted:
+                error_message += "Failed to delete the file from disk.\n"
+            if not db_deleted:
+                error_message += "Failed to delete the record from the database.\n"
+            
+            QMessageBox.critical(
+                self,
+                "Delete Failed",
+                f"{error_message}\nPlease try again or contact support."
+            )
