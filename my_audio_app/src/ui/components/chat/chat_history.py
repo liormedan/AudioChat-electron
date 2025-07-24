@@ -280,17 +280,15 @@ class ChatHistory(QScrollArea):
                 return False
         
         # הסרת כל ההודעות
-        while self.layout.count() > 2:  # שמירה על כפתור 'טען עוד' והמרווח בסוף
-            item = self.layout.takeAt(1)  # דילוג על כפתור 'טען עוד'
-            if item.widget():
-                item.widget().deleteLater()
+        for message in self.messages:
+            if message in self.messages and message.parent() == self.container:
+                message.setParent(None)
+                message.deleteLater()
         
         # איפוס רשימת ההודעות
         self.messages = []
         
         # הצגת תווית ריקה
-        self.empty_label.setVisible(True)
-        self.layout.insertWidget(1, self.empty_label)  # הוספה אחרי כפתור 'טען עוד'
         self.is_empty = True
         
         # הסתרת כפתור 'טען עוד'

@@ -4,16 +4,8 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from ..utils.file_utils import get_file_metadata, extract_audio_duration
-
-@dataclass
-class FileInfo:
-    name: str
-    path: str
-    size: int
-    format: str
-    duration: int
-    upload_date: datetime
+from utils.file_utils import get_file_metadata, extract_audio_duration
+from ui.components.file_upload.file_info import FileInfo
 
 class FileService:
     """שירות לניהול מידע על קבצי אודיו"""
@@ -161,6 +153,7 @@ class FileService:
         
         except Exception as e:
             print(f"שגיאה בטעינת קבצים אחרונים: {e}")
+            # Return an empty list if there's an error
             return []
     
     def delete_file(self, file_path: str) -> bool:
@@ -251,6 +244,43 @@ class FileService:
         
         except Exception as e:
             print(f"שגיאה בטעינת מידע על קובץ: {e}")
+            return None
+    
+    def extract_file_info(self, file_path: str) -> Optional[FileInfo]:
+        """
+        חילוץ מידע על קובץ אודיו
+        
+        Args:
+            file_path (str): נתיב הקובץ
+            
+        Returns:
+            Optional[FileInfo]: אובייקט FileInfo או None אם לא ניתן לחלץ מידע
+        """
+        try:
+            if not os.path.exists(file_path):
+                print(f"הקובץ {file_path} לא קיים")
+                return None
+            
+            # מידע בסיסי
+            name = os.path.basename(file_path)
+            size = os.path.getsize(file_path)
+            format = os.path.splitext(name)[1].lower().replace('.', '')
+            
+            # חילוץ משך הקובץ
+            duration = extract_audio_duration(file_path) or 0
+            
+            # יצירת אובייקט FileInfo
+            return FileInfo(
+                name=name,
+                path=file_path,
+                size=size,
+                format=format,
+                duration=duration,
+                upload_date=datetime.now()
+            )
+        
+        except Exception as e:
+            print(f"שגיאה בחילוץ מידע מהקובץ {file_path}: {e}")
             return None
     
     

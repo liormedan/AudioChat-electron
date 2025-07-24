@@ -22,15 +22,15 @@
   - Create unit tests for the service
   - _Requirements: 1.1, 2.6, 3.3, 5.1, 5.2_
 
-- [ ] 3. Create ExportsPage basic structure
-
+- [*] 3. Create ExportsPage basic structure
+    **DONE - AND APDATED GITHUB*
   - Set up page layout with splitter for list and details
   - Implement toolbar with search and new export button
   - Connect signals and slots for component communication
   - Add page to main window navigation
   - _Requirements: 1.1, 2.1, 5.1, 5.3_
 
-- [ ] 4. Implement ExportsList component
+- [-] 4. Implement ExportsList component
 
   - Create table view for displaying exports
   - Add columns for key information (name, format, duration, size, date, status)
