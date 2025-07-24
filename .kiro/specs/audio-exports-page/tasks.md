@@ -40,9 +40,6 @@
   - _Requirements: 1.1, 1.2, 1.4, 1.5, 5.3_
 
 - [x] 5. Implement ExportDetails component
-
-
-
     **DONE - AND APDATED GITHUB*
   - Create form layout for displaying export details
   - Add waveform visualization placeholder
@@ -51,7 +48,12 @@
   - Create empty state display
   - _Requirements: 1.3, 3.1, 4.1, 4.2, 4.3_
 
-- [ ] 6. Create ExportDialog for new exports
+- [x] 6. Create ExportDialog for new exports
+
+
+
+
+
 
   - Design dialog layout with form fields
   - Add source file selection

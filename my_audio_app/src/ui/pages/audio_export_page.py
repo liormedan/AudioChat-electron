@@ -7,7 +7,7 @@ from PyQt6.QtGui import QIcon, QPixmap
 import os
 from datetime import datetime
 
-from ui.components.exports import ExportDetails
+from ui.components.exports import ExportDetails, ExportDialog
 from models.audio_export import AudioExport
 from services.export_service import ExportService
 
@@ -233,13 +233,41 @@ class AudioExportPage(QWidget):
     
     def _on_new_export_clicked(self):
         """טיפול בלחיצה על כפתור יצירת ייצוא חדש"""
-        # הצגת הודעה שהפונקציונליות תיושם בעתיד (משימה 6)
-        QMessageBox.information(
-            self,
-            "Coming Soon",
-            "The Export Dialog functionality will be implemented in the next phase (Task 6).\n\n"
-            "This will allow you to select source files and configure export settings."
-        )
+        # יצירת דיאלוג ייצוא חדש
+        dialog = ExportDialog(self)
+        dialog.export_created.connect(self._on_export_created)
+        
+        # הצגת הדיאלוג
+        dialog.exec()
+    
+    def _on_export_created(self, export_id):
+        """
+        טיפול ביצירת ייצוא חדש
+        
+        Args:
+            export_id (str): מזהה הייצוא שנוצר
+        """
+        # רענון רשימת הייצואים
+        self._load_sample_exports()
+        
+        # בחירת הייצוא החדש
+        export = self.export_service.get_export_by_id(export_id)
+        if export:
+            # מציאת הפריט ברשימה
+            for i in range(self.exports_list.count()):
+                item = self.exports_list.item(i)
+                if item.data(Qt.ItemDataRole.UserRole) == export_id:
+                    self.exports_list.setCurrentItem(item)
+                    self.export_details.set_export(export)
+                    break
+            
+            # הצגת הודעת הצלחה
+            QMessageBox.information(
+                self,
+                "Export Created",
+                f"The export '{export.name}' has been created and is now processing.\n\n"
+                "You can monitor its progress in the exports list."
+            )
     
     def _on_export_selected(self, item):
         """
