@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QFormLayout,
     QComboBox,
+    QTabWidget,
 )
 from PyQt6.QtCore import Qt
 
@@ -32,6 +33,7 @@ class ProfilePage(QWidget):
                 background-color: #121212;
                 color: white;
             }
+
             QLineEdit, QPushButton, QComboBox {
                 background-color: #333;
                 color: white;
@@ -39,8 +41,31 @@ class ProfilePage(QWidget):
                 border-radius: 4px;
                 padding: 4px;
             }
+
             QPushButton:hover {
                 background-color: #444;
+            }
+
+            QTabWidget::pane {
+                border: 1px solid #333;
+                background-color: #1e1e1e;
+            }
+
+            QTabBar::tab {
+                background-color: #2d2d2d;
+                color: #ffffff;
+                padding: 8px 16px;
+                margin-right: 2px;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+            }
+
+            QTabBar::tab:selected {
+                background-color: #4CAF50;
+            }
+
+            QTabBar::tab:hover {
+                background-color: #3d3d3d;
             }
             """
         )
@@ -53,18 +78,33 @@ class ProfilePage(QWidget):
         title.setStyleSheet("font-size: 24px; font-weight: bold;")
         layout.addWidget(title)
 
-        form = QFormLayout()
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setTabPosition(QTabWidget.TabPosition.North)
+
+        # General information tab
+        general_tab = QWidget()
+        general_form = QFormLayout(general_tab)
         self.name_input = QLineEdit()
         self.email_input = QLineEdit()
         self.avatar_input = QLineEdit()
-        self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["dark_blue.xml", "dark_amber.xml", "dark_teal.xml"])
+        general_form.addRow("Display Name", self.name_input)
+        general_form.addRow("Email", self.email_input)
+        general_form.addRow("Avatar Path", self.avatar_input)
+        self.tab_widget.addTab(general_tab, "General Info")
 
-        form.addRow("Display Name", self.name_input)
-        form.addRow("Email", self.email_input)
-        form.addRow("Avatar Path", self.avatar_input)
-        form.addRow("Theme", self.theme_combo)
-        layout.addLayout(form)
+        # Preferences tab
+        preferences_tab = QWidget()
+        preferences_form = QFormLayout(preferences_tab)
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems([
+            "dark_blue.xml",
+            "dark_amber.xml",
+            "dark_teal.xml",
+        ])
+        preferences_form.addRow("Theme", self.theme_combo)
+        self.tab_widget.addTab(preferences_tab, "Preferences")
+
+        layout.addWidget(self.tab_widget)
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self._save_profile)
