@@ -16,8 +16,9 @@ import uuid
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from ui.components.llm.model_tester import (
-    ModelTester, TestPrompt, TestResult, ModelComparison, 
-    TestStatus, TestWorker, CustomPromptDialog, TestDetailsDialog
+    ModelTester, TestPrompt, TestResult, ModelComparison,
+    TestStatus, TestWorker, CustomPromptDialog, TestDetailsDialog,
+    ABTestResult
 )
 from models.llm_models import LLMModel, LLMProvider, ModelCapability
 
@@ -411,6 +412,31 @@ class TestModelComparison:
         assert comparison.results == {}
         assert isinstance(comparison.created_at, datetime)
         assert comparison.completed_at is None
+
+
+class TestBenchmarking:
+    """Test benchmarking and A/B testing utilities"""
+
+    def test_benchmark_models(self, model_tester, sample_test_prompt):
+        models = [{"id": "gpt4", "name": "GPT-4", "cost_per_token": 0.001}]
+        summary = model_tester.benchmark_models(models, [sample_test_prompt])
+        assert "gpt4" in summary
+        assert "avg_response_time" in summary["gpt4"]
+        assert "avg_quality" in summary["gpt4"]
+
+    def test_run_ab_test(self, model_tester, sample_test_prompt):
+        m1 = {"id": "A", "name": "Model A", "cost_per_token": 0.001}
+        m2 = {"id": "B", "name": "Model B", "cost_per_token": 0.001}
+        results = model_tester.run_ab_test(m1, m2, [sample_test_prompt])
+        assert len(results) == 1
+        assert results[0].winner in {"A", "B", "tie"}
+
+    def test_generate_performance_report(self, model_tester, tmp_path):
+        summary = {"gpt": {"avg_response_time": 1.0, "avg_quality": 0.8}}
+        output_file = tmp_path / "report.png"
+        path = model_tester.generate_performance_report(summary, str(output_file))
+        assert path == str(output_file)
+        assert output_file.exists()
 
 
 if __name__ == '__main__':
