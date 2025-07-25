@@ -1,13 +1,23 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                           QTableWidget, QTableWidgetItem, QFrame, QGroupBox)
+from PyQt6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QTableWidget,
+    QTableWidgetItem,
+    QFrame,
+    QGroupBox,
+)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPainter, QPen, QColor
-import random  # לצורך נתוני דוגמה - יש להחליף בנתונים אמיתיים
+
+from services.file_stats_data_manager import FileStatsDataManager
 
 
 class FileStatsPage(QWidget):
-    def __init__(self):
+    def __init__(self, data_manager: FileStatsDataManager = None):
         super().__init__()
+        self.data_manager = data_manager or FileStatsDataManager()
         self.setObjectName("fileStatsPage")
         
         # סגנון כללי לדף - רקע שחור וטקסט לבן
@@ -53,10 +63,10 @@ class FileStatsPage(QWidget):
         summary_layout = QHBoxLayout()
         
         # קופסאות סטטיסטיקה
-        self._add_stat_box(summary_layout, "Total Files", "128", "🗂️")
-        self._add_stat_box(summary_layout, "Total Duration", "14:32:45", "⏱️")
-        self._add_stat_box(summary_layout, "Formats", "MP3, WAV, FLAC", "🔤")
-        self._add_stat_box(summary_layout, "Last Upload", "Today, 14:25", "📅")
+        self.total_files_label = self._add_stat_box(summary_layout, "Total Files", "0", "🗂️")
+        self.total_duration_label = self._add_stat_box(summary_layout, "Total Duration", "0:00", "⏱️")
+        self.formats_label = self._add_stat_box(summary_layout, "Formats", "-", "🔤")
+        self.last_upload_label = self._add_stat_box(summary_layout, "Last Upload", "-", "📅")
         
         main_layout.addLayout(summary_layout)
         
@@ -75,9 +85,57 @@ class FileStatsPage(QWidget):
         
         # טבלת קבצים אחרונים
         main_layout.addWidget(self._create_recent_files_table())
-        
+
         # מרווח בסוף
         main_layout.addStretch()
+
+        # Load initial data
+        self.refresh_data()
+
+    def refresh_data(self):
+        """Load statistics from the data manager and update widgets."""
+        try:
+            total_files = self.data_manager.get_total_files_count()
+            total_duration = self.data_manager.get_total_duration()
+            formats = self.data_manager.get_format_distribution()
+            last_upload = self.data_manager.get_last_upload_date()
+            recent_files = self.data_manager.get_recent_files()
+
+            self.total_files_label.setText(str(total_files))
+
+            minutes, sec = divmod(total_duration, 60)
+            hours, minutes = divmod(minutes, 60)
+            if hours:
+                duration_str = f"{hours}:{minutes:02d}:{sec:02d}"
+            else:
+                duration_str = f"{minutes}:{sec:02d}"
+            self.total_duration_label.setText(duration_str)
+
+            self.formats_label.setText(
+                ", ".join(sorted(formats.keys())) if formats else "-"
+            )
+
+            if last_upload:
+                self.last_upload_label.setText(
+                    last_upload.strftime("%Y-%m-%d %H:%M")
+                )
+            else:
+                self.last_upload_label.setText("-")
+
+            table = self.recent_files_table
+            table.setRowCount(len(recent_files))
+            for row, info in enumerate(recent_files):
+                table.setItem(row, 0, QTableWidgetItem(info.name))
+                table.setItem(row, 1, QTableWidgetItem(info.format.upper()))
+                table.setItem(row, 2, QTableWidgetItem(info.size_formatted))
+                table.setItem(row, 3, QTableWidgetItem(info.duration_formatted))
+                table.setItem(
+                    row,
+                    4,
+                    QTableWidgetItem(info.upload_date.strftime("%Y-%m-%d")),
+                )
+        except Exception as exc:
+            print(f"Failed to refresh file statistics: {exc}")
     
     def _add_stat_box(self, layout, title, value, icon):
         """יוצר קופסת סטטיסטיקה עם כותרת, ערך ואייקון"""
@@ -110,8 +168,9 @@ class FileStatsPage(QWidget):
         value_label = QLabel(value)
         value_label.setStyleSheet("font-size: 22px; font-weight: bold; color: white;")
         box_layout.addWidget(value_label)
-        
+
         layout.addWidget(box)
+        return value_label
     
     def _create_pie_chart(self):
         """יוצר גרף עוגה פשוט לסוגי קבצים"""
@@ -217,24 +276,9 @@ class FileStatsPage(QWidget):
         table = QTableWidget()
         table.setColumnCount(5)
         table.setHorizontalHeaderLabels(["Filename", "Format", "Size", "Duration", "Upload Date"])
+        self.recent_files_table = table
         
-        # נתוני דוגמה - יש להחליף בנתונים אמיתיים
-        sample_data = [
-            ["Interview_001", "MP3", "12.4 MB", "24:15", "2025-07-22"],
-            ["Voice_Note_123", "WAV", "45.2 MB", "12:33", "2025-07-22"],
-            ["Meeting_Recording", "FLAC", "78.1 MB", "45:22", "2025-07-21"],
-            ["Audio_Book_Ch1", "MP3", "35.7 MB", "1:12:45", "2025-07-20"],
-            ["Podcast_Episode5", "MP3", "28.9 MB", "32:18", "2025-07-19"],
-        ]
-        
-        table.setRowCount(len(sample_data))
-        
-        for row, (name, fmt, size, duration, date) in enumerate(sample_data):
-            table.setItem(row, 0, QTableWidgetItem(name))
-            table.setItem(row, 1, QTableWidgetItem(fmt))
-            table.setItem(row, 2, QTableWidgetItem(size))
-            table.setItem(row, 3, QTableWidgetItem(duration))
-            table.setItem(row, 4, QTableWidgetItem(date))
+        table.setRowCount(0)
         
         table.setColumnWidth(0, 200)  # שם קובץ
         table.setColumnWidth(1, 80)   # פורמט
@@ -245,3 +289,4 @@ class FileStatsPage(QWidget):
         layout.addWidget(table)
         
         return group_box
+

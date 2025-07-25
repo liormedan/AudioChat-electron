@@ -27,6 +27,11 @@ try:
 except ImportError:
     FileService = None
 
+try:
+    from .file_stats_data_manager import FileStatsDataManager
+except ImportError:
+    FileStatsDataManager = None
+
 __all__ = [
     'ChatService',
     'ChatMessage', 
@@ -46,3 +51,6 @@ if ExportService:
     __all__.append('ExportService')
 if FileService:
     __all__.append('FileService')
+if FileStatsDataManager:
+    __all__.append('FileStatsDataManager')
+
