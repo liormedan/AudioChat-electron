@@ -13,6 +13,7 @@ from models.llm_models import (
     LLMProvider, LLMModel, UsageRecord, LLMParameters,
     ProviderStatus, ModelCapability
 )
+from services.api_key_manager import APIKeyManager
 
 
 class LLMService(QObject):
@@ -43,6 +44,9 @@ class LLMService(QObject):
         
         # יצירת מסד נתונים אם לא קיים
         self._init_db()
+        
+        # מנהל מפתחות API מאובטח
+        self.api_key_manager = APIKeyManager(db_path.replace("llm_data.db", "api_keys.db"))
         
         # מודל פעיל נוכחי
         self.active_model: Optional[LLMModel] = None
@@ -324,8 +328,19 @@ class LLMService(QObject):
         provider.connection_status = ProviderStatus.TESTING
         self.save_provider(provider)
         
-        # בדיקת חיבור
-        success = provider.test_connection()
+        # בדיקת חיבור מאובטחת
+        success, message, response_time = self.test_provider_connection_secure(provider_name)
+        
+        # עדכון סטטוס הספק
+        if success:
+            provider.connection_status = ProviderStatus.CONNECTED
+            provider.is_connected = True
+            provider.error_message = None
+            provider.last_test_date = datetime.now()
+        else:
+            provider.connection_status = ProviderStatus.ERROR
+            provider.is_connected = False
+            provider.error_message = message
         
         # שמירת תוצאה
         self.save_provider(provider)
@@ -562,3 +577,142 @@ class LLMService(QObject):
                 pass
         
         return self.current_parameters
+    
+    # API Key Management Integration
+    def set_provider_api_key(self, provider_name: str, api_key: str) -> bool:
+        """
+        הגדרת מפתח API לספק
+        
+        Args:
+            provider_name (str): שם הספק
+            api_key (str): מפתח API
+            
+        Returns:
+            bool: האם ההגדרה הצליחה
+        """
+        # שמירה במנהל המפתחות המאובטח
+        success = self.api_key_manager.store_api_key(provider_name, api_key)
+        
+        if success:
+            # עדכון הספק במסד הנתונים
+            provider = self.get_provider(provider_name)
+            if provider:
+                provider.api_key = api_key  # זה יוצפן אוטומטית
+                provider.is_connected = False  # יידרש לבדוק חיבור מחדש
+                provider.connection_status = ProviderStatus.DISCONNECTED
+                self.save_provider(provider)
+        
+        return success
+    
+    def get_provider_api_key(self, provider_name: str) -> Optional[str]:
+        """
+        קבלת מפתח API של ספק
+        
+        Args:
+            provider_name (str): שם הספק
+            
+        Returns:
+            Optional[str]: מפתח API או None אם לא נמצא
+        """
+        return self.api_key_manager.retrieve_api_key(provider_name)
+    
+    def test_provider_connection_secure(self, provider_name: str) -> Tuple[bool, str, float]:
+        """
+        בדיקת חיבור מאובטחת לספק
+        
+        Args:
+            provider_name (str): שם הספק
+            
+        Returns:
+            Tuple[bool, str, float]: הצלחה, הודעה, זמן תגובה
+        """
+        return self.api_key_manager.test_api_key_connection(provider_name)
+    
+    def remove_provider_api_key(self, provider_name: str) -> bool:
+        """
+        הסרת מפתח API של ספק
+        
+        Args:
+            provider_name (str): שם הספק
+            
+        Returns:
+            bool: האם ההסרה הצליחה
+        """
+        success = self.api_key_manager.delete_api_key(provider_name)
+        
+        if success:
+            # עדכון הספק במסד הנתונים
+            provider = self.get_provider(provider_name)
+            if provider:
+                provider.api_key = None
+                provider.is_connected = False
+                provider.connection_status = ProviderStatus.DISCONNECTED
+                provider.error_message = "API key removed"
+                self.save_provider(provider)
+        
+        return success
+    
+    def rotate_provider_api_key(self, provider_name: str, new_api_key: str) -> bool:
+        """
+        רוטציה של מפתח API לספק
+        
+        Args:
+            provider_name (str): שם הספק
+            new_api_key (str): מפתח API חדש
+            
+        Returns:
+            bool: האם הרוטציה הצליחה
+        """
+        success = self.api_key_manager.rotate_api_key(provider_name, new_api_key)
+        
+        if success:
+            # עדכון הספק במסד הנתונים
+            provider = self.get_provider(provider_name)
+            if provider:
+                provider.api_key = new_api_key
+                provider.is_connected = False  # יידרש לבדוק חיבור מחדש
+                provider.connection_status = ProviderStatus.DISCONNECTED
+                provider.last_test_date = None
+                self.save_provider(provider)
+        
+        return success
+    
+    def get_api_key_security_status(self) -> Dict:
+        """
+        קבלת סטטוס אבטחה של מפתחות API
+        
+        Returns:
+            Dict: מידע על מצב האבטחה
+        """
+        return self.api_key_manager.get_security_status()
+    
+    def validate_provider_api_key_format(self, provider_name: str, api_key: str) -> Tuple[bool, str]:
+        """
+        בדיקת פורמט מפתח API לספק
+        
+        Args:
+            provider_name (str): שם הספק
+            api_key (str): מפתח API לבדיקה
+            
+        Returns:
+            Tuple[bool, str]: האם תקין והודעת שגיאה אם לא
+        """
+        return self.api_key_manager.validate_api_key_format(provider_name, api_key)
+    
+    def get_stored_api_key_providers(self) -> List[Dict]:
+        """
+        קבלת רשימת ספקים עם מפתחות שמורים
+        
+        Returns:
+            List[Dict]: רשימת ספקים עם מידע בסיסי
+        """
+        return self.api_key_manager.list_stored_providers()
+    
+    def cleanup_old_api_key_data(self, days_to_keep: int = 90) -> None:
+        """
+        ניקוי נתוני מפתחות API ישנים
+        
+        Args:
+            days_to_keep (int): מספר ימים לשמירה
+        """
+        self.api_key_manager.cleanup_old_data(days_to_keep)
