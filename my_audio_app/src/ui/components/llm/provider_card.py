@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
 from models.llm_models import LLMProvider, ProviderStatus
 from services.llm_service import LLMService
 from services.api_key_manager import APIKeyManager
-from ui.components.llm.api_key_dialog import APIKeyDialog
+from .api_key_dialog import APIKeyDialog
 
 
 class ConnectionTestWorker(QThread):
