@@ -137,6 +137,7 @@ class HomePage(QWidget):
         self.chat_history = ChatHistory()
         self.chat_history.message_clicked.connect(self.on_message_clicked)
         self.chat_history.load_more_requested.connect(self.on_load_more_messages)
+        self.chat_history.model_suggestion_clicked.connect(self.on_model_suggestion_clicked)
         layout.addWidget(self.chat_history, 1)  # stretch factor 1
         
         # טעינת היסטוריית צ'אט
@@ -225,8 +226,10 @@ class HomePage(QWidget):
             current_session = self.chat_service.load_session(session_id, page=page, page_size=page_size)
         
         # אם עדיין אין סשן, צור סשן חדש
+        created = False
         if current_session is None:
             current_session = self.chat_service.create_session()
+            created = True
             # הוסף הודעת ברוכים הבאים מורחבת
             welcome_message = (
                 "ברוכים הבאים ל-Audio Chat Studio! 🎵\n\n"
@@ -241,6 +244,8 @@ class HomePage(QWidget):
         
         # הצג את ההודעות בצ'אט
         self._display_chat_messages(current_session, page > 1)
+        if created:
+            self._show_model_suggestions("chat")
     
     def _display_chat_messages(self, session, append=False):
         """
@@ -315,9 +320,10 @@ class HomePage(QWidget):
         
         # הוספת הודעת ברוכים הבאים
         self.chat_service.add_message("ברוכים הבאים ל-Audio Chat Studio! במה אוכל לעזור לך היום?", "system")
-        
+
         # הצגת הודעות
         self._display_chat_messages(session)
+        self._show_model_suggestions("chat")
     
     def _clear_chat(self):
         """ניקוי שיחה נוכחית"""
@@ -330,6 +336,7 @@ class HomePage(QWidget):
             welcome_msg = "השיחה נוקתה. במה אוכל לעזור לך?"
             self.chat_service.add_message(welcome_msg, "system")
             self.chat_history.add_system_message(welcome_msg)
+            self._show_model_suggestions("chat")
     
     def _load_chat_session(self, session_id):
         """טעינת סשן צ'אט"""
@@ -355,12 +362,18 @@ class HomePage(QWidget):
             else:
                 self._simulate_ai_response(text)
 
-            suggestions = self.chat_service.suggest_models_for_prompt(text)
-            if suggestions:
-                names = ", ".join(suggestions[:3])
-                self.chat_history.add_system_message(
-                    f"Model suggestions for this task: {names}"
-                )
+            lower = text.lower()
+            if any(k in lower for k in ["code", "תכנת"]):
+                task = "code"
+            elif any(k in lower for k in ["summary", "summarize", "סיכום"]):
+                task = "summarize"
+            elif any(k in lower for k in ["transcribe", "תמלל", "תמלול"]):
+                task = "transcribe"
+            elif any(k in lower for k in ["analyze", "analysis", "ניתוח"]):
+                task = "analyze"
+            else:
+                task = "chat"
+            self._show_model_suggestions(task)
     
     def on_typing_started(self):
         """טיפול בהתחלת הקלדה"""
@@ -371,6 +384,17 @@ class HomePage(QWidget):
         """טיפול בסיום הקלדה"""
         # כאן ניתן להוסיף לוגיקה כמו הסתרת "המשתמש מקליד..."
         pass
+
+    def on_model_suggestion_clicked(self, model_id: str):
+        """הפעלת מודל שנבחר מהרשימה"""
+        try:
+            success = self.chat_service.llm_service.set_active_model(model_id)
+            if success:
+                self.chat_history.add_system_message(f"Switched to model: {model_id}")
+            else:
+                self.chat_history.add_system_message("Failed to activate model")
+        except Exception as e:
+            self.chat_history.add_system_message(f"Error activating model: {e}")
         
     def on_file_reference_requested(self):
         """טיפול בבקשה להוספת התייחסות לקובץ"""
@@ -608,6 +632,7 @@ class HomePage(QWidget):
                  f"- עריכת הקובץ (הסרת רעשים, חיתוך, וכו')\n"
                  f"- המרה לפורמט אחר")
         QTimer.singleShot(1000, lambda: self._add_ai_response(ai_msg))
+        self._show_model_suggestions("analyze")
     
     def on_file_upload_failed(self, file_path, error):
         """טיפול בכישלון העלאת קובץ"""
@@ -642,6 +667,7 @@ class HomePage(QWidget):
                  f"- עריכת הקובץ (הסרת רעשים, חיתוך, וכו')\n"
                  f"- המרה לפורמט אחר")
         QTimer.singleShot(500, lambda: self._add_ai_response(ai_msg))
+        self._show_model_suggestions("analyze")
     
     def on_file_play_requested(self, file_info):
         """טיפול בבקשה לנגן קובץ"""
@@ -683,6 +709,12 @@ class HomePage(QWidget):
         """הוספת תשובת AI לצ'אט ולשירות"""
         # הוספת הודעת AI לשירות הצ'אט
         self.chat_service.add_message(text, "ai")
-        
+
         # הוספת הודעת AI לממשק
         self.chat_history.add_ai_message(text)
+
+    def _show_model_suggestions(self, task: str):
+        """הצגת הצעות מודלים מתאימות למשימה"""
+        models = self.chat_service.llm_service.suggest_models_for_task(task)
+        if models:
+            self.chat_history.add_model_suggestions(models)
