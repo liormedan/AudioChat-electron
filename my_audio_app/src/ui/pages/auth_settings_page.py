@@ -1,10 +1,18 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QLineEdit, QPushButton, QFormLayout
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QLineEdit,
+    QPushButton,
+    QFormLayout,
+    QMessageBox,
 )
 from PyQt6.QtCore import Qt
 
-from app_context import settings_service
+from app_context import settings_service, llm_service
 
 
 class AuthSettingsPage(QWidget):
@@ -55,16 +63,32 @@ class AuthSettingsPage(QWidget):
         self.provider_input = QLineEdit()
         self.api_key_input = QLineEdit()
         self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+        # Show/Hide button for API key
+        self.show_button = QPushButton("👁️")
+        self.show_button.setCheckable(True)
+        self.show_button.setFixedWidth(30)
+        self.show_button.clicked.connect(self._toggle_visibility)
+
+        key_row = QHBoxLayout()
+        key_row.addWidget(self.api_key_input)
+        key_row.addWidget(self.show_button)
+
         form.addRow("Provider", self.provider_input)
-        form.addRow("API Key", self.api_key_input)
+        form.addRow("API Key", key_row)
         layout.addLayout(form)
 
         btn_row = QHBoxLayout()
         self.save_button = QPushButton("Save")
+        self.test_button = QPushButton("Test")
         self.delete_button = QPushButton("Delete")
         btn_row.addWidget(self.save_button)
+        btn_row.addWidget(self.test_button)
         btn_row.addWidget(self.delete_button)
         layout.addLayout(btn_row)
+
+        self.status_label = QLabel("")
+        layout.addWidget(self.status_label)
 
         self.providers_list = QListWidget()
         layout.addWidget(QLabel("Saved Keys:"))
@@ -72,8 +96,13 @@ class AuthSettingsPage(QWidget):
 
         # connections
         self.save_button.clicked.connect(self._save_api_key)
+        self.test_button.clicked.connect(self._test_api_key)
         self.delete_button.clicked.connect(self._delete_api_key)
         self.providers_list.itemClicked.connect(self._provider_selected)
+
+        # update list automatically when keys change
+        self.settings_service.api_key_added.connect(lambda *_: self._load_providers())
+        self.settings_service.api_key_removed.connect(lambda *_: self._load_providers())
 
     def _load_providers(self) -> None:
         self.providers_list.clear()
@@ -104,3 +133,22 @@ class AuthSettingsPage(QWidget):
             self.provider_input.clear()
             self.api_key_input.clear()
             self._load_providers()
+
+    def _toggle_visibility(self) -> None:
+        if self.show_button.isChecked():
+            self.api_key_input.setEchoMode(QLineEdit.EchoMode.Normal)
+            self.show_button.setText("🙈")
+        else:
+            self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+            self.show_button.setText("👁️")
+
+    def _test_api_key(self) -> None:
+        provider = self.provider_input.text().strip()
+        key = self.api_key_input.text().strip()
+        if not provider or not key:
+            QMessageBox.warning(self, "Missing Data", "Provider and API key are required")
+            return
+        success, message, _time = llm_service.api_key_manager.test_api_key_connection(provider, key)
+        icon = "✅" if success else "❌"
+        self.status_label.setText(f"{icon} {message}")
+
