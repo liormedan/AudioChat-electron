@@ -77,6 +77,15 @@ class ModelComparison:
     completed_at: Optional[datetime] = None
 
 
+@dataclass
+class ABTestResult:
+    """תוצאת מבחן A/B"""
+    prompt_id: str
+    model_a_result: TestResult
+    model_b_result: TestResult
+    winner: Optional[str] = None  # "A", "B", or "tie"
+
+
 class TestWorker(QThread):
     """Worker thread לביצוע בדיקות"""
     
@@ -895,6 +904,112 @@ class ModelTester(QWidget):
         """טעינת היסטוריית בדיקות"""
         # כאן תהיה לוגיקת טעינה מקובץ או מסד נתונים
         pass
+
+    # ------------------------------------------------------------------
+    # New benchmarking and A/B testing utilities
+    # ------------------------------------------------------------------
+    def benchmark_models(self, models: List[Dict[str, Any]], prompts: List[TestPrompt]) -> Dict[str, Dict[str, float]]:
+        """Run a simple synchronous benchmark on given models and prompts."""
+        results: Dict[str, List[TestResult]] = {m["id"]: [] for m in models}
+
+        for model in models:
+            for prompt in prompts:
+                start = time.time()
+                response = TestWorker({})._simulate_llm_call(model, prompt)
+                end = time.time()
+                response_time = end - start
+                quality = TestWorker({})._evaluate_response(response, prompt)
+
+                result = TestResult(
+                    id=str(uuid.uuid4()),
+                    test_id=f"{model['id']}_{prompt.id}",
+                    model_id=model['id'],
+                    prompt_id=prompt.id,
+                    response=response,
+                    response_time=response_time,
+                    token_count=len(response.split()),
+                    cost=len(response.split()) * model.get("cost_per_token", 0.001),
+                    quality_score=quality,
+                )
+                results[model["id"]].append(result)
+
+        summary: Dict[str, Dict[str, float]] = {}
+        for model_id, tests in results.items():
+            if not tests:
+                continue
+            avg_time = sum(t.response_time for t in tests) / len(tests)
+            avg_quality = sum(t.quality_score or 0 for t in tests) / len(tests)
+            summary[model_id] = {
+                "avg_response_time": avg_time,
+                "avg_quality": avg_quality,
+            }
+        return summary
+
+    def run_ab_test(self, model_a: Dict[str, Any], model_b: Dict[str, Any], prompts: List[TestPrompt]) -> List[ABTestResult]:
+        """Run A/B test between two models."""
+        results: List[ABTestResult] = []
+        for prompt in prompts:
+            response_a = TestWorker({})._simulate_llm_call(model_a, prompt)
+            qa = TestWorker({})._evaluate_response(response_a, prompt)
+            res_a = TestResult(
+                id=str(uuid.uuid4()),
+                test_id=f"A_{prompt.id}",
+                model_id=model_a["id"],
+                prompt_id=prompt.id,
+                response=response_a,
+                response_time=0.0,
+                token_count=len(response_a.split()),
+                cost=len(response_a.split()) * model_a.get("cost_per_token", 0.001),
+                quality_score=qa,
+            )
+
+            response_b = TestWorker({})._simulate_llm_call(model_b, prompt)
+            qb = TestWorker({})._evaluate_response(response_b, prompt)
+            res_b = TestResult(
+                id=str(uuid.uuid4()),
+                test_id=f"B_{prompt.id}",
+                model_id=model_b["id"],
+                prompt_id=prompt.id,
+                response=response_b,
+                response_time=0.0,
+                token_count=len(response_b.split()),
+                cost=len(response_b.split()) * model_b.get("cost_per_token", 0.001),
+                quality_score=qb,
+            )
+
+            winner = None
+            if qa > qb:
+                winner = "A"
+            elif qb > qa:
+                winner = "B"
+            else:
+                winner = "tie"
+
+            results.append(ABTestResult(prompt.id, res_a, res_b, winner))
+
+        return results
+
+    def generate_performance_report(self, summary: Dict[str, Dict[str, float]], output_path: str) -> str:
+        """Generate a simple bar chart report of benchmark results."""
+        import matplotlib.pyplot as plt
+
+        models = list(summary.keys())
+        times = [summary[m]["avg_response_time"] for m in models]
+        qualities = [summary[m]["avg_quality"] for m in models]
+
+        fig, ax1 = plt.subplots()
+        ax1.bar(models, times, color="skyblue")
+        ax1.set_ylabel("Avg Response Time (s)")
+        ax1.set_xlabel("Model")
+
+        ax2 = ax1.twinx()
+        ax2.plot(models, qualities, color="orange", marker="o")
+        ax2.set_ylabel("Avg Quality Score")
+
+        fig.tight_layout()
+        plt.savefig(output_path)
+        plt.close(fig)
+        return output_path
 
 
 class CustomPromptDialog(QDialog):
