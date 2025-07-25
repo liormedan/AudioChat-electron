@@ -3,7 +3,7 @@ import json
 import sqlite3
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 
 import sys
 import os
@@ -45,7 +45,10 @@ class UsageService(QObject):
             "monthly_tokens": 1000000,  # 1M טוקנים לחודש
             "hourly_requests": 100  # 100 בקשות לשעה
         }
-        
+
+        # טיימר לניטור רקע
+        self._monitor_timer: Optional[QTimer] = None
+
         # יצירת מסד נתונים אם לא קיים
         self._init_db()
     
@@ -622,5 +625,46 @@ class UsageService(QObject):
         
         conn.commit()
         conn.close()
-        
+
         return deleted_count
+
+    # Background Monitoring
+    def start_background_monitoring(self, interval_seconds: int = 60) -> None:
+        """הפעלת ניטור שימוש ברקע"""
+        if self._monitor_timer is None:
+            self._monitor_timer = QTimer()
+            self._monitor_timer.timeout.connect(self._background_check)
+        self._monitor_timer.start(interval_seconds * 1000)
+
+    def stop_background_monitoring(self) -> None:
+        """עצירת ניטור הרקע"""
+        if self._monitor_timer and self._monitor_timer.isActive():
+            self._monitor_timer.stop()
+
+    def _background_check(self) -> None:
+        """בדיקה תקופתית של מגבלות והוצאת אותות במידת הצורך"""
+        summary = self.get_usage_summary()
+        self._check_limits(
+            UsageRecord(
+                id="background", timestamp=datetime.now(), model_id="", provider="", tokens_used=0,
+                cost=0.0, response_time=0.0, success=True
+            )
+        )
+
+    def get_usage_recommendations(self) -> List[str]:
+        """הפקת המלצות לשיפור וייעול השימוש"""
+        recs = []
+        month_start = datetime.now().replace(day=1).date()
+        monthly = self.get_usage_summary(month_start, datetime.now().date())
+
+        limit = self.get_usage_limit("monthly_cost")
+        if limit and monthly["total_cost"] >= limit["limit_value"] * 0.9:
+            recs.append("שקול להקטין שימוש או לבחור מודל זול יותר")
+
+        if monthly["success_rate"] < 0.9:
+            recs.append("שיעור ההצלחה נמוך - בדוק את ההגדרות או החלף ספק")
+
+        if monthly["avg_response_time"] > 2:
+            recs.append("זמני התגובה גבוהים - נסה להקטין עומס או לשפר חיבור")
+
+        return recs

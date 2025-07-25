@@ -692,6 +692,53 @@ class UsageMonitor(QWidget):
     def on_usage_warning(self, limit_type: str, current_value: float, limit_value: float):
         """טיפול באזהרת מגבלה"""
         self.usage_limit_warning.emit(limit_type, current_value, limit_value)
-        
+
         # עדכון התראות
         self.check_current_limits()
+
+    def export_history(self) -> None:
+        """ייצוא היסטוריית שימוש לקובץ CSV"""
+        if not self.usage_records:
+            QMessageBox.information(self, "ייצוא היסטוריה", "אין רשומות לייצוא")
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "בחר מיקום לשמירת הייצוא",
+            "usage_history.csv",
+            "CSV Files (*.csv)"
+        )
+
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                headers = [
+                    "id",
+                    "timestamp",
+                    "model_id",
+                    "provider",
+                    "tokens_used",
+                    "cost",
+                    "response_time",
+                    "success"
+                ]
+                f.write(",".join(headers) + "\n")
+                for record in self.usage_records:
+                    row = [
+                        record.id,
+                        record.timestamp.isoformat(),
+                        record.model_id,
+                        record.provider,
+                        str(record.tokens_used),
+                        str(record.cost),
+                        str(record.response_time),
+                        str(record.success)
+                    ]
+                    f.write(",".join(row) + "\n")
+
+            QMessageBox.information(self, "ייצוא היסטוריה", "הייצוא הושלם בהצלחה")
+        except Exception as e:
+            QMessageBox.warning(self, "שגיאה בייצוא", str(e))
+
