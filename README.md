@@ -82,6 +82,7 @@ python my_audio_app/main.py
 - מבוסס על **qt-material**
 - נושא עיצוב: **dark_blue.xml**
 - תמיכה בנושאות נוספים: dark_amber, dark_teal
+- ניתן לשנות ערכת נושא דרך עמוד **Profile** וההגדרה תישמר
 
 ---
 
