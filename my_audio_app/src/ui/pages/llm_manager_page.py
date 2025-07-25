@@ -12,46 +12,15 @@ from app_context import settings_service, llm_service
 from services.usage_service import UsageService
 from models.llm_models import LLMParameters
 
-# Placeholder classes for missing components
-class ProviderCard(QWidget):
-    connection_changed = pyqtSignal(str, bool)
-    def __init__(self, provider_data, parent=None):
-        super().__init__(parent)
-        self.setMinimumSize(300, 200)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel(f"Provider: {provider_data.get('name', 'Unknown')}"))
-
-class ModelSelector(QWidget):
-    model_selected = pyqtSignal(str)
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Model Selector"))
-
-class ModelDetails(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Model Details"))
-
-class ParameterEditor(QWidget):
-    parameters_changed = pyqtSignal(dict)
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Parameter Editor"))
-
-class UsageMonitor(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Usage Monitor"))
-
-class ModelTester(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Model Tester"))
+# Import full implementations of the LLM management widgets
+from ..components.llm import (
+    ProviderCard,
+    ModelSelector,
+    ModelDetailsWidget,
+    ParameterEditor,
+    UsageMonitor,
+    ModelTester,
+)
 
 class LLMManagerPage(QWidget):
     """דף ניהול מודלי LLM"""
@@ -200,24 +169,17 @@ class LLMManagerPage(QWidget):
         grid_layout = QGridLayout(container)
         grid_layout.setSpacing(20)
         
-        # Provider data
-        providers = [
-            {"name": "OpenAI", "icon": "🤖", "description": "GPT models", "models": ["GPT-4", "GPT-3.5-turbo"], "status": "disconnected"},
-            {"name": "Anthropic", "icon": "🧠", "description": "Claude models", "models": ["Claude-3-Opus", "Claude-3-Sonnet"], "status": "disconnected"},
-            {"name": "Google", "icon": "🔍", "description": "Gemini models", "models": ["Gemini-Pro", "PaLM-2"], "status": "disconnected"},
-            {"name": "Cohere", "icon": "💬", "description": "Enterprise models", "models": ["Command", "Generate"], "status": "disconnected"},
-            {"name": "Hugging Face", "icon": "🤗", "description": "Open-source hub", "models": ["Various Models"], "status": "disconnected"},
-            {"name": "Local Models", "icon": "🏠", "description": "Local with Ollama", "models": ["Llama-2", "Mistral"], "status": "disconnected"}
-        ]
-        
+        # Load providers from the service
+        providers = self.llm_service.get_all_providers()
+
         # Create provider cards
         self.provider_cards = {}
-        for i, provider_data in enumerate(providers):
-            card = ProviderCard(provider_data, self)
+        for i, provider in enumerate(providers):
+            card = ProviderCard(provider, self.llm_service)
             card.connection_changed.connect(self._on_provider_connection_changed)
-            
+
             # Store reference
-            self.provider_cards[provider_data["name"]] = card
+            self.provider_cards[provider.name] = card
             
             # Add to grid (2 columns)
             row = i // 2
@@ -248,7 +210,7 @@ class LLMManagerPage(QWidget):
         left_layout.addWidget(selector_header)
         
         # Model selector
-        self.model_selector = ModelSelector(self)
+        self.model_selector = ModelSelector(self.llm_service)
         self.model_selector.model_selected.connect(self._on_model_selected)
         left_layout.addWidget(self.model_selector)
         
@@ -265,7 +227,7 @@ class LLMManagerPage(QWidget):
         right_layout.addWidget(details_header)
         
         # Model details
-        self.model_details = ModelDetails(self)
+        self.model_details = ModelDetailsWidget(self.llm_service)
         right_layout.addWidget(self.model_details)
         
         models_layout.addWidget(right_panel)
@@ -314,7 +276,7 @@ class LLMManagerPage(QWidget):
         usage_layout.addWidget(description)
         
         # Usage monitor
-        self.usage_monitor = UsageMonitor(self)
+        self.usage_monitor = UsageMonitor(self.usage_service, self)
         usage_layout.addWidget(self.usage_monitor)
         
         # Add tab
@@ -512,9 +474,8 @@ class LLMManagerPage(QWidget):
 
         # Update model details
         if hasattr(self, 'model_details'):
-            if hasattr(self.model_details, 'update_model'):
-                model_info = self.get_model_info(model_id)
-                self.model_details.update_model(model_info)
+            if hasattr(self.model_details, 'show_model_details'):
+                self.model_details.show_model_details(model_id)
         
         # Update status
         self._update_model_status()
