@@ -5,9 +5,10 @@ from PyQt6.QtGui import QIcon
 
 class ChatMessage(QFrame):
     """רכיב להצגת הודעת צ'אט בודדת"""
-    
+
     # אותות
     file_clicked = pyqtSignal(dict)  # אות שנשלח כאשר לוחצים על קובץ מצורף
+    link_clicked = pyqtSignal(str)  # אות שנשלח כאשר לוחצים על קישור בהודעה
     
     def __init__(self, text, message_type="user", parent=None, timestamp=None, attachments=None):
         """
@@ -39,15 +40,16 @@ class ChatMessage(QFrame):
         # תוכן ההודעה
         self.text_label = QLabel(text)
         self.text_label.setWordWrap(True)
-        # בגרסאות שונות של PyQt6 יש שמות שונים לקבועים
+        # אפשר בחירה והפעלת קישורים
         try:
-            self.text_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            self.text_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
         except AttributeError:
             try:
-                self.text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+                self.text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
             except AttributeError:
-                # אם שום דבר לא עובד, נשתמש בערכים מספריים
-                self.text_label.setTextInteractionFlags(2)  # TextSelectableByMouse = 2
+                self.text_label.setTextInteractionFlags(0x0080 | 0x0004)  # TextSelectableByMouse | LinksAccessibleByMouse
+        self.text_label.setOpenExternalLinks(False)
+        self.text_label.linkActivated.connect(self.link_clicked.emit)
         layout.addWidget(self.text_label)
         
         # קבצים מצורפים

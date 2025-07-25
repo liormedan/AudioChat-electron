@@ -1,5 +1,7 @@
 from PyQt6.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore import Qt, QTimer, QDateTime, pyqtSignal
+from typing import List
+from models.llm_models import LLMModel
 from .chat_message import ChatMessage
 
 
@@ -10,6 +12,7 @@ class ChatHistory(QScrollArea):
     message_clicked = pyqtSignal(int)  # אות שנשלח כאשר לוחצים על הודעה
     load_more_requested = pyqtSignal()  # אות שנשלח כאשר המשתמש מבקש לטעון עוד הודעות
     file_attachment_clicked = pyqtSignal(dict)  # אות שנשלח כאשר לוחצים על קובץ מצורף
+    model_suggestion_clicked = pyqtSignal(str)  # אות שנשלח כאשר נבחר מודל מהרשימה
     
     def __init__(self, parent=None):
         """
@@ -197,6 +200,15 @@ class ChatHistory(QScrollArea):
         """
         message = ChatMessage(text, "system", timestamp=timestamp, attachments=attachments)
         return self._add_message(message)
+
+    def add_model_suggestions(self, models: List[LLMModel]):
+        """הוספת הודעת הצעה למודלים"""
+        if not models:
+            return None
+        links = " | ".join(f'<a href="{m.id}">{m.name}</a>' for m in models)
+        message = ChatMessage(f"Model suggestions for this task: {links}", "system")
+        message.link_clicked.connect(self.model_suggestion_clicked)
+        return self._add_message(message)
     
     def _add_message(self, message):
         """
@@ -227,6 +239,8 @@ class ChatHistory(QScrollArea):
         
         # חיבור אות לחיצה על קובץ מצורף
         message.file_clicked.connect(self.on_file_attachment_clicked)
+        # חיבור קישורי מודלים
+        message.link_clicked.connect(self.model_suggestion_clicked)
         
         # הוספת מרווח מחדש
         self.layout.addStretch()
