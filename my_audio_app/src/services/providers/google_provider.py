@@ -98,8 +98,13 @@ class GoogleProvider(BaseProvider):
     
     def _setup_google_session(self) -> None:
         """Setup session with Google AI-specific headers"""
-        # Google AI uses API key as query parameter
-        pass
+        # Google AI allows passing the API key using the ``X-Goog-Api-Key``
+        # header.  Using a header means the key will automatically be sent with
+        # every request performed through ``self.session`` without having to
+        # manually append ``?key=...`` to each endpoint.
+        self.session.headers.update({
+            'X-Goog-Api-Key': self.api_key
+        })
     
     def validate_api_key_format(self, api_key: str) -> Tuple[bool, str]:
         """
@@ -142,7 +147,7 @@ class GoogleProvider(BaseProvider):
                 }
             }
             
-            endpoint = f"models/gemini-pro:generateContent?key={self.api_key}"
+            endpoint = "models/gemini-pro:generateContent"
             success, response_data, response_time = self._make_request('POST', endpoint, test_data)
             
             if success:
@@ -201,7 +206,7 @@ class GoogleProvider(BaseProvider):
             request_data["generationConfig"]["stopSequences"] = parameters.stop_sequences
         
         try:
-            endpoint = f"models/{model_id}:generateContent?key={self.api_key}"
+            endpoint = f"models/{model_id}:generateContent"
             success, response_data, response_time = self._make_request('POST', endpoint, request_data)
             
             if not success:
@@ -327,7 +332,7 @@ class GoogleProvider(BaseProvider):
             request_data["generationConfig"]["stopSequences"] = parameters.stop_sequences
         
         try:
-            endpoint = f"models/{model_id}:generateContent?key={self.api_key}"
+            endpoint = f"models/{model_id}:generateContent"
             success, response_data, response_time = self._make_request('POST', endpoint, request_data)
             
             if not success:
