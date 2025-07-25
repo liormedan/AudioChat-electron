@@ -18,9 +18,9 @@ from ..components.llm import (
     ModelSelector,
     ModelDetailsWidget,
     ParameterEditor,
-    UsageMonitor,
     ModelTester,
 )
+from ..components.llm.usage_monitor import UsageMonitor
 
 class LLMManagerPage(QWidget):
     """דף ניהול מודלי LLM"""
