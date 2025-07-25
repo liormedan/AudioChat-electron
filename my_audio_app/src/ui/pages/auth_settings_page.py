@@ -9,6 +9,11 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QFormLayout,
     QMessageBox,
+    QTabWidget,
+    QGroupBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
 )
 from PyQt6.QtCore import Qt
 
@@ -48,6 +53,32 @@ class AuthSettingsPage(QWidget):
                 border: 1px solid #333;
                 border-radius: 4px;
             }
+            QTabWidget::pane {
+                border: 1px solid #333;
+                background-color: #2d2d2d;
+            }
+            QTabBar::tab {
+                background-color: #3d3d3d;
+                color: #ffffff;
+                padding: 8px 16px;
+                margin-right: 2px;
+            }
+            QTabBar::tab:selected {
+                background-color: #2d2d2d;
+                border-bottom: 2px solid #4CAF50;
+            }
+            QGroupBox {
+                font-weight: bold;
+                border: 1px solid #555;
+                border-radius: 4px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+            }
             """
         )
 
@@ -59,12 +90,36 @@ class AuthSettingsPage(QWidget):
         title.setStyleSheet("font-size: 24px; font-weight: bold;")
         layout.addWidget(title)
 
-        form = QFormLayout()
+        self.tab_widget = QTabWidget()
+        layout.addWidget(self.tab_widget)
+
+        self._create_manage_tab()
+        self._create_history_tab()
+
+        self.status_label = QLabel("")
+        layout.addWidget(self.status_label)
+
+        # connections
+        self.save_button.clicked.connect(self._save_api_key)
+        self.test_button.clicked.connect(self._test_api_key)
+        self.delete_button.clicked.connect(self._delete_api_key)
+        self.providers_list.itemClicked.connect(self._provider_selected)
+
+        # update list automatically when keys change
+        self.settings_service.api_key_added.connect(lambda *_: self._load_providers())
+        self.settings_service.api_key_removed.connect(lambda *_: self._load_providers())
+
+    def _create_manage_tab(self) -> None:
+        tab = QWidget()
+        tab_layout = QVBoxLayout(tab)
+
+        input_group = QGroupBox("API Key")
+        form = QFormLayout(input_group)
+
         self.provider_input = QLineEdit()
         self.api_key_input = QLineEdit()
         self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
 
-        # Show/Hide button for API key
         self.show_button = QPushButton("👁️")
         self.show_button.setCheckable(True)
         self.show_button.setFixedWidth(30)
@@ -76,33 +131,66 @@ class AuthSettingsPage(QWidget):
 
         form.addRow("Provider", self.provider_input)
         form.addRow("API Key", key_row)
-        layout.addLayout(form)
 
-        btn_row = QHBoxLayout()
+        actions_group = QGroupBox("Actions")
+        btn_row = QHBoxLayout(actions_group)
         self.save_button = QPushButton("Save")
         self.test_button = QPushButton("Test")
         self.delete_button = QPushButton("Delete")
         btn_row.addWidget(self.save_button)
         btn_row.addWidget(self.test_button)
         btn_row.addWidget(self.delete_button)
-        layout.addLayout(btn_row)
 
-        self.status_label = QLabel("")
-        layout.addWidget(self.status_label)
-
+        list_group = QGroupBox("Saved Keys")
+        list_layout = QVBoxLayout(list_group)
         self.providers_list = QListWidget()
-        layout.addWidget(QLabel("Saved Keys:"))
-        layout.addWidget(self.providers_list)
+        list_layout.addWidget(self.providers_list)
 
-        # connections
-        self.save_button.clicked.connect(self._save_api_key)
-        self.test_button.clicked.connect(self._test_api_key)
-        self.delete_button.clicked.connect(self._delete_api_key)
-        self.providers_list.itemClicked.connect(self._provider_selected)
+        tab_layout.addWidget(input_group)
+        tab_layout.addWidget(actions_group)
+        tab_layout.addWidget(list_group)
+        tab_layout.addStretch()
 
-        # update list automatically when keys change
-        self.settings_service.api_key_added.connect(lambda *_: self._load_providers())
-        self.settings_service.api_key_removed.connect(lambda *_: self._load_providers())
+        self.tab_widget.addTab(tab, "🔑 Keys")
+
+    def _create_history_tab(self) -> None:
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+
+        self.history_table = QTableWidget()
+        self.history_table.setColumnCount(4)
+        self.history_table.setHorizontalHeaderLabels(["Test Time", "Success", "Response Time", "Message"])
+
+        header = self.history_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+
+        layout.addWidget(self.history_table)
+
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.clicked.connect(self._load_history)
+        layout.addWidget(refresh_btn)
+
+        layout.addStretch()
+
+        self.tab_widget.addTab(tab, "📜 History")
+
+    def _load_history(self) -> None:
+        provider = self.provider_input.text().strip()
+        if not provider:
+            self.history_table.setRowCount(0)
+            return
+        history = llm_service.api_key_manager.get_connection_test_history(provider, 20)
+        self.history_table.setRowCount(len(history))
+        for row, item in enumerate(history):
+            self.history_table.setItem(row, 0, QTableWidgetItem(item["test_time"][:19].replace("T", " ")))
+            success_text = "✅" if item["success"] else "❌"
+            self.history_table.setItem(row, 1, QTableWidgetItem(success_text))
+            resp = f"{item['response_time']:.2f}s" if item["response_time"] else "N/A"
+            self.history_table.setItem(row, 2, QTableWidgetItem(resp))
+            self.history_table.setItem(row, 3, QTableWidgetItem(item["error_message"] or ""))
 
     def _load_providers(self) -> None:
         self.providers_list.clear()
@@ -118,6 +206,7 @@ class AuthSettingsPage(QWidget):
         key = self.settings_service.get_api_key(provider) or ""
         self.provider_input.setText(provider)
         self.api_key_input.setText(key)
+        self._load_history()
 
     def _save_api_key(self) -> None:
         provider = self.provider_input.text().strip()
@@ -133,6 +222,7 @@ class AuthSettingsPage(QWidget):
             self.provider_input.clear()
             self.api_key_input.clear()
             self._load_providers()
+            self._load_history()
 
     def _toggle_visibility(self) -> None:
         if self.show_button.isChecked():
@@ -151,4 +241,5 @@ class AuthSettingsPage(QWidget):
         success, message, _time = llm_service.api_key_manager.test_api_key_connection(provider, key)
         icon = "✅" if success else "❌"
         self.status_label.setText(f"{icon} {message}")
+        self._load_history()
 
