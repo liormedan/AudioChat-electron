@@ -592,7 +592,9 @@ class HomePage(QWidget):
     
     def on_file_upload_started(self, file_path):
         """טיפול בהתחלת העלאת קובץ"""
-        self.chat_history.add_system_message(f"מתחיל להעלות את הקובץ: {os.path.basename(file_path)}")
+        msg = f"מתחיל להעלות את הקובץ: {os.path.basename(file_path)}"
+        self.chat_service.add_message(msg, "system")
+        self.chat_history.add_system_message(msg)
     
     def on_file_upload_progress(self, file_path, progress):
         """טיפול בהתקדמות העלאת קובץ"""
@@ -607,8 +609,11 @@ class HomePage(QWidget):
         # הוספת הקובץ לרשימת הקבצים האחרונים
         self.recent_files_list.add_file(file_info)
         
-        # הודעה בצ'אט עם קובץ מצורף
-        system_msg = f"הקובץ {file_info.name} הועלה בהצלחה"
+        # הודעה בצ'אט עם קובץ מצורף והפניה לשימוש בשם הקובץ
+        system_msg = (
+            f"הקובץ {file_info.name} הועלה בהצלחה. "
+            f"ניתן להתייחס אליו כ-[קובץ: {file_info.name}]"
+        )
         
         # יצירת מידע על הקובץ המצורף
         attachment = {
@@ -643,7 +648,10 @@ class HomePage(QWidget):
     
     def on_file_selected(self, file_info):
         """טיפול בבחירת קובץ מהרשימה"""
-        system_msg = f"נבחר הקובץ: {file_info.name}"
+        system_msg = (
+            f"נבחר הקובץ: {file_info.name}. "
+            f"השתמשו ב-[קובץ: {file_info.name}] כדי להתייחס אליו"
+        )
         
         # יצירת מידע על הקובץ המצורף
         attachment = {
