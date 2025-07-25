@@ -103,7 +103,10 @@
   - Test with various audio file formats
   - _Requirements: 1.5, 4.2_
 
-- [x] 10. Integrate chat and file functionality
+- [ ] 10. Integrate chat and file functionality
+
+
+
 
 
 
