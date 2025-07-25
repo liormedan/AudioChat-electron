@@ -7,6 +7,7 @@ from .provider_card import ProviderCard
 from .model_selector import ModelSelector
 from .model_details import ModelDetailsWidget, ModelComparisonDialog
 from .parameter_editor import ParameterEditor, ParameterSlider, PresetCard
+from .model_tester import ModelTester, TestPrompt, TestResult, ModelComparison, TestStatus
 
 __all__ = [
     'APIKeyDialog',
@@ -17,5 +18,10 @@ __all__ = [
     'ModelComparisonDialog',
     'ParameterEditor',
     'ParameterSlider',
-    'PresetCard'
+    'PresetCard',
+    'ModelTester',
+    'TestPrompt',
+    'TestResult',
+    'ModelComparison',
+    'TestStatus'
 ]
