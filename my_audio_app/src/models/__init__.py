@@ -5,13 +5,15 @@ from .llm_models import (
     LLMProvider, LLMModel, UsageRecord, LLMParameters,
     ProviderStatus, ModelCapability
 )
+from .user_profile import UserProfile
 
 __all__ = [
     'AudioExport',
     'LLMProvider',
-    'LLMModel', 
+    'LLMModel',
     'UsageRecord',
     'LLMParameters',
     'ProviderStatus',
-    'ModelCapability'
+    'ModelCapability',
+    'UserProfile'
 ]
