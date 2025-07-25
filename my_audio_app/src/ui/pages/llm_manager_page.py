@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
 
 from app_context import settings_service, llm_service
+from models.llm_models import LLMParameters
 
 # Placeholder classes for missing components
 class ProviderCard(QWidget):
@@ -381,10 +382,15 @@ class LLMManagerPage(QWidget):
         try:
             # Load saved settings
             self._load_settings()
-            
+
             # Load provider states
             self._load_provider_states()
-            
+
+            active = self.llm_service.get_active_model()
+            if active:
+                self.current_model = active.id
+                self._update_model_status()
+
             # Update status
             self._update_status()
             
@@ -495,9 +501,13 @@ class LLMManagerPage(QWidget):
     def _on_model_selected(self, model_id: str):
         """טיפול בבחירת מודל"""
         print(f"Model selected: {model_id}")
-        
+
         self.current_model = model_id
-        
+        try:
+            self.llm_service.set_active_model(model_id)
+        except Exception as e:
+            print(f"Error activating model {model_id}: {e}")
+
         # Update model details
         if hasattr(self, 'model_details'):
             if hasattr(self.model_details, 'update_model'):
@@ -513,11 +523,16 @@ class LLMManagerPage(QWidget):
     def _on_parameters_changed(self, parameters: Dict[str, Any]):
         """טיפול בשינוי פרמטרים"""
         print(f"Parameters changed: {parameters}")
-        
+
         self.current_parameters = parameters
-        
+
         # Save settings
         self._save_settings()
+        try:
+            params = LLMParameters.from_dict(parameters)
+            self.llm_service.set_parameters(params)
+        except Exception as e:
+            print(f"Error applying parameters: {e}")
         
         # Emit signal
         self.settings_changed.emit(parameters)
@@ -537,30 +552,39 @@ class LLMManagerPage(QWidget):
     # Data management methods
     def _load_settings(self):
         """טעינת הגדרות"""
-        # TODO: Implement settings loading from persistent storage
-        self.current_parameters = {
-            "temperature": 0.7,
-            "max_tokens": 1000,
-            "top_p": 0.9,
-            "frequency_penalty": 0.0
-        }
+        params = self.llm_service.get_parameters()
+        if isinstance(params, LLMParameters):
+            self.current_parameters = params.to_dict()
+        else:
+            self.current_parameters = {
+                "temperature": 0.7,
+                "max_tokens": 1000,
+                "top_p": 0.9,
+                "frequency_penalty": 0.0,
+            }
+
+        if hasattr(self, "parameter_editor") and hasattr(
+            self.parameter_editor, "set_parameters"
+        ):
+            self.parameter_editor.set_parameters(params)
     
     def _save_settings(self):
         """שמירת הגדרות"""
-        # TODO: Implement settings saving to persistent storage
-        print("Settings saved")
+        try:
+            params = LLMParameters.from_dict(self.current_parameters)
+            self.llm_service.set_parameters(params)
+            print("Settings saved")
+        except Exception as e:
+            print(f"Error saving settings: {e}")
     
     def _load_provider_states(self):
         """טעינת מצבי ספקים"""
-        # TODO: Load provider connection states from storage
-        self.providers_data = {
-            "OpenAI": {"connected": False, "api_key": None},
-            "Anthropic": {"connected": False, "api_key": None},
-            "Google": {"connected": False, "api_key": None},
-            "Cohere": {"connected": False, "api_key": None},
-            "Hugging Face": {"connected": False, "api_key": None},
-            "Local Models": {"connected": False, "api_key": None}
-        }
+        self.providers_data = {}
+        for provider in self.llm_service.get_all_providers():
+            self.providers_data[provider.name] = {
+                "connected": provider.is_connected,
+                "api_key": provider.api_key,
+            }
     
     def _refresh_data(self):
         """רענון כל הנתונים"""

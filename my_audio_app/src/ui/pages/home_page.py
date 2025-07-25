@@ -354,6 +354,13 @@ class HomePage(QWidget):
                 self.chat_history.add_ai_message(ai_text)
             else:
                 self._simulate_ai_response(text)
+
+            suggestions = self.chat_service.suggest_models_for_prompt(text)
+            if suggestions:
+                names = ", ".join(suggestions[:3])
+                self.chat_history.add_system_message(
+                    f"Model suggestions for this task: {names}"
+                )
     
     def on_typing_started(self):
         """טיפול בהתחלת הקלדה"""
