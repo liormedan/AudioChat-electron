@@ -495,7 +495,8 @@ class LLMManagerPage(QWidget):
         # Update model details
         if hasattr(self, 'model_details'):
             if hasattr(self.model_details, 'update_model'):
-                self.model_details.update_model(model_id)
+                model_info = self.get_model_info(model_id)
+                self.model_details.update_model(model_info)
         
         # Update status
         self._update_model_status()
