@@ -6,7 +6,7 @@ from PyQt6.QtGui import QFont, QCursor, QIcon, QAction
 import os
 from ui.components.chat import ChatHistory, ChatMessage, ChatInput
 from ui.components.file_upload import FileUploader, RecentFilesList, FileInfo
-from services.chat_service import ChatService
+from app_context import chat_service, llm_service, settings_service
 from services.file_service import FileService
 
 
@@ -18,7 +18,7 @@ class HomePage(QWidget):
         self.setObjectName("homePage")
         
         # יצירת שירותים
-        self.chat_service = ChatService()
+        self.chat_service = chat_service
         self.file_service = FileService()
         
         # סגנון כללי לדף - רקע שחור וטקסט לבן
@@ -349,8 +349,11 @@ class HomePage(QWidget):
             # הוספת הודעת משתמש לממשק
             self.chat_history.add_user_message(text)
             
-            # סימולציה של תשובת AI
-            self._simulate_ai_response(text)
+            ai_text = self.chat_service.generate_ai_reply(text)
+            if ai_text:
+                self.chat_history.add_ai_message(ai_text)
+            else:
+                self._simulate_ai_response(text)
     
     def on_typing_started(self):
         """טיפול בהתחלת הקלדה"""

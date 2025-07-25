@@ -8,6 +8,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
 
+from app_context import settings_service, llm_service
+
 # Placeholder classes for missing components
 class ProviderCard(QWidget):
     connection_changed = pyqtSignal(str, bool)
@@ -60,6 +62,9 @@ class LLMManagerPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("llmManagerPage")
+
+        self.settings_service = settings_service
+        self.llm_service = llm_service
         
         # State management
         self.current_provider = None
@@ -72,6 +77,7 @@ class LLMManagerPage(QWidget):
         self._setup_connections()
         self._load_initial_data()
         self._apply_styling()
+        QTimer.singleShot(100, self._show_welcome_if_needed)
     
     def _setup_ui(self):
         """הגדרת ממשק המשתמש"""
@@ -665,6 +671,17 @@ class LLMManagerPage(QWidget):
             self.providers_data[provider_name]["connected"] = False
             self.providers_data[provider_name]["api_key"] = None
             self._update_connection_status()
+
+    def _show_welcome_if_needed(self):
+        """Display welcome message on first setup"""
+        first_run = not self.settings_service.get_setting("llm_setup_complete", False)
+        if first_run:
+            QMessageBox.information(
+                self,
+                "Welcome",
+                "Welcome to the LLM Manager! Configure a provider to start using AI features."
+            )
+            self.settings_service.set_setting("llm_setup_complete", True)
 
 
 # Demo/Testing function

@@ -14,6 +14,8 @@ from models.llm_models import (
     ProviderStatus, ModelCapability
 )
 from services.api_key_manager import APIKeyManager
+from services.providers.provider_factory import ProviderFactory
+from services.providers.base_provider import BaseProvider, ProviderResponse
 
 
 class LLMService(QObject):
@@ -50,9 +52,12 @@ class LLMService(QObject):
         
         # מודל פעיל נוכחי
         self.active_model: Optional[LLMModel] = None
-        
+
         # פרמטרים נוכחיים
         self.current_parameters = LLMParameters()
+
+        # Provider instance cache
+        self._provider_instances: Dict[str, BaseProvider] = {}
         
         # טעינת ספקים ברירת מחדל
         self._init_default_providers()
@@ -289,6 +294,20 @@ class LLMService(QObject):
             cost_per_1k_tokens=row[9],
             metadata=json.loads(row[10]) if row[10] else {}
         )
+
+    def _get_provider_instance(self, provider_name: str) -> Optional[BaseProvider]:
+        """Return or create a provider instance"""
+        if provider_name in self._provider_instances:
+            return self._provider_instances[provider_name]
+
+        provider = self.get_provider(provider_name)
+        if not provider or not provider.api_key:
+            return None
+
+        instance = ProviderFactory.create_provider(provider_name, provider.api_key, provider.api_base_url)
+        if instance:
+            self._provider_instances[provider_name] = instance
+        return instance
     
     def get_all_providers(self) -> List[LLMProvider]:
         """קבלת כל הספקים"""
@@ -716,3 +735,31 @@ class LLMService(QObject):
             days_to_keep (int): מספר ימים לשמירה
         """
         self.api_key_manager.cleanup_old_data(days_to_keep)
+
+    # --- Integration Helpers ---
+    def generate_chat_response(self, messages: List[Dict[str, str]]) -> Optional[ProviderResponse]:
+        """Generate a chat completion using the active model"""
+        active = self.get_active_model()
+        if not active:
+            return None
+
+        provider = self._get_provider_instance(active.provider)
+        if not provider:
+            return None
+
+        model_id = active.id.split("-", 1)[-1]
+        params = self.get_parameters()
+        response = provider.chat_completion(messages, model_id, params)
+        return response
+
+    def suggest_models_for_task(self, task: str) -> List[LLMModel]:
+        """Return models suitable for the given task"""
+        capability_map = {
+            "chat": ModelCapability.CHAT,
+            "code": ModelCapability.CODE_GENERATION,
+            "summarize": ModelCapability.SUMMARIZATION,
+            "transcribe": ModelCapability.AUDIO_TRANSCRIPTION,
+            "analyze": ModelCapability.AUDIO_ANALYSIS,
+        }
+        capability = capability_map.get(task, ModelCapability.TEXT_GENERATION)
+        return [m for m in self.get_all_models() if capability in m.capabilities]
