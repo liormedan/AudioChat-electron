@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
 
 from app_context import settings_service, llm_service
+from services.usage_service import UsageService
 from models.llm_models import LLMParameters
 
 # Placeholder classes for missing components
@@ -66,6 +67,7 @@ class LLMManagerPage(QWidget):
 
         self.settings_service = settings_service
         self.llm_service = llm_service
+        self.usage_service = UsageService()
         
         # State management
         self.current_provider = None
@@ -622,15 +624,70 @@ class LLMManagerPage(QWidget):
     
     def _refresh_usage_data(self):
         """רענון נתוני שימוש"""
-        if hasattr(self, 'usage_monitor'):
-            # TODO: Refresh usage statistics
-            pass
-    
+        if not hasattr(self, 'usage_monitor'):
+            return
+
+        try:
+            summary = self.usage_service.get_usage_summary()
+
+            if hasattr(self.usage_monitor, 'tokens_card'):
+                self.usage_monitor.tokens_card.update_value(
+                    f"{summary['total_tokens']:,}"
+                )
+            if hasattr(self.usage_monitor, 'calls_card'):
+                self.usage_monitor.calls_card.update_value(
+                    f"{summary['total_requests']:,}"
+                )
+            if hasattr(self.usage_monitor, 'cost_card'):
+                self.usage_monitor.cost_card.update_value(
+                    f"${summary['total_cost']:.2f}"
+                )
+            if hasattr(self.usage_monitor, 'errors_card'):
+                errors = int(summary['total_requests'] * (1 - summary['success_rate']))
+                self.usage_monitor.errors_card.update_value(str(errors))
+
+            if hasattr(self.usage_monitor, 'avg_response_time_label'):
+                self.usage_monitor.avg_response_time_label.setText(
+                    f"{summary['avg_response_time']:.2f}s"
+                )
+            if hasattr(self.usage_monitor, 'success_rate_label'):
+                self.usage_monitor.success_rate_label.setText(
+                    f"{summary['success_rate'] * 100:.1f}%"
+                )
+            if hasattr(self.usage_monitor, 'active_providers_label'):
+                self.usage_monitor.active_providers_label.setText(
+                    str(summary['unique_providers'])
+                )
+            if hasattr(self.usage_monitor, 'active_models_label'):
+                self.usage_monitor.active_models_label.setText(
+                    str(summary['unique_models'])
+                )
+
+            # Fallback for placeholder widget with a single label
+            if isinstance(self.usage_monitor, QWidget) and not hasattr(self.usage_monitor, 'tokens_card'):
+                label = self.usage_monitor.findChild(QLabel)
+                if label:
+                    label.setText(
+                        f"Requests: {summary['total_requests']}  |  Tokens: {summary['total_tokens']}  |  Cost: ${summary['total_cost']:.2f}"
+                    )
+        except Exception as e:
+            print(f"Error refreshing usage data: {e}")
+
     def _refresh_testing_data(self):
         """רענון נתוני בדיקות"""
-        if hasattr(self, 'model_tester'):
-            # TODO: Refresh testing data
-            pass
+        if not hasattr(self, 'model_tester'):
+            return
+
+        try:
+            if hasattr(self.model_tester, 'refresh_history'):
+                self.model_tester.refresh_history()
+            else:
+                if hasattr(self.model_tester, 'update_history_table'):
+                    self.model_tester.update_history_table()
+                if hasattr(self.model_tester, 'update_performance_metrics'):
+                    self.model_tester.update_performance_metrics()
+        except Exception as e:
+            print(f"Error refreshing testing data: {e}")
     
     def _auto_refresh(self):
         """רענון אוטומטי"""
