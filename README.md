@@ -92,6 +92,12 @@ python my_audio_app/main.py
 - **librosa** — ניתוח קבצי אודיו
 - **openai / transformers** — מודלי AI (בהמשך)
 
+### ProfileService
+
+שירות קטן מבוסס SQLite לאחסון פרטי משתמש (שם תצוגה, אימייל ונתיב לאווטאר).
+ניתן לגשת אליו דרך `app_context.profile_service` והוא שולח אות
+`profile_saved` כאשר הפרופיל משתנה.
+
 ---
 
 ## 💡 רעיונות להמשך
