@@ -18,6 +18,11 @@ except ImportError:
     AudioStorageService = None
 
 try:
+    from .cloud_storage_service import CloudStorageService
+except ImportError:
+    CloudStorageService = None
+
+try:
     from .export_service import ExportService
 except ImportError:
     ExportService = None
@@ -47,6 +52,8 @@ if AudioEditingService:
     __all__.append('AudioEditingService')
 if AudioStorageService:
     __all__.append('AudioStorageService')
+if CloudStorageService:
+    __all__.append('CloudStorageService')
 if ExportService:
     __all__.append('ExportService')
 if FileService:

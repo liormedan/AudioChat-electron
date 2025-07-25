@@ -20,6 +20,10 @@ pydub>=0.25.0
 
 # Database & Storage
 sqlite3  # Built-in with Python
+# Cloud providers
+boto3>=1.28.0
+google-cloud-storage>=2.12.0
+azure-storage-blob>=12.19.0
 # sqlalchemy>=2.0.0  # For advanced database features
 
 # Security & Encryption

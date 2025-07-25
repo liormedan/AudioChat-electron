@@ -20,8 +20,9 @@ class TestDataManagementPage(unittest.TestCase):
     def test_widget_creation(self):
         page = DataManagementPage()
         self.assertIsNotNone(page.local_files_list)
+        self.assertIsNotNone(page.s3_files_list)
         self.assertIsNotNone(page.gcs_files_list)
-        self.assertIsNotNone(page.onedrive_files_list)
+        self.assertIsNotNone(page.azure_files_list)
 
     @classmethod
     def tearDownClass(cls):
