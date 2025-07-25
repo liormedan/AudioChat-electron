@@ -754,13 +754,25 @@ class LLMManagerPage(QWidget):
     def connect_provider(self, provider_name: str, api_key: str) -> bool:
         """חיבור ספק"""
         try:
-            # TODO: Implement actual provider connection
+            # Save API key securely via the service
+            saved = self.llm_service.set_provider_api_key(provider_name, api_key)
+            if not saved:
+                return False
+
+            # Test the connection with the stored key
+            success, _msg, _time = self.llm_service.test_provider_connection_secure(
+                provider_name
+            )
+
+            # Update internal state
             self.providers_data[provider_name] = {
-                "connected": True,
-                "api_key": api_key
+                "connected": success,
+                "api_key": api_key,
             }
             self._update_connection_status()
-            return True
+            # Emit change notification
+            self.provider_connected.emit(provider_name, success)
+            return success
         except Exception as e:
             print(f"Error connecting provider {provider_name}: {e}")
             return False
