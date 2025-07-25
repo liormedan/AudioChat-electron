@@ -65,23 +65,22 @@ class TestLLMService(unittest.TestCase):
             name="TestProvider",
             api_base_url="https://api.test.com",
             supported_models=["test-model-1", "test-model-2"],
-            api_key="test-key-123",
             rate_limit=1000,
             cost_per_1k_tokens=0.01
         )
         
         # שמירת הספק
         self.llm_service.save_provider(provider)
-        
-        # קבלת הספק
+        self.llm_service.set_provider_api_key("TestProvider", "test-key-123")
+
         retrieved_provider = self.llm_service.get_provider("TestProvider")
-        
-        # בדיקות
+
         self.assertIsNotNone(retrieved_provider)
         self.assertEqual(retrieved_provider.name, provider.name)
         self.assertEqual(retrieved_provider.api_base_url, provider.api_base_url)
         self.assertEqual(retrieved_provider.supported_models, provider.supported_models)
-        self.assertEqual(retrieved_provider.api_key, provider.api_key)
+        self.assertIsNone(retrieved_provider.api_key)
+        self.assertEqual(self.llm_service.get_provider_api_key("TestProvider"), "test-key-123")
         self.assertEqual(retrieved_provider.rate_limit, provider.rate_limit)
     
     def test_get_nonexistent_provider(self):
@@ -99,10 +98,10 @@ class TestLLMService(unittest.TestCase):
         provider = LLMProvider(
             name="TestProvider",
             api_base_url="https://api.test.com",
-            supported_models=["test-model"],
-            api_key="test-key"
+            supported_models=["test-model"]
         )
         self.llm_service.save_provider(provider)
+        self.llm_service.set_provider_api_key("TestProvider", "test-key")
         
         # בדיקת חיבור
         result = self.llm_service.test_provider_connection("TestProvider")
@@ -292,8 +291,7 @@ class TestLLMService(unittest.TestCase):
         provider = LLMProvider(
             name="SignalTestProvider",
             api_base_url="https://api.test.com",
-            supported_models=["test-model"],
-            api_key="test-key"
+            supported_models=["test-model"]
         )
         
         model = LLMModel(
@@ -308,6 +306,7 @@ class TestLLMService(unittest.TestCase):
         
         # שמירת ספק ומודל
         self.llm_service.save_provider(provider)
+        self.llm_service.set_provider_api_key("SignalTestProvider", "test-key")
         self.llm_service.save_model(model)
         
         # בדיקת חיבור (אמור לשלוח אות)

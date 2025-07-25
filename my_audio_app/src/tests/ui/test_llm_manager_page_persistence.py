@@ -47,8 +47,8 @@ class TestLLMManagerPagePersistence(unittest.TestCase):
 
         provider = self.llm_service.get_provider("OpenAI")
         provider.is_connected = True
-        provider.api_key = "key-123"
         self.llm_service.save_provider(provider)
+        self.llm_service.set_provider_api_key("OpenAI", "key-123")
 
         page2 = llm_page_module.LLMManagerPage()
         self.assertAlmostEqual(page2.current_parameters.get("temperature"), 0.5, places=2)
