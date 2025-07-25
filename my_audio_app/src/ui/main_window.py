@@ -4,6 +4,7 @@ from .widgets.sidebar import Sidebar
 from .pages.file_stats_page import FileStatsPage
 from .pages.home_page import HomePage
 from .pages.audio_export_page import AudioExportPage
+from .pages.llm_manager_page import LLMManagerPage
 
 
 class MainWindow(QMainWindow):
@@ -37,7 +38,7 @@ class MainWindow(QMainWindow):
         self._register_page("exports", AudioExportPage())
         self._register_page("file_stats", FileStatsPage())
         self._register_page("terminal", self._create_dummy_page("🧠 AI Terminal"))
-        self._register_page("llm_management", self._create_dummy_page("🧬 LLM Management"))
+        self._register_page("llm_management", LLMManagerPage())
         self._register_page("auth", self._create_dummy_page("🔐 Auth Settings"))
         self._register_page("profile", self._create_dummy_page("👤 Profile"))
         self._register_page("database", self._create_dummy_page("🗃️ Database Management"))
