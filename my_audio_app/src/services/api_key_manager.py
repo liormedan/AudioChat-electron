@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 
 from PyQt6.QtCore import QObject, pyqtSignal
+from services.providers.provider_factory import ProviderFactory
 
 
 class APIKeyManager(QObject):
@@ -527,33 +528,24 @@ class APIKeyManager(QObject):
     
     def _perform_connection_test(self, provider_name: str, api_key: str) -> Tuple[bool, str]:
         """
-        ביצוע בדיקת חיבור אמיתית
-        
+        ביצוע בדיקת חיבור אמיתית באמצעות מחלקות הספקים
+
         Args:
             provider_name (str): שם הספק
             api_key (str): מפתח API
-            
+
         Returns:
             Tuple[bool, str]: הצלחה והודעת שגיאה
         """
-        # כאן תהיה הלוגיקה האמיתית לבדיקת חיבור לכל ספק
-        # לעת עתה נחזיר הצלחה אם המפתח עובר בדיקת פורמט
-        
-        test_endpoints = {
-            "OpenAI": "https://api.openai.com/v1/models",
-            "Anthropic": "https://api.anthropic.com/v1/messages",
-            "Google": "https://generativelanguage.googleapis.com/v1/models",
-            "Cohere": "https://api.cohere.ai/v1/models"
-        }
-        
-        # סימולציה של בדיקת חיבור
-        # בפועל כאן נשלח בקשה HTTP לנקודת הקצה המתאימה
-        
-        if len(api_key) < 20:
-            return False, "API key too short"
-        
-        # סימולציה של הצלחה
-        return True, "Connection successful"
+        try:
+            provider = ProviderFactory.create_provider(provider_name, api_key)
+            if provider is None:
+                return False, f"Unsupported provider: {provider_name}"
+
+            success, message, _ = provider.test_connection()
+            return success, message
+        except Exception as e:
+            return False, str(e)
     
     def _save_connection_test_result(self, provider_name: str, success: bool, 
                                    response_time: float, error_message: str = None) -> None:

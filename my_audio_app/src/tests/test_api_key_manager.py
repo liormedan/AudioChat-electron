@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from datetime import datetime
 import sys
+from unittest.mock import patch, MagicMock
 
 # הוספת נתיב למודלים
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -173,13 +174,20 @@ class TestAPIKeyManager(unittest.TestCase):
         """בדיקת רישום תוצאות בדיקת חיבור"""
         provider = "OpenAI"
         api_key = self.test_keys[provider]
-        
+
         # שמירת מפתח
         self.api_key_manager.store_api_key(provider, api_key)
-        
-        # בדיקת חיבור
-        success, message, response_time = self.api_key_manager.test_api_key_connection(provider)
-        
+
+        # בדיקת חיבור עם mocking כדי למנוע קריאות רשת
+        with patch('services.api_key_manager.ProviderFactory.create_provider') as mock_factory:
+            mock_provider = MagicMock()
+            mock_provider.test_connection.return_value = (True, "ok", 0.1)
+            mock_factory.return_value = mock_provider
+
+            success, message, response_time = self.api_key_manager.test_api_key_connection(provider)
+            mock_factory.assert_called_once_with(provider, api_key)
+            mock_provider.test_connection.assert_called_once()
+
         # בדיקה שהתוצאה נרשמה
         history = self.api_key_manager.get_connection_test_history(provider, 1)
         self.assertEqual(len(history), 1)
@@ -188,6 +196,39 @@ class TestAPIKeyManager(unittest.TestCase):
         self.assertEqual(test_record["success"], success)
         self.assertIsNotNone(test_record["test_time"])
         self.assertIsNotNone(test_record["response_time"])
+
+    @patch('services.api_key_manager.ProviderFactory.create_provider')
+    def test_perform_connection_test_success(self, mock_factory):
+        """בדיקת מסלול הצלחה של _perform_connection_test"""
+        mock_provider = MagicMock()
+        mock_provider.test_connection.return_value = (True, "ok", 0.2)
+        mock_factory.return_value = mock_provider
+
+        success, message = self.api_key_manager._perform_connection_test("OpenAI", "dummy")
+
+        self.assertTrue(success)
+        self.assertEqual(message, "ok")
+        mock_factory.assert_called_once_with("OpenAI", "dummy")
+        mock_provider.test_connection.assert_called_once()
+
+    @patch('services.api_key_manager.ProviderFactory.create_provider')
+    def test_perform_connection_test_failure(self, mock_factory):
+        """בדיקת מסלול כשל של _perform_connection_test"""
+        mock_provider = MagicMock()
+        mock_provider.test_connection.side_effect = Exception("boom")
+        mock_factory.return_value = mock_provider
+
+        success, message = self.api_key_manager._perform_connection_test("OpenAI", "dummy")
+
+        self.assertFalse(success)
+        self.assertEqual(message, "boom")
+
+    @patch('services.api_key_manager.ProviderFactory.create_provider', return_value=None)
+    def test_perform_connection_test_unsupported(self, mock_factory):
+        """בדיקת טיפול בספק שאינו נתמך"""
+        success, message = self.api_key_manager._perform_connection_test("Foo", "key")
+        self.assertFalse(success)
+        self.assertIn("Unsupported provider", message)
     
     def test_security_status(self):
         """בדיקת סטטוס אבטחה"""
@@ -236,7 +277,11 @@ class TestAPIKeyManager(unittest.TestCase):
         self.api_key_manager.store_api_key(provider, api_key)
         
         # בדיקת חיבור (ליצירת רשומה)
-        self.api_key_manager.test_api_key_connection(provider)
+        with patch('services.api_key_manager.ProviderFactory.create_provider') as mock_factory:
+            mock_provider = MagicMock()
+            mock_provider.test_connection.return_value = (True, "ok", 0.1)
+            mock_factory.return_value = mock_provider
+            self.api_key_manager.test_api_key_connection(provider)
         
         # בדיקה שיש נתונים
         history_before = self.api_key_manager.get_connection_test_history(provider)
