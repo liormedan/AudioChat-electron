@@ -7,6 +7,7 @@ from cryptography.fernet import Fernet
 from PyQt6.QtCore import QObject, pyqtSignal
 import base64
 import hashlib
+from services.api_key_manager import APIKeyManager
 
 
 class SettingsService(QObject):
@@ -418,16 +419,17 @@ class SettingsService(QObject):
         """
         api_key = self.get_api_key(provider)
         if not api_key:
+            self._update_key_validity(provider, False)
             return False
-        
-        # כאן תהיה לוגיקת בדיקה אמיתית לכל ספק
-        # לעת עתה נבדוק רק שהמפתח לא ריק
-        is_valid = len(api_key.strip()) > 0
-        
-        # עדכון סטטוס תקינות
-        self._update_key_validity(provider, is_valid)
-        
-        return is_valid
+
+        # השתמש ב‑APIKeyManager כדי לבצע בדיקת חיבור אמיתית
+        api_key_manager = APIKeyManager(self.db_path.replace("settings.db", "api_keys.db"))
+        success, _msg, _time = api_key_manager.test_api_key_connection(provider, api_key)
+
+        # עדכון סטטוס התקינות במסד הנתונים
+        self._update_key_validity(provider, success)
+
+        return success
     
     def _update_last_used(self, provider: str) -> None:
         """עדכון זמן שימוש אחרון"""
