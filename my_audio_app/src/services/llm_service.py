@@ -44,11 +44,14 @@ class LLMService(QObject):
         
         self.db_path = db_path
         
-        # יצירת מסד נתונים אם לא קיים
+        # יצירת מסד נתונים אם לא קיים ומעבר סכמת ספקים
         self._init_db()
-        
+
         # מנהל מפתחות API מאובטח
         self.api_key_manager = APIKeyManager(db_path.replace("llm_data.db", "api_keys.db"))
+
+        # העברת מפתחות ישנים אם קיימים
+        self._migrate_old_api_keys()
         
         # מודל פעיל נוכחי
         self.active_model: Optional[LLMModel] = None
@@ -66,14 +69,21 @@ class LLMService(QObject):
         """יצירת מסד נתונים אם לא קיים"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
-        # טבלת ספקים
+
+        cursor.execute("PRAGMA table_info(llm_providers)")
+        columns = [row[1] for row in cursor.fetchall()]
+
+        if 'api_key' in columns:
+            cursor.execute("SELECT name, api_key FROM llm_providers WHERE api_key IS NOT NULL")
+            self._old_api_keys = {row[0]: row[1] for row in cursor.fetchall()}
+            cursor.execute("ALTER TABLE llm_providers RENAME TO llm_providers_old")
+
+        # טבלת ספקים (ללא עמודת api_key)
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS llm_providers (
             name TEXT PRIMARY KEY,
             api_base_url TEXT NOT NULL,
             supported_models TEXT NOT NULL,
-            api_key TEXT,
             is_connected BOOLEAN DEFAULT FALSE,
             connection_status TEXT DEFAULT 'disconnected',
             last_test_date TEXT,
@@ -83,6 +93,18 @@ class LLMService(QObject):
             metadata TEXT DEFAULT '{}'
         )
         ''')
+
+        if 'api_key' in columns:
+            cursor.execute('''
+            INSERT INTO llm_providers (name, api_base_url, supported_models, is_connected,
+                                      connection_status, last_test_date, error_message,
+                                      rate_limit, cost_per_1k_tokens, metadata)
+            SELECT name, api_base_url, supported_models, is_connected,
+                   connection_status, last_test_date, error_message,
+                   rate_limit, cost_per_1k_tokens, metadata
+            FROM llm_providers_old
+            ''')
+            cursor.execute('DROP TABLE llm_providers_old')
         
         # טבלת מודלים
         cursor.execute('''
@@ -248,15 +270,14 @@ class LLMService(QObject):
         cursor = conn.cursor()
         
         cursor.execute('''
-        INSERT OR REPLACE INTO llm_providers 
-        (name, api_base_url, supported_models, api_key, is_connected, connection_status,
+        INSERT OR REPLACE INTO llm_providers
+        (name, api_base_url, supported_models, is_connected, connection_status,
          last_test_date, error_message, rate_limit, cost_per_1k_tokens, metadata)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             provider.name,
             provider.api_base_url,
             json.dumps(provider.supported_models),
-            provider.api_key,
             provider.is_connected,
             provider.connection_status.value,
             provider.last_test_date.isoformat() if provider.last_test_date else None,
@@ -285,14 +306,14 @@ class LLMService(QObject):
             name=row[0],
             api_base_url=row[1],
             supported_models=json.loads(row[2]),
-            api_key=row[3],
-            is_connected=bool(row[4]),
-            connection_status=ProviderStatus(row[5]),
-            last_test_date=datetime.fromisoformat(row[6]) if row[6] else None,
-            error_message=row[7],
-            rate_limit=row[8],
-            cost_per_1k_tokens=row[9],
-            metadata=json.loads(row[10]) if row[10] else {}
+            api_key=None,
+            is_connected=bool(row[3]),
+            connection_status=ProviderStatus(row[4]),
+            last_test_date=datetime.fromisoformat(row[5]) if row[5] else None,
+            error_message=row[6],
+            rate_limit=row[7],
+            cost_per_1k_tokens=row[8],
+            metadata=json.loads(row[9]) if row[9] else {}
         )
 
     def _get_provider_instance(self, provider_name: str) -> Optional[BaseProvider]:
@@ -301,10 +322,14 @@ class LLMService(QObject):
             return self._provider_instances[provider_name]
 
         provider = self.get_provider(provider_name)
-        if not provider or not provider.api_key:
+        if not provider:
             return None
 
-        instance = ProviderFactory.create_provider(provider_name, provider.api_key, provider.api_base_url)
+        api_key = self.get_provider_api_key(provider_name)
+        if not api_key:
+            return None
+
+        instance = ProviderFactory.create_provider(provider_name, api_key, provider.api_base_url)
         if instance:
             self._provider_instances[provider_name] = instance
         return instance
@@ -324,14 +349,14 @@ class LLMService(QObject):
                 name=row[0],
                 api_base_url=row[1],
                 supported_models=json.loads(row[2]),
-                api_key=row[3],
-                is_connected=bool(row[4]),
-                connection_status=ProviderStatus(row[5]),
-                last_test_date=datetime.fromisoformat(row[6]) if row[6] else None,
-                error_message=row[7],
-                rate_limit=row[8],
-                cost_per_1k_tokens=row[9],
-                metadata=json.loads(row[10]) if row[10] else {}
+                api_key=None,
+                is_connected=bool(row[3]),
+                connection_status=ProviderStatus(row[4]),
+                last_test_date=datetime.fromisoformat(row[5]) if row[5] else None,
+                error_message=row[6],
+                rate_limit=row[7],
+                cost_per_1k_tokens=row[8],
+                metadata=json.loads(row[9]) if row[9] else {}
             )
             providers.append(provider)
         
@@ -611,14 +636,14 @@ class LLMService(QObject):
         """
         # שמירה במנהל המפתחות המאובטח
         success = self.api_key_manager.store_api_key(provider_name, api_key)
-        
+
         if success:
-            # עדכון הספק במסד הנתונים
             provider = self.get_provider(provider_name)
             if provider:
-                provider.api_key = api_key  # זה יוצפן אוטומטית
-                provider.is_connected = False  # יידרש לבדוק חיבור מחדש
+                provider.is_connected = False
                 provider.connection_status = ProviderStatus.DISCONNECTED
+                provider.last_test_date = None
+                provider.error_message = None
                 self.save_provider(provider)
         
         return success
@@ -660,10 +685,8 @@ class LLMService(QObject):
         success = self.api_key_manager.delete_api_key(provider_name)
         
         if success:
-            # עדכון הספק במסד הנתונים
             provider = self.get_provider(provider_name)
             if provider:
-                provider.api_key = None
                 provider.is_connected = False
                 provider.connection_status = ProviderStatus.DISCONNECTED
                 provider.error_message = "API key removed"
@@ -685,10 +708,8 @@ class LLMService(QObject):
         success = self.api_key_manager.rotate_api_key(provider_name, new_api_key)
         
         if success:
-            # עדכון הספק במסד הנתונים
             provider = self.get_provider(provider_name)
             if provider:
-                provider.api_key = new_api_key
                 provider.is_connected = False  # יידרש לבדוק חיבור מחדש
                 provider.connection_status = ProviderStatus.DISCONNECTED
                 provider.last_test_date = None
@@ -735,6 +756,14 @@ class LLMService(QObject):
             days_to_keep (int): מספר ימים לשמירה
         """
         self.api_key_manager.cleanup_old_data(days_to_keep)
+
+    def _migrate_old_api_keys(self) -> None:
+        """Store API keys found in the old providers table via the APIKeyManager"""
+        if hasattr(self, "_old_api_keys") and self._old_api_keys:
+            for name, key in self._old_api_keys.items():
+                if key:
+                    self.api_key_manager.store_api_key(name, key)
+            del self._old_api_keys
 
     # --- Integration Helpers ---
     def generate_chat_response(self, messages: List[Dict[str, str]]) -> Optional[ProviderResponse]:
