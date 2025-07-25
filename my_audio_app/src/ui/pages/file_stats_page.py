@@ -5,11 +5,18 @@ from PyQt6.QtWidgets import (
     QLabel,
     QTableWidget,
     QTableWidgetItem,
-    QFrame,
     QGroupBox,
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPainter, QPen, QColor
+
+try:
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.figure import Figure
+    MATPLOTLIB_AVAILABLE = True
+except Exception:  # pragma: no cover - optional dependency
+    FigureCanvas = None  # type: ignore
+    Figure = None  # type: ignore
+    MATPLOTLIB_AVAILABLE = False
 
 from services.file_stats_data_manager import FileStatsDataManager
 
@@ -19,6 +26,11 @@ class FileStatsPage(QWidget):
         super().__init__()
         self.data_manager = data_manager or FileStatsDataManager()
         self.setObjectName("fileStatsPage")
+
+        self.pie_canvas = None
+        self.pie_ax = None
+        self.bar_canvas = None
+        self.bar_ax = None
         
         # סגנון כללי לדף - רקע שחור וטקסט לבן
         self.setStyleSheet("""
@@ -100,6 +112,7 @@ class FileStatsPage(QWidget):
             formats = self.data_manager.get_format_distribution()
             last_upload = self.data_manager.get_last_upload_date()
             recent_files = self.data_manager.get_recent_files()
+            timeline = self.data_manager.get_upload_timeline()
 
             self.total_files_label.setText(str(total_files))
 
@@ -134,6 +147,9 @@ class FileStatsPage(QWidget):
                     4,
                     QTableWidgetItem(info.upload_date.strftime("%Y-%m-%d")),
                 )
+
+            self._update_pie_chart(formats)
+            self._update_bar_chart(timeline)
         except Exception as exc:
             print(f"Failed to refresh file statistics: {exc}")
     
@@ -193,21 +209,22 @@ class FileStatsPage(QWidget):
         """)
         
         layout = QVBoxLayout(chart_box)
-        
-        # כאן יש להוסיף גרף עוגה אמיתי - לדוגמה נשתמש בתווית
-        chart_placeholder = QLabel("Pie Chart: MP3 (60%), WAV (25%), FLAC (15%)")
-        chart_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        chart_placeholder.setMinimumHeight(150)
-        chart_placeholder.setStyleSheet("color: white;")
-        layout.addWidget(chart_placeholder)
-        
-        # לגנדה
-        legend = QHBoxLayout()
-        self._add_legend_item(legend, "MP3", "#2196F3")
-        self._add_legend_item(legend, "WAV", "#4CAF50")
-        self._add_legend_item(legend, "FLAC", "#FFC107")
-        layout.addLayout(legend)
-        
+
+        if MATPLOTLIB_AVAILABLE:
+            self.pie_canvas = FigureCanvas(Figure(figsize=(3, 3)))
+            self.pie_ax = self.pie_canvas.figure.subplots()
+            self.pie_canvas.figure.tight_layout()
+            self.pie_canvas.figure.set_facecolor("#1e1e1e")
+            layout.addWidget(self.pie_canvas)
+        else:
+            placeholder = QLabel("matplotlib not available")
+            placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            placeholder.setMinimumHeight(150)
+            placeholder.setStyleSheet("color: white;")
+            layout.addWidget(placeholder)
+            self.pie_canvas = None
+            self.pie_ax = None
+
         return chart_box
     
     def _create_bar_chart(self):
@@ -231,25 +248,66 @@ class FileStatsPage(QWidget):
         """)
         
         layout = QVBoxLayout(chart_box)
-        
-        # כאן יש להוסיף גרף עמודות אמיתי - לדוגמה נשתמש בתווית
-        chart_placeholder = QLabel("Bar Chart: Mon (5), Tue (8), Wed (12), Thu (7), Fri (15)")
-        chart_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        chart_placeholder.setMinimumHeight(150)
-        chart_placeholder.setStyleSheet("color: white;")
-        layout.addWidget(chart_placeholder)
-        
+
+        if MATPLOTLIB_AVAILABLE:
+            self.bar_canvas = FigureCanvas(Figure(figsize=(3, 3)))
+            self.bar_ax = self.bar_canvas.figure.subplots()
+            self.bar_canvas.figure.tight_layout()
+            self.bar_canvas.figure.set_facecolor("#1e1e1e")
+            layout.addWidget(self.bar_canvas)
+        else:
+            placeholder = QLabel("matplotlib not available")
+            placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            placeholder.setMinimumHeight(150)
+            placeholder.setStyleSheet("color: white;")
+            layout.addWidget(placeholder)
+            self.bar_canvas = None
+            self.bar_ax = None
+
         return chart_box
-    
-    def _add_legend_item(self, layout, text, color):
-        """מוסיף פריט ללגנדה של הגרף"""
-        color_box = QFrame()
-        color_box.setFixedSize(12, 12)
-        color_box.setStyleSheet(f"background-color: {color}; border-radius: 2px;")
-        
-        layout.addWidget(color_box)
-        layout.addWidget(QLabel(text))
-        layout.addSpacing(10)
+
+    def _update_pie_chart(self, formats):
+        if not MATPLOTLIB_AVAILABLE or self.pie_ax is None:
+            return
+        self.pie_ax.clear()
+        if not formats:
+            self.pie_ax.text(
+                0.5,
+                0.5,
+                "No Data",
+                ha="center",
+                va="center",
+                color="white",
+            )
+            self.pie_ax.set_xticks([])
+            self.pie_ax.set_yticks([])
+        else:
+            labels = list(formats.keys())
+            values = list(formats.values())
+            self.pie_ax.pie(values, labels=labels, autopct="%1.0f%%")
+        self.pie_canvas.draw()
+
+    def _update_bar_chart(self, timeline):
+        if not MATPLOTLIB_AVAILABLE or self.bar_ax is None:
+            return
+        self.bar_ax.clear()
+        if not timeline:
+            self.bar_ax.text(
+                0.5,
+                0.5,
+                "No Data",
+                ha="center",
+                va="center",
+                color="white",
+            )
+            self.bar_ax.set_xticks([])
+            self.bar_ax.set_yticks([])
+        else:
+            dates = list(timeline.keys())
+            counts = list(timeline.values())
+            self.bar_ax.bar(dates, counts, color="#2196F3")
+            self.bar_ax.set_xticklabels(dates, rotation=45, ha="right")
+        self.bar_canvas.draw()
     
     def _create_recent_files_table(self):
         """יוצר טבלה עם הקבצים האחרונים שהועלו"""
