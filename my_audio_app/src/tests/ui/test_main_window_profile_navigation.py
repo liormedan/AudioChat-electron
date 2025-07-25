@@ -5,7 +5,10 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 from PyQt6.QtTest import QTest
 
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '..'))
+# add src directory so that imports work when running tests directly
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 from ui.main_window import MainWindow
 from ui.pages.profile_page import ProfilePage
 
