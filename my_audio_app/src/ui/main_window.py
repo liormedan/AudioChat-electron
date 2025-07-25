@@ -7,6 +7,7 @@ from .pages.audio_export_page import AudioExportPage
 from .pages.llm_manager_page import LLMManagerPage
 from .pages.auth_settings_page import AuthSettingsPage
 from .pages.profile_page import ProfilePage
+from .pages.data_management_page import DataManagementPage
 
 
 class MainWindow(QMainWindow):
@@ -43,7 +44,7 @@ class MainWindow(QMainWindow):
         self._register_page("llm_management", LLMManagerPage())
         self._register_page("auth", AuthSettingsPage())
         self._register_page("profile", ProfilePage())
-        self._register_page("database", self._create_dummy_page("🗃️ Database Management"))
+        self._register_page("data_management", DataManagementPage())
 
         # Connect navigation
         self.sidebar.page_changed.connect(self.set_current_page)

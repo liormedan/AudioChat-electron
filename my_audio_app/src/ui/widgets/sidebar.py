@@ -41,7 +41,7 @@ class Sidebar(QWidget):
         self._add_section("System", [
             ("🔐 Auth Settings", "auth"),
             ("👤 Profile", "profile"),
-            ("🗃️ Database Management", "database"),
+            ("🗄️ Data Management", "data_management"),
         ])
 
         self.layout.addStretch()
