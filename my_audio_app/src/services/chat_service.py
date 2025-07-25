@@ -168,7 +168,7 @@ class ChatService(QObject):
     session_saved = pyqtSignal(str)  # אות שנשלח כאשר נשמר סשן
     session_deleted = pyqtSignal(str)  # אות שנשלח כאשר נמחק סשן
     
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str = None, llm_service=None):
         """
         יוצר שירות צ'אט חדש
         
@@ -176,6 +176,7 @@ class ChatService(QObject):
             db_path (str, optional): נתיב למסד הנתונים
         """
         super().__init__()
+        self.llm_service = llm_service
         
         # נתיב למסד הנתונים
         if db_path is None:
@@ -476,3 +477,19 @@ class ChatService(QObject):
         
         # החזרת מספר ההודעות
         return len(session_data["messages"])
+
+    def generate_ai_reply(self, text: str) -> Optional[str]:
+        """Generate an AI response using the connected LLM service"""
+        if not self.llm_service:
+            return None
+
+        try:
+            messages = [{"role": "user", "content": text}]
+            response = self.llm_service.generate_chat_response(messages)
+            if response and getattr(response, "success", False):
+                self.add_message(response.content, "ai")
+                return response.content
+        except Exception as e:
+            print(f"AI generation error: {e}")
+
+        return None
