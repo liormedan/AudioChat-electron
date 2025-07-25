@@ -306,23 +306,35 @@ class TestSettingsService(unittest.TestCase):
         """בדיקת תקינות API key קיים"""
         provider = "TestProvider"
         api_key = "valid-api-key"
-        
+
         # הגדרת מפתח
         self.settings_service.set_api_key(provider, api_key)
-        
-        # בדיקת תקינות
-        is_valid = self.settings_service.validate_api_key(provider)
-        
+
+        with patch("services.settings_service.APIKeyManager") as MockManager:
+            instance = MockManager.return_value
+            instance.test_api_key_connection.return_value = (True, "ok", 0.1)
+
+            # בדיקת תקינות
+            is_valid = self.settings_service.validate_api_key(provider)
+
+            instance.test_api_key_connection.assert_called_with(provider, api_key)
+
         # בדיקות
         self.assertTrue(is_valid)
     
     def test_validate_api_key_nonexistent(self):
         """בדיקת תקינות API key שלא קיים"""
         provider = "NonexistentProvider"
-        
-        # בדיקת תקינות
-        is_valid = self.settings_service.validate_api_key(provider)
-        
+
+        with patch("services.settings_service.APIKeyManager") as MockManager:
+            instance = MockManager.return_value
+            instance.test_api_key_connection.return_value = (False, "missing", 0)
+
+            # בדיקת תקינות
+            is_valid = self.settings_service.validate_api_key(provider)
+
+            instance.test_api_key_connection.assert_not_called()
+
         # בדיקות
         self.assertFalse(is_valid)
     
@@ -330,13 +342,19 @@ class TestSettingsService(unittest.TestCase):
         """בדיקת תקינות API key ריק"""
         provider = "TestProvider"
         api_key = ""
-        
+
         # הגדרת מפתח ריק
         self.settings_service.set_api_key(provider, api_key)
-        
-        # בדיקת תקינות
-        is_valid = self.settings_service.validate_api_key(provider)
-        
+
+        with patch("services.settings_service.APIKeyManager") as MockManager:
+            instance = MockManager.return_value
+            instance.test_api_key_connection.return_value = (True, "ok", 0)
+
+            # בדיקת תקינות
+            is_valid = self.settings_service.validate_api_key(provider)
+
+            instance.test_api_key_connection.assert_not_called()
+
         # בדיקות
         self.assertFalse(is_valid)
     
