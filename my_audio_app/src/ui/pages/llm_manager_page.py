@@ -552,27 +552,45 @@ class LLMManagerPage(QWidget):
     # Data management methods
     def _load_settings(self):
         """טעינת הגדרות"""
-        params = self.llm_service.get_parameters()
-        if isinstance(params, LLMParameters):
-            self.current_parameters = params.to_dict()
-        else:
-            self.current_parameters = {
-                "temperature": 0.7,
-                "max_tokens": 1000,
-                "top_p": 0.9,
-                "frequency_penalty": 0.0,
-            }
+        # Try loading from the SettingsService first
+        params_dict = self.settings_service.get_setting("llm_parameters")
+        params_obj = None
+
+        if isinstance(params_dict, dict):
+            try:
+                params_obj = LLMParameters.from_dict(params_dict)
+            except Exception:
+                params_obj = None
+
+        if not params_obj:
+            # Fallback to values stored in the LLMService
+            params_obj = self.llm_service.get_parameters()
+            if isinstance(params_obj, LLMParameters):
+                params_dict = params_obj.to_dict()
+            else:
+                params_obj = LLMParameters()
+                params_dict = params_obj.to_dict()
+
+        self.current_parameters = params_dict
+
+        # ensure services hold the same parameters
+        try:
+            self.llm_service.set_parameters(params_obj)
+        except Exception:
+            pass
 
         if hasattr(self, "parameter_editor") and hasattr(
             self.parameter_editor, "set_parameters"
         ):
-            self.parameter_editor.set_parameters(params)
+            self.parameter_editor.set_parameters(params_obj)
     
     def _save_settings(self):
         """שמירת הגדרות"""
         try:
             params = LLMParameters.from_dict(self.current_parameters)
+            # Persist via both services
             self.llm_service.set_parameters(params)
+            self.settings_service.set_setting("llm_parameters", self.current_parameters)
             print("Settings saved")
         except Exception as e:
             print(f"Error saving settings: {e}")
@@ -581,9 +599,10 @@ class LLMManagerPage(QWidget):
         """טעינת מצבי ספקים"""
         self.providers_data = {}
         for provider in self.llm_service.get_all_providers():
+            api_key = provider.api_key or self.llm_service.get_provider_api_key(provider.name)
             self.providers_data[provider.name] = {
                 "connected": provider.is_connected,
-                "api_key": provider.api_key,
+                "api_key": api_key,
             }
     
     def _refresh_data(self):
