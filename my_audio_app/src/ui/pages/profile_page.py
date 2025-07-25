@@ -10,7 +10,9 @@ from PyQt6.QtWidgets import (
     QApplication,
 )
 from PyQt6.QtCore import Qt
-from qt_material import apply_stylesheet
+from qt_material import apply_stylesheet, list_themes
+import os
+import glob
 
 from app_context import profile_service, settings_service
 from models.user_profile import UserProfile
@@ -98,11 +100,19 @@ class ProfilePage(QWidget):
         preferences_tab = QWidget()
         preferences_form = QFormLayout(preferences_tab)
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems([
-            "dark_blue.xml",
-            "dark_amber.xml",
-            "dark_teal.xml",
-        ])
+
+        # Built-in themes provided by qt-material
+        available_themes = list_themes()
+
+        # Custom themes bundled with the application
+        app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+        custom_dir = os.path.join(app_root, "theme")
+        custom_themes = [
+            os.path.basename(p) for p in glob.glob(os.path.join(custom_dir, "*.xml"))
+        ]
+
+        for theme in sorted(set(available_themes + custom_themes)):
+            self.theme_combo.addItem(theme)
         self.theme_combo.currentTextChanged.connect(self._apply_theme)
         preferences_form.addRow("Theme", self.theme_combo)
         self.tab_widget.addTab(preferences_tab, "Preferences")
