@@ -493,3 +493,23 @@ class ChatService(QObject):
             print(f"AI generation error: {e}")
 
         return None
+
+    def suggest_models_for_prompt(self, prompt: str) -> List[str]:
+        """Return model name suggestions based on the prompt"""
+        if not self.llm_service:
+            return []
+
+        lower = prompt.lower()
+        if any(k in lower for k in ["code", "תכנת"]):
+            task = "code"
+        elif any(k in lower for k in ["summary", "summarize", "סיכום"]):
+            task = "summarize"
+        elif any(k in lower for k in ["transcribe", "תמלל", "תמלול"]):
+            task = "transcribe"
+        elif any(k in lower for k in ["analyze", "analysis", "ניתוח"]):
+            task = "analyze"
+        else:
+            task = "chat"
+
+        models = self.llm_service.suggest_models_for_task(task)
+        return [m.name for m in models]
