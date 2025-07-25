@@ -3,6 +3,7 @@
 from .chat_service import ChatService, ChatMessage, ChatSession
 from .llm_service import LLMService
 from .settings_service import SettingsService
+from .profile_service import ProfileService
 from .usage_service import UsageService
 
 # Import other services if they exist
@@ -32,7 +33,8 @@ __all__ = [
     'ChatSession',
     'LLMService',
     'SettingsService',
-    'UsageService'
+    'UsageService',
+    'ProfileService'
 ]
 
 # Add to __all__ only if imported successfully
