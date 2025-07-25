@@ -1,5 +1,6 @@
 # Core GUI Framework
 PyQt6>=6.4.0
+PyQt6-QtCharts>=6.4.0
 qt-material>=2.14
 
 # Data Processing & Visualization

@@ -8,15 +8,28 @@ from PyQt6.QtWidgets import (
     QGroupBox,
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPainter
 
 try:
-    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-    from matplotlib.figure import Figure
-    MATPLOTLIB_AVAILABLE = True
+    from PyQt6.QtCharts import (
+        QChart,
+        QChartView,
+        QPieSeries,
+        QBarSeries,
+        QBarSet,
+        QBarCategoryAxis,
+        QValueAxis,
+    )
+    QTCHARTS_AVAILABLE = True
 except Exception:  # pragma: no cover - optional dependency
-    FigureCanvas = None  # type: ignore
-    Figure = None  # type: ignore
-    MATPLOTLIB_AVAILABLE = False
+    QChart = None  # type: ignore
+    QChartView = None  # type: ignore
+    QPieSeries = None  # type: ignore
+    QBarSeries = None  # type: ignore
+    QBarSet = None  # type: ignore
+    QBarCategoryAxis = None  # type: ignore
+    QValueAxis = None  # type: ignore
+    QTCHARTS_AVAILABLE = False
 
 from services.file_stats_data_manager import FileStatsDataManager
 
@@ -27,10 +40,12 @@ class FileStatsPage(QWidget):
         self.data_manager = data_manager or FileStatsDataManager()
         self.setObjectName("fileStatsPage")
 
-        self.pie_canvas = None
-        self.pie_ax = None
-        self.bar_canvas = None
-        self.bar_ax = None
+        self.pie_chart = None
+        self.pie_series = None
+        self.bar_chart = None
+        self.bar_series = None
+        self.bar_axis_x = None
+        self.bar_axis_y = None
         
         # סגנון כללי לדף - רקע שחור וטקסט לבן
         self.setStyleSheet("""
@@ -210,20 +225,27 @@ class FileStatsPage(QWidget):
         
         layout = QVBoxLayout(chart_box)
 
-        if MATPLOTLIB_AVAILABLE:
-            self.pie_canvas = FigureCanvas(Figure(figsize=(3, 3)))
-            self.pie_ax = self.pie_canvas.figure.subplots()
-            self.pie_canvas.figure.tight_layout()
-            self.pie_canvas.figure.set_facecolor("#1e1e1e")
-            layout.addWidget(self.pie_canvas)
+        if QTCHARTS_AVAILABLE:
+            series = QPieSeries()
+            chart = QChart()
+            chart.addSeries(series)
+            chart.setTheme(QChart.ChartThemeDark)
+            chart.legend().setVisible(True)
+            view = QChartView(chart)
+            view.setRenderHint(QPainter.RenderHint.Antialiasing)
+            view.setMinimumHeight(200)
+            layout.addWidget(view)
+
+            self.pie_series = series
+            self.pie_chart = chart
         else:
-            placeholder = QLabel("matplotlib not available")
+            placeholder = QLabel("QtCharts not available")
             placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
             placeholder.setMinimumHeight(150)
             placeholder.setStyleSheet("color: white;")
             layout.addWidget(placeholder)
-            self.pie_canvas = None
-            self.pie_ax = None
+            self.pie_series = None
+            self.pie_chart = None
 
         return chart_box
     
@@ -249,65 +271,68 @@ class FileStatsPage(QWidget):
         
         layout = QVBoxLayout(chart_box)
 
-        if MATPLOTLIB_AVAILABLE:
-            self.bar_canvas = FigureCanvas(Figure(figsize=(3, 3)))
-            self.bar_ax = self.bar_canvas.figure.subplots()
-            self.bar_canvas.figure.tight_layout()
-            self.bar_canvas.figure.set_facecolor("#1e1e1e")
-            layout.addWidget(self.bar_canvas)
+        if QTCHARTS_AVAILABLE:
+            chart = QChart()
+            series = QBarSeries()
+            chart.addSeries(series)
+            chart.setTheme(QChart.ChartThemeDark)
+            axis_x = QBarCategoryAxis()
+            axis_y = QValueAxis()
+            chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
+            chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
+            series.attachAxis(axis_x)
+            series.attachAxis(axis_y)
+            view = QChartView(chart)
+            view.setRenderHint(QPainter.RenderHint.Antialiasing)
+            view.setMinimumHeight(200)
+            layout.addWidget(view)
+
+            self.bar_chart = chart
+            self.bar_series = series
+            self.bar_axis_x = axis_x
+            self.bar_axis_y = axis_y
         else:
-            placeholder = QLabel("matplotlib not available")
+            placeholder = QLabel("QtCharts not available")
             placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
             placeholder.setMinimumHeight(150)
             placeholder.setStyleSheet("color: white;")
             layout.addWidget(placeholder)
-            self.bar_canvas = None
-            self.bar_ax = None
+            self.bar_chart = None
+            self.bar_series = None
+            self.bar_axis_x = None
+            self.bar_axis_y = None
 
         return chart_box
 
     def _update_pie_chart(self, formats):
-        if not MATPLOTLIB_AVAILABLE or self.pie_ax is None:
+        if not QTCHARTS_AVAILABLE or self.pie_series is None:
             return
-        self.pie_ax.clear()
+        self.pie_series.clear()
         if not formats:
-            self.pie_ax.text(
-                0.5,
-                0.5,
-                "No Data",
-                ha="center",
-                va="center",
-                color="white",
-            )
-            self.pie_ax.set_xticks([])
-            self.pie_ax.set_yticks([])
+            self.pie_chart.setTitle("No Data")
         else:
-            labels = list(formats.keys())
-            values = list(formats.values())
-            self.pie_ax.pie(values, labels=labels, autopct="%1.0f%%")
-        self.pie_canvas.draw()
+            self.pie_chart.setTitle("")
+            for label, value in formats.items():
+                self.pie_series.append(label, value)
 
     def _update_bar_chart(self, timeline):
-        if not MATPLOTLIB_AVAILABLE or self.bar_ax is None:
+        if not QTCHARTS_AVAILABLE or self.bar_series is None:
             return
-        self.bar_ax.clear()
+        self.bar_series.clear()
+        self.bar_axis_x.clear()
         if not timeline:
-            self.bar_ax.text(
-                0.5,
-                0.5,
-                "No Data",
-                ha="center",
-                va="center",
-                color="white",
-            )
-            self.bar_ax.set_xticks([])
-            self.bar_ax.set_yticks([])
+            self.bar_chart.setTitle("No Data")
         else:
+            self.bar_chart.setTitle("")
             dates = list(timeline.keys())
             counts = list(timeline.values())
-            self.bar_ax.bar(dates, counts, color="#2196F3")
-            self.bar_ax.set_xticklabels(dates, rotation=45, ha="right")
-        self.bar_canvas.draw()
+            bar_set = QBarSet("Uploads")
+            for count in counts:
+                bar_set.append(count)
+            self.bar_series.append(bar_set)
+            self.bar_axis_x.append(dates)
+            max_val = max(counts) if counts else 0
+            self.bar_axis_y.setRange(0, max_val)
     
     def _create_recent_files_table(self):
         """יוצר טבלה עם הקבצים האחרונים שהועלו"""
