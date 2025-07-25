@@ -7,8 +7,10 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QComboBox,
     QTabWidget,
+    QApplication,
 )
 from PyQt6.QtCore import Qt
+from qt_material import apply_stylesheet
 
 from app_context import profile_service, settings_service
 from models.user_profile import UserProfile
@@ -101,6 +103,7 @@ class ProfilePage(QWidget):
             "dark_amber.xml",
             "dark_teal.xml",
         ])
+        self.theme_combo.currentTextChanged.connect(self._apply_theme)
         preferences_form.addRow("Theme", self.theme_combo)
         self.tab_widget.addTab(preferences_tab, "Preferences")
 
@@ -132,3 +135,10 @@ class ProfilePage(QWidget):
         )
         self.profile_service.save_profile(profile)
         self.settings_service.set_setting("theme", self.theme_combo.currentText())
+
+    def _apply_theme(self, theme_name: str) -> None:
+        """Apply the selected theme immediately and persist it."""
+        app = QApplication.instance()
+        if app is not None:
+            apply_stylesheet(app, theme=theme_name)
+        self.settings_service.set_setting("theme", theme_name)
