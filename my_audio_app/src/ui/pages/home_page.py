@@ -6,6 +6,8 @@ from PyQt6.QtGui import QFont, QCursor, QIcon, QAction
 import os
 from ui.components.chat import ChatHistory, ChatMessage, ChatInput
 from ui.components.file_upload import FileUploader, RecentFilesList, FileInfo
+from ui.components.shadcn_components import ShadcnCard, ShadcnButton, ShadcnBadge, ShadcnAlert
+from ui.components.modern_home_widgets import StatsCard, QuickActionCard, RecentActivityCard, WelcomeCard, StatusIndicator
 from app_context import chat_service, llm_service, settings_service
 from services.file_service import FileService
 
@@ -65,72 +67,67 @@ class HomePage(QWidget):
         """)
         
         # יצירת הלייאאוט הראשי
-        self.main_layout = QHBoxLayout(self)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(0)
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(24, 24, 24, 24)
+        self.main_layout.setSpacing(24)
+        
+        # Add welcome section
+        self._create_welcome_section()
         
         # יצירת הפאנלים
+        content_layout = QHBoxLayout()
+        content_layout.setSpacing(24)
+        
         self.chat_panel = self._create_chat_panel()
         self.file_panel = self._create_file_panel()
         
-        # הוספת הפאנלים ללייאאוט עם ספליטר
-        # בגרסאות שונות של PyQt6 יש שמות שונים לקבועים
-        try:
-            self.splitter = QSplitter(Qt.Horizontal)
-        except AttributeError:
-            try:
-                self.splitter = QSplitter(Qt.Orientation.Horizontal)
-            except AttributeError:
-                # אם שום דבר לא עובד, נשתמש בערכים מספריים
-                self.splitter = QSplitter(1)  # Horizontal = 1
-        self.splitter.addWidget(self.chat_panel)
-        self.splitter.addWidget(self.file_panel)
+        content_layout.addWidget(self.chat_panel, 3)  # 60% width
+        content_layout.addWidget(self.file_panel, 2)  # 40% width
         
-        # הגדרת גדלים התחלתיים (60% לצ'אט, 40% לקבצים)
-        self.splitter.setSizes([600, 400])
-        
-        self.main_layout.addWidget(self.splitter)
+        self.main_layout.addLayout(content_layout)
     
     def _create_chat_panel(self):
         """יצירת פאנל צ'אט"""
-        panel = QFrame()
+        panel = ShadcnCard()
         panel.setObjectName("chatPanel")
-        # panel.setFrameShape(QFrame.StyledPanel)  # מבוטל בגלל בעיית תאימות
         
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
         # כותרת עם תפריט
         title_layout = QHBoxLayout()
         
-        title = QLabel("צ'אט")
+        title = QLabel("💬 Chat")
         title.setObjectName("panelTitle")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px;")
+        title.setFont(QFont("Inter", 20, QFont.Weight.Bold))
+        title.setStyleSheet("""
+            QLabel {
+                color: #fafafa;
+                margin-bottom: 8px;
+                font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
+        """)
         title_layout.addWidget(title)
         
         # כפתור תפריט
-        menu_button = QPushButton("⋮")
-        menu_button.setFixedSize(30, 30)
-        menu_button.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border: none;
-                font-size: 18px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #333;
-            }
-        """)
+        menu_button = ShadcnButton("⋮", variant="ghost", size="sm")
+        menu_button.setFixedSize(32, 32)
         menu_button.clicked.connect(self._show_chat_menu)
         title_layout.addWidget(menu_button)
         
         layout.addLayout(title_layout)
         
         # תיאור
-        description = QLabel("שוחח עם ה-AI או העלה קבצי אודיו לניתוח")
-        description.setStyleSheet("color: #aaa; margin-bottom: 15px;")
+        description = QLabel("Chat with AI or upload audio files for analysis")
+        description.setFont(QFont("Inter", 14))
+        description.setStyleSheet("""
+            QLabel {
+                color: #a1a1aa;
+                margin-bottom: 16px;
+                font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
+        """)
         layout.addWidget(description)
         
         # אזור הודעות - רכיב ChatHistory
@@ -155,23 +152,36 @@ class HomePage(QWidget):
     
     def _create_file_panel(self):
         """יצירת פאנל העלאת קבצים"""
-        panel = QFrame()
+        panel = ShadcnCard()
         panel.setObjectName("filePanel")
-        # panel.setFrameShape(QFrame.StyledPanel)  # מבוטל בגלל בעיית תאימות
         
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
         
         # כותרת
-        title = QLabel("העלאת קבצים")
+        title = QLabel("📁 File Upload")
         title.setObjectName("panelTitle")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px;")
+        title.setFont(QFont("Inter", 20, QFont.Weight.Bold))
+        title.setStyleSheet("""
+            QLabel {
+                color: #fafafa;
+                margin-bottom: 8px;
+                font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
+        """)
         layout.addWidget(title)
         
         # תיאור
-        description = QLabel("העלה קבצי אודיו לניתוח וצפה בקבצים האחרונים שלך")
-        description.setStyleSheet("color: #aaa; margin-bottom: 15px;")
+        description = QLabel("Upload audio files for analysis and view your recent files")
+        description.setFont(QFont("Inter", 14))
+        description.setStyleSheet("""
+            QLabel {
+                color: #a1a1aa;
+                margin-bottom: 16px;
+                font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
+        """)
         layout.addWidget(description)
         
         # אזור העלאת קבצים
@@ -193,6 +203,41 @@ class HomePage(QWidget):
         self._load_recent_files()
         
         return panel
+    
+    def _create_welcome_section(self):
+        """Create welcome section with stats and quick actions"""
+        welcome_layout = QHBoxLayout()
+        welcome_layout.setSpacing(24)
+        
+        # Left side - Welcome card
+        welcome_card = WelcomeCard()
+        welcome_layout.addWidget(welcome_card, 2)
+        
+        # Right side - Stats and actions
+        right_layout = QVBoxLayout()
+        right_layout.setSpacing(16)
+        
+        # Stats row
+        stats_layout = QHBoxLayout()
+        stats_layout.setSpacing(16)
+        
+        files_card = StatsCard("Total Files", "12", "📁", "+2 this week")
+        chats_card = StatsCard("Chat Sessions", "8", "💬", "+3 today")
+        exports_card = StatsCard("Exports", "5", "📤", "2 pending")
+        
+        stats_layout.addWidget(files_card)
+        stats_layout.addWidget(chats_card)
+        stats_layout.addWidget(exports_card)
+        
+        right_layout.addLayout(stats_layout)
+        
+        # Recent activity
+        activity_card = RecentActivityCard()
+        right_layout.addWidget(activity_card)
+        
+        welcome_layout.addLayout(right_layout, 1)
+        
+        self.main_layout.addLayout(welcome_layout)
         
     def _load_recent_files(self):
         """טעינת קבצים אחרונים מהמסד נתונים"""

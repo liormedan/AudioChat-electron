@@ -101,18 +101,27 @@ class ProfilePage(QWidget):
         preferences_form = QFormLayout(preferences_tab)
         self.theme_combo = QComboBox()
 
-        # Built-in themes provided by qt-material
-        available_themes = list_themes()
+        # Import theme service
+        from services.theme_service import theme_service
+        self.theme_service = theme_service
 
-        # Custom themes bundled with the application
-        app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
-        custom_dir = os.path.join(app_root, "theme")
-        custom_themes = [
-            os.path.basename(p) for p in glob.glob(os.path.join(custom_dir, "*.xml"))
-        ]
-
-        for theme in sorted(set(available_themes + custom_themes)):
-            self.theme_combo.addItem(theme)
+        # Get all available themes
+        available_themes = self.theme_service.get_available_themes()
+        
+        # Add themes to combo box with nice display names
+        theme_display_names = {
+            "kiro_modern_dark": "🌙 Kiro Modern Dark",
+            "kiro_modern_light": "☀️ Kiro Modern Light", 
+            "dark_blue.xml": "🔵 Classic Dark Blue",
+            "light_blue.xml": "🔷 Classic Light Blue",
+            "dark_teal.xml": "🟢 Dark Teal",
+            "light_teal.xml": "🟦 Light Teal",
+        }
+        
+        for theme in sorted(available_themes):
+            display_name = theme_display_names.get(theme, theme)
+            self.theme_combo.addItem(display_name, theme)
+        
         self.theme_combo.currentTextChanged.connect(self._apply_theme)
         preferences_form.addRow("Theme", self.theme_combo)
         self.tab_widget.addTab(preferences_tab, "Preferences")
@@ -129,10 +138,15 @@ class ProfilePage(QWidget):
             self.name_input.setText(profile.display_name)
             self.email_input.setText(profile.email)
             self.avatar_input.setText(profile.avatar_path or "")
-        theme = self.settings_service.get_setting("theme", "dark_blue.xml")
-        index = self.theme_combo.findText(theme)
-        if index >= 0:
-            self.theme_combo.setCurrentIndex(index)
+        
+        # Load current theme
+        current_theme = self.settings_service.get_setting("theme", "kiro_modern_dark")
+        
+        # Find the theme in combo box by data (not display text)
+        for i in range(self.theme_combo.count()):
+            if self.theme_combo.itemData(i) == current_theme:
+                self.theme_combo.setCurrentIndex(i)
+                break
 
     def _save_profile(self):
         profile = UserProfile(
@@ -144,11 +158,20 @@ class ProfilePage(QWidget):
             updated_at=datetime.now(),
         )
         self.profile_service.save_profile(profile)
-        self.settings_service.set_setting("theme", self.theme_combo.currentText())
+        
+        # Save current theme
+        current_index = self.theme_combo.currentIndex()
+        if current_index >= 0:
+            theme_name = self.theme_combo.itemData(current_index)
+            if theme_name:
+                self.settings_service.set_setting("theme", theme_name)
 
-    def _apply_theme(self, theme_name: str) -> None:
+    def _apply_theme(self, display_name: str) -> None:
         """Apply the selected theme immediately and persist it."""
-        app = QApplication.instance()
-        if app is not None:
-            apply_stylesheet(app, theme=theme_name)
-        self.settings_service.set_setting("theme", theme_name)
+        # Get the actual theme name from the combo box data
+        current_index = self.theme_combo.currentIndex()
+        if current_index >= 0:
+            theme_name = self.theme_combo.itemData(current_index)
+            if theme_name:
+                self.theme_service.apply_theme(theme_name)
+                self.settings_service.set_setting("theme", theme_name)

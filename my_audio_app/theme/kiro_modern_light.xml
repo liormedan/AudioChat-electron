@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Kiro Modern Light Theme
+Clean and modern light theme with subtle colors
+-->
+<resources>
+  <color name="primaryColor">#ffffff</color>
+  <color name="primaryLightColor">#f8f9fa</color>
+  <color name="secondaryColor">#f1f3f4</color>
+  <color name="secondaryLightColor">#e8eaed</color>
+  <color name="secondaryDarkColor">#dadce0</color>
+  <color name="primaryTextColor">#202124</color>
+  <color name="secondaryTextColor">#5f6368</color>
+  <color name="primaryDarkTextColor">#3c4043</color>
+  <color name="disabledTextColor">#9aa0a6</color>
+  <color name="linkColor">#1a73e8</color>
+  <color name="iconColor">#5f6368</color>
+  <color name="iconDisabledColor">#9aa0a6</color>
+  <color name="iconCheckedColor">#137333</color>
+  <color name="iconUncheckedColor">#d93025</color>
+  <color name="accentColor">#1a73e8</color>
+  <color name="accentLightColor">#4285f4</color>
+  <color name="accentDarkColor">#1557b0</color>
+  <color name="successColor">#137333</color>
+  <color name="warningColor">#f9ab00</color>
+  <color name="errorColor">#d93025</color>
+  <color name="infoColor">#1a73e8</color>
+  <color name="highlightColor">#e8f0fe</color>
+  <color name="selectionColor">#e8f0fe</color>
+  <color name="borderColor">#dadce0</color>
+  <color name="shadowColor">#00000020</color>
+  <color name="tooltipColor">#616161</color>
+  <color name="tooltipTextColor">#ffffff</color>
+  <color name="menuColor">#ffffff</color>
+  <color name="menuTextColor">#202124</color>
+  <color name="menuSelectedColor">#e8f0fe</color>
+  <color name="menuSelectedTextColor">#1a73e8</color>
+  <color name="buttonColor">#f8f9fa</color>
+  <color name="buttonHoverColor">#f1f3f4</color>
+  <color name="buttonPressedColor">#e8eaed</color>
+  <color name="buttonDisabledColor">#f8f9fa</color>
+  <color name="inputColor">#ffffff</color>
+  <color name="inputBorderColor">#dadce0</color>
+  <color name="inputFocusColor">#1a73e8</color>
+  <color name="scrollbarColor">#dadce0</color>
+  <color name="scrollbarHoverColor">#bdc1c6</color>
+  <color name="progressColor">#1a73e8</color>
+  <color name="progressBackgroundColor">#e8eaed</color>
+  <color name="tabColor">#f8f9fa</color>
+  <color name="tabSelectedColor">#ffffff</color>
+  <color name="tabHoverColor">#f1f3f4</color>
+  <color name="tabTextColor">#5f6368</color>
+  <color name="tabSelectedTextColor">#202124</color>
+  <color name="sidebarColor">#f8f9fa</color>
+  <color name="sidebarSelectedColor">#e8f0fe</color>
+  <color name="sidebarHoverColor">#f1f3f4</color>
+  <color name="headerColor">#ffffff</color>
+  <color name="statusbarColor">#f8f9fa</color>
+  <color name="waveformColor">#1a73e8</color>
+  <color name="waveformBackgroundColor">#ffffff</color>
+  <color name="waveformSelectionColor">#fbbc04</color>
+  <color name="waveformPositionColor">#d93025</color>
+  <color name="chatUserColor">#1a73e8</color>
+  <color name="chatAiColor">#137333</color>
+  <color name="chatSystemColor">#f9ab00</color>
+  <color name="chatBackgroundColor">#ffffff</color>
+  <color name="chatInputColor">#f8f9fa</color>
+  <color name="notificationSuccessColor">#137333</color>
+  <color name="notificationWarningColor">#f9ab00</color>
+  <color name="notificationErrorColor">#d93025</color>
+  <color name="notificationInfoColor">#1a73e8</color>
+</resources>
