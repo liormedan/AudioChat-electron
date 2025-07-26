@@ -73,6 +73,12 @@ export const queryKeys = {
     health: () => [...queryKeys.system.all, 'health'] as const,
     logs: () => [...queryKeys.system.all, 'logs'] as const,
   },
+
+  // Misc stats
+  stats: {
+    all: ['stats'] as const,
+    quick: () => [...queryKeys.stats.all, 'quick'] as const,
+  },
 } as const;
 
 // Type helpers for query keys

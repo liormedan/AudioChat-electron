@@ -1,15 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Music, Download, BarChart3, Bot, FileAudio, Clock } from 'lucide-react';
 import { useUIStore } from '../stores/ui-store';
 import { useAppState } from '../hooks/use-app-state';
+import { FileDropZone } from '../components/file-drop-zone';
+import { useToast } from '../hooks/use-toast';
+import { useQuickStats } from '../hooks/use-queries';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { setCurrentPage } = useUIStore();
   const appState = useAppState();
+  const { toast } = useToast();
+  const { data: quickStats } = useQuickStats();
+
+  useEffect(() => {
+    toast({ title: 'Welcome back!' });
+  }, [toast]);
+
+  const handleFiles = (files: FileList) => {
+    Array.from(files).forEach((file) => appState.user.addRecentFile(file.path));
+    toast({ title: 'Files uploaded', description: `${files.length} file(s) added` });
+  };
 
   const handleQuickAction = (path: string, pageId: string) => {
     setCurrentPage(pageId);
@@ -63,20 +77,29 @@ export const HomePage: React.FC = () => {
         </p>
       </div>
 
+      {/* Upload Zone */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Upload Audio</CardTitle>
+          <CardDescription>Drag and drop audio files to add them</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FileDropZone onFiles={handleFiles} />
+        </CardContent>
+      </Card>
+
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Files</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Files</CardTitle>
             <FileAudio className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {appState.user.recentFiles.length}
+              {quickStats?.totalFiles ?? appState.user.recentFiles.length}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Files accessed recently
-            </p>
+            <p className="text-xs text-muted-foreground">Files processed</p>
           </CardContent>
         </Card>
 
@@ -86,10 +109,10 @@ export const HomePage: React.FC = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              Active processing jobs
-            </p>
+            <div className="text-2xl font-bold">
+              {quickStats?.processingJobs ?? 0}
+            </div>
+            <p className="text-xs text-muted-foreground">Active processing jobs</p>
           </CardContent>
         </Card>
 
@@ -99,10 +122,10 @@ export const HomePage: React.FC = () => {
             <Bot className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              Active chat sessions
-            </p>
+            <div className="text-2xl font-bold">
+              {quickStats?.conversations ?? 0}
+            </div>
+            <p className="text-xs text-muted-foreground">Active chat sessions</p>
           </CardContent>
         </Card>
       </div>
