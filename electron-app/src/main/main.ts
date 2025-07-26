@@ -119,29 +119,21 @@ class MainWindow {
       },
     });
 
-    // Load the app
-    // For testing, load the simple test to show implementation status
-    const testPath = join(__dirname, '../../simple-test.html');
+    // Load the application UI
     const indexPath = join(__dirname, '../renderer/index.html');
-    
-    if (existsSync(testPath)) {
-      void this.window.loadFile(testPath);
-      // Open DevTools automatically during development
-      if (isDev) {
-        this.window.webContents.openDevTools();
-      }
-    } else if (existsSync(indexPath)) {
+
+    if (existsSync(indexPath)) {
       void this.window.loadFile(indexPath);
-      // Open DevTools automatically during development
-      if (isDev) {
-        this.window.webContents.openDevTools();
-      }
     } else {
-      console.error('No renderer found. Paths checked:');
-      console.error('Test path:', testPath);
-      console.error('Index path:', indexPath);
+      console.error('No renderer found. Path checked:', indexPath);
       console.error('Current __dirname:', __dirname);
       app.quit();
+      return;
+    }
+
+    // Open DevTools automatically during development
+    if (isDev) {
+      this.window.webContents.openDevTools();
     }
 
     // Show window when ready
