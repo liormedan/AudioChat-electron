@@ -53,6 +53,12 @@ interface FileStats {
   metadata: Record<string, any>;
 }
 
+export interface QuickStats {
+  totalFiles: number;
+  processingJobs: number;
+  conversations: number;
+}
+
 // Mock API functions (these would typically call the actual IPC/API)
 const mockAPI = {
   audio: {
@@ -131,6 +137,23 @@ const mockAPI = {
       return {};
     },
   },
+
+  stats: {
+    getQuickStats: async (): Promise<QuickStats> => {
+      // Placeholder for Python backend call
+      const resp = (await window.electronAPI.callPythonService(
+        'stats',
+        'get_quick_stats',
+        null
+      )) as { success: boolean; data?: QuickStats } | null;
+
+      if (resp && resp.success && resp.data) {
+        return resp.data;
+      }
+
+      return { totalFiles: 0, processingJobs: 0, conversations: 0 };
+    },
+  },
 };
 
 // Audio-related hooks
@@ -184,6 +207,15 @@ export const useFileMetadata = (path: string | undefined) => {
     queryFn: () => mockAPI.files.getMetadata(path!),
     enabled: !!path,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// Quick stats
+export const useQuickStats = () => {
+  return useQuery({
+    queryKey: queryKeys.stats.quick(),
+    queryFn: () => mockAPI.stats.getQuickStats(),
+    staleTime: 30 * 1000,
   });
 };
 
