@@ -20,6 +20,8 @@ class MainWindow {
     height: 800,
   };
   private windowStateFile = join(app.getPath('userData'), 'window-state.json');
+  private saveStateTimer: NodeJS.Timeout | null = null;
+  private readonly debounceDelay = 500;
 
   constructor() {
     this.loadWindowState();
@@ -38,7 +40,7 @@ class MainWindow {
     }
   }
 
-  private saveWindowState(): void {
+  private saveWindowStateNow(): void {
     if (!this.window) return;
     
     try {
@@ -57,6 +59,23 @@ class MainWindow {
       this.windowState = state;
     } catch (error) {
       console.error('Failed to save window state:', error);
+    }
+  }
+
+  private scheduleSaveWindowState(): void {
+    if (this.saveStateTimer) {
+      clearTimeout(this.saveStateTimer);
+    }
+    this.saveStateTimer = setTimeout(() => {
+      this.saveStateTimer = null;
+      this.saveWindowStateNow();
+    }, this.debounceDelay);
+  }
+
+  private clearSaveTimer(): void {
+    if (this.saveStateTimer) {
+      clearTimeout(this.saveStateTimer);
+      this.saveStateTimer = null;
     }
   }
 
@@ -136,15 +155,16 @@ class MainWindow {
 
     // Handle window closed
     this.window.on('closed', () => {
-      this.saveWindowState();
+      this.clearSaveTimer();
+      this.saveWindowStateNow();
       this.window = null;
     });
 
     // Save window state on resize/move
-    this.window.on('resize', () => this.saveWindowState());
-    this.window.on('move', () => this.saveWindowState());
-    this.window.on('maximize', () => this.saveWindowState());
-    this.window.on('unmaximize', () => this.saveWindowState());
+    this.window.on('resize', () => this.scheduleSaveWindowState());
+    this.window.on('move', () => this.scheduleSaveWindowState());
+    this.window.on('maximize', () => this.scheduleSaveWindowState());
+    this.window.on('unmaximize', () => this.scheduleSaveWindowState());
 
     // Security: Prevent new window creation
     this.window.webContents.setWindowOpenHandler(() => {
@@ -202,7 +222,7 @@ class MainWindow {
     ipcMain.handle('window:setBounds', (_, bounds: { width: number; height: number; x?: number; y?: number }) => {
       if (this.window) {
         this.window.setBounds(bounds);
-        this.saveWindowState();
+        this.scheduleSaveWindowState();
       }
     });
 
