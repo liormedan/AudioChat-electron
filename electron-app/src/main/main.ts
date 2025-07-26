@@ -36,7 +36,7 @@ class MainWindow {
         nodeIntegration: false,
         nodeIntegrationInWorker: false,
         nodeIntegrationInSubFrames: false,
-        enableRemoteModule: false,
+        // enableRemoteModule is deprecated in newer Electron versions
         webSecurity: true,
         allowRunningInsecureContent: false,
         experimentalFeatures: false,
@@ -46,17 +46,24 @@ class MainWindow {
     });
 
     // Load the app
-    if (isDev) {
-      void this.window.loadURL('http://localhost:5173');
+    // For testing, load the simple test to show implementation status
+    const testPath = join(__dirname, '../../simple-test.html');
+    const indexPath = join(__dirname, '../renderer/index.html');
+    
+    if (existsSync(testPath)) {
+      void this.window.loadFile(testPath);
+      // Always open DevTools for debugging
+      this.window.webContents.openDevTools();
+    } else if (existsSync(indexPath)) {
+      void this.window.loadFile(indexPath);
+      // Always open DevTools for debugging
       this.window.webContents.openDevTools();
     } else {
-      const indexPath = join(__dirname, '../renderer/index.html');
-      if (existsSync(indexPath)) {
-        void this.window.loadFile(indexPath);
-      } else {
-        console.error('Renderer build not found. Run npm run build first.');
-        app.quit();
-      }
+      console.error('No renderer found. Paths checked:');
+      console.error('Test path:', testPath);
+      console.error('Index path:', indexPath);
+      console.error('Current __dirname:', __dirname);
+      app.quit();
     }
 
     // Show window when ready
@@ -87,7 +94,7 @@ class MainWindow {
     this.window.webContents.on('will-navigate', (event, navigationUrl) => {
       const parsedUrl = new URL(navigationUrl);
       
-      if (parsedUrl.origin !== 'http://localhost:5173' && !isDev) {
+      if (parsedUrl.origin !== 'http://localhost:5174' && !isDev) {
         event.preventDefault();
         void shell.openExternal(navigationUrl);
       }
@@ -207,8 +214,8 @@ app.whenReady().then(() => {
 
   // Security: Prevent new window creation from renderer
   app.on('web-contents-created', (_, contents) => {
-    contents.on('new-window', (event) => {
-      event.preventDefault();
+    contents.setWindowOpenHandler(() => {
+      return { action: 'deny' };
     });
   });
 });
@@ -226,7 +233,7 @@ app.on('web-contents-created', (_, contents) => {
   contents.on('will-navigate', (event, navigationUrl) => {
     const parsedUrl = new URL(navigationUrl);
     
-    if (parsedUrl.origin !== 'http://localhost:5173' && !isDev) {
+    if (parsedUrl.origin !== 'http://localhost:5174' && !isDev) {
       event.preventDefault();
     }
   });

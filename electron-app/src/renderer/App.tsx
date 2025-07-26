@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { ThemeProvider } from './contexts/theme-provider';
 import { Toaster } from './components/ui/toaster';
 import ComponentShowcase from './components/ComponentShowcase';
 import { Button } from './components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
-import { useTheme } from './contexts/theme-provider';
+import { AppProviders } from './providers/app-providers';
+import { StoreManager } from './components/store-manager';
+import { useStoreInitialization } from './hooks/use-store-initialization';
+import { useTheme, useNotifications, useAppState } from './hooks/use-app-state';
 import { useToast } from './hooks/use-toast';
+import { StateDebugPanel } from './components/state-debug-panel';
 
 const AppContent: React.FC = () => {
   const [isElectronReady, setIsElectronReady] = useState(false);
   const [showShowcase, setShowShowcase] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { addNotification } = useNotifications();
   const { toast } = useToast();
+  const { isInitialized, initializationError } = useStoreInitialization();
+  const appState = useAppState();
 
   useEffect(() => {
     // Check if Electron API is available
@@ -35,6 +41,13 @@ const AppContent: React.FC = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     
+    // Add notification using Zustand store
+    addNotification({
+      type: 'success',
+      title: 'Theme Changed',
+      message: `Switched to ${newTheme} theme`,
+    });
+    
     toast({
       title: "Theme Changed",
       description: `Switched to ${newTheme} theme`,
@@ -48,12 +61,26 @@ const AppContent: React.FC = () => {
           'Audio Chat Studio',
           'Welcome to the new Electron version!'
         );
+        
+        addNotification({
+          type: 'success',
+          title: 'Notification Sent',
+          message: 'System notification has been displayed',
+        });
+        
         toast({
           title: "Notification Sent",
           description: "System notification has been displayed",
         });
       } catch (error) {
         console.error('Failed to show notification:', error);
+        
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to show system notification',
+        });
+        
         toast({
           title: "Error",
           description: "Failed to show system notification",
@@ -74,10 +101,20 @@ const AppContent: React.FC = () => {
         });
         
         if (filePath) {
+          // Add to recent files using Zustand store
+          appState.user.addRecentFile(filePath);
+          
           await window.electronAPI.showNotification(
             'File Selected',
             `Selected: ${filePath}`
           );
+          
+          addNotification({
+            type: 'info',
+            title: 'File Selected',
+            message: `Selected: ${filePath.split('/').pop()}`,
+          });
+          
           toast({
             title: "File Selected",
             description: `Selected: ${filePath.split('/').pop()}`,
@@ -85,6 +122,13 @@ const AppContent: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to select file:', error);
+        
+        addNotification({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to select file',
+        });
+        
         toast({
           title: "Error",
           description: "Failed to select file",
@@ -93,6 +137,21 @@ const AppContent: React.FC = () => {
       }
     }
   };
+
+  // Show loading screen while stores are initializing
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Initializing application...</p>
+          {initializationError && (
+            <p className="text-destructive text-sm">Error: {initializationError}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (showShowcase) {
     return <ComponentShowcase onBack={() => setShowShowcase(false)} />;
@@ -226,8 +285,16 @@ const AppContent: React.FC = () => {
                   <span>shadcn/ui component library</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <span>State management with Zustand</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>React Query for server state</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Redux DevTools integration</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
@@ -236,6 +303,9 @@ const AppContent: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* State Debug Panel */}
+          <StateDebugPanel />
         </main>
       </div>
     </div>
@@ -244,10 +314,12 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="audio-chat-studio-theme">
-      <AppContent />
-      <Toaster />
-    </ThemeProvider>
+    <AppProviders>
+      <StoreManager>
+        <AppContent />
+        <Toaster />
+      </StoreManager>
+    </AppProviders>
   );
 };
 
