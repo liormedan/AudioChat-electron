@@ -57,30 +57,6 @@ export const LLMPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Chat Interface */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <MessageSquare className="h-5 w-5" />
-            <span>AI Chat</span>
-          </CardTitle>
-          <CardDescription>
-            Chat with your AI assistant about audio processing
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-lg p-4 min-h-[300px] bg-muted/20">
-            <div className="text-center py-8">
-              <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">
-                AI assistant is not available. Configure your AI settings to start chatting.
-              </p>
-              <Button variant="outline">Configure AI Settings</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* AI Configuration */}
       <Card>
         <CardHeader>

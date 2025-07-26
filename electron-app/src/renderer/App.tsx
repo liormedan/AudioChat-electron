@@ -5,14 +5,15 @@ import { AppProviders } from './providers/app-providers';
 import { StoreManager } from './components/store-manager';
 import { useStoreInitialization } from './hooks/use-store-initialization';
 import { MainLayout } from './components/layout/main-layout';
-import { 
-  HomePage, 
-  AudioPage, 
-  ExportPage, 
-  StatsPage, 
-  LLMPage, 
-  ProfilePage, 
-  SettingsPage 
+import {
+  HomePage,
+  AudioPage,
+  ExportPage,
+  StatsPage,
+  LLMPage,
+  ProfilePage,
+  SettingsPage,
+  ChatPage // Import ChatPage
 } from './pages';
 
 const AppContent: React.FC = () => {
@@ -43,6 +44,7 @@ const AppContent: React.FC = () => {
             <Route path="export" element={<ExportPage />} />
             <Route path="stats" element={<StatsPage />} />
             <Route path="llm" element={<LLMPage />} />
+            <Route path="chat" element={<ChatPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
