@@ -13,11 +13,13 @@ if SRC_DIR not in sys.path:
 # --- Import Services ---
 # Now we can safely import our services
 from services.llm_service import LLMService
+from services.audio_editing_service import AudioEditingService
 # from models.llm_models import LLMProvider # Import the model for type hinting and serialization
 
 # --- Initialize Services ---
 # Create an instance of the service that the server will use
 llm_service = LLMService()
+audio_editing_service = AudioEditingService()
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
@@ -47,6 +49,19 @@ def list_files_endpoint():
         import glob
         files = [os.path.abspath(f) for f in glob.glob(os.path.join(path, pattern), recursive=recursive)]
         return jsonify(files)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/audio/transcribe', methods=['POST'])
+def transcribe_audio_endpoint():
+    data = request.get_json()
+    audio_base64 = data.get('audio_base64')
+    if not audio_base64:
+        return jsonify({"error": "audio_base64 is required"}), 400
+
+    try:
+        transcription = audio_editing_service.transcribe_audio(audio_base64)
+        return jsonify({"transcription": transcription})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
