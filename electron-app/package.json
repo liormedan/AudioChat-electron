@@ -4,6 +4,8 @@
   "description": "Audio Chat Studio - Modern Electron Application",
   "main": "dist/main/main.js",
   "scripts": {
+    "start": "concurrently \"npm run start:python\" \"npm run dev:electron\"",
+    "start:python": "python ../server.py",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
     "dev:electron": "wait-on http://localhost:5174 && electron .",
@@ -14,7 +16,8 @@
     "package": "npm run build && electron-builder",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist .vite"
   },
   "keywords": [
     "electron",
@@ -74,6 +77,12 @@
     "files": [
       "dist/**/*",
       "node_modules/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "../py_build/dist/server_dist.exe",
+        "to": "python/server_dist.exe"
+      }
     ],
     "mac": {
       "category": "public.app-category.productivity"

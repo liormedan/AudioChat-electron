@@ -1,9 +1,13 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, Notification, screen } from 'electron';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { spawn, ChildProcessWithoutNullStreams } from 'child_process'; // Import spawn
 
 // Security: Disable node integration and enable context isolation
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const shouldOpenDevTools = ['1', 'true'].includes(
+  (process.env.OPEN_DEVTOOLS ?? '').toLowerCase()
+);
 
 interface WindowState {
   width: number;
@@ -11,6 +15,50 @@ interface WindowState {
   x?: number;
   y?: number;
   isMaximized?: boolean;
+}
+
+let pythonProcess: ChildProcessWithoutNullStreams | null = null; // Declare pythonProcess
+
+function startPythonBackend() {
+  const pythonExecutable = process.platform === 'win32' ? 'server_dist.exe' : 'server_dist';
+  const pythonPath = isDev
+    ? join(__dirname, '../../server.py') // Adjust path for development
+    : join(process.resourcesPath, 'python', pythonExecutable); // Path in packaged app
+
+  console.log(`Attempting to start Python backend from: ${pythonPath}`);
+
+  if (isDev) {
+    pythonProcess = spawn('python', [pythonPath]);
+  } else {
+    pythonProcess = spawn(pythonPath);
+  }
+
+  pythonProcess.stdout.on('data', (data) => {
+    console.log(`Python stdout: ${data.toString()}`);
+  });
+
+  pythonProcess.stderr.on('data', (data) => {
+    console.error(`Python stderr: ${data.toString()}`);
+  });
+
+  pythonProcess.on('close', (code) => {
+    console.log(`Python process exited with code ${code}`);
+    pythonProcess = null;
+  });
+
+  pythonProcess.on('error', (err) => {
+    console.error('Failed to start Python process:', err);
+    dialog.showErrorBox('Application Error', 'Failed to start Python backend. Please check logs.');
+    app.quit();
+  });
+}
+
+function stopPythonBackend() {
+  if (pythonProcess) {
+    console.log('Stopping Python backend...');
+    pythonProcess.kill(); // Send SIGTERM to the process
+    pythonProcess = null;
+  }
 }
 
 class MainWindow {
@@ -29,71 +77,50 @@ class MainWindow {
     this.setupIPC();
   }
 
-  private loadWindowState(): void {
+  private loadWindowState() {
     try {
       if (existsSync(this.windowStateFile)) {
-        const data = readFileSync(this.windowStateFile, 'utf8');
-        this.windowState = { ...this.windowState, ...JSON.parse(data) };
+        const state = JSON.parse(readFileSync(this.windowStateFile, 'utf-8'));
+        this.windowState = { ...this.windowState, ...state };
       }
     } catch (error) {
       console.error('Failed to load window state:', error);
     }
   }
 
-  private saveWindowStateNow(): void {
-    if (!this.window) return;
-    
-    try {
-      const bounds = this.window.getBounds();
-      const isMaximized = this.window.isMaximized();
-      
-      const state: WindowState = {
-        width: bounds.width,
-        height: bounds.height,
-        x: bounds.x,
-        y: bounds.y,
-        isMaximized
-      };
-      
-      writeFileSync(this.windowStateFile, JSON.stringify(state, null, 2));
-      this.windowState = state;
-    } catch (error) {
-      console.error('Failed to save window state:', error);
+  private saveWindowStateNow() {
+    if (this.window && !this.window.isDestroyed()) {
+      if (this.window.isMaximized()) {
+        this.windowState.isMaximized = true;
+      } else {
+        this.windowState.isMaximized = false;
+        const bounds = this.window.getBounds();
+        this.windowState.width = bounds.width;
+        this.windowState.height = bounds.height;
+        this.windowState.x = bounds.x;
+        this.windowState.y = bounds.y;
+      }
+      try {
+        writeFileSync(this.windowStateFile, JSON.stringify(this.windowState));
+      } catch (error) {
+        console.error('Failed to save window state:', error);
+      }
     }
   }
 
-  private scheduleSaveWindowState(): void {
-    if (this.saveStateTimer) {
-      clearTimeout(this.saveStateTimer);
-    }
-    this.saveStateTimer = setTimeout(() => {
-      this.saveStateTimer = null;
-      this.saveWindowStateNow();
-    }, this.debounceDelay);
+  private scheduleSaveWindowState() {
+    this.clearSaveTimer();
+    this.saveStateTimer = setTimeout(() => this.saveWindowStateNow(), this.debounceDelay);
   }
 
-  private clearSaveTimer(): void {
+  private clearSaveTimer() {
     if (this.saveStateTimer) {
       clearTimeout(this.saveStateTimer);
       this.saveStateTimer = null;
     }
   }
 
-  private createWindow(): void {
-    // Ensure window is within screen bounds
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-    
-    // Validate and adjust window position
-    if (this.windowState.x !== undefined && this.windowState.y !== undefined) {
-      if (this.windowState.x < 0 || this.windowState.x > screenWidth - 100) {
-        this.windowState.x = undefined;
-      }
-      if (this.windowState.y < 0 || this.windowState.y > screenHeight - 100) {
-        this.windowState.y = undefined;
-      }
-    }
-
+  private createWindow() {
     // Create the browser window with security best practices
     this.window = new BrowserWindow({
       width: this.windowState.width,
@@ -131,8 +158,8 @@ class MainWindow {
       return;
     }
 
-    // Open DevTools automatically during development
-    if (isDev) {
+    // Optionally open DevTools in development
+    if (isDev && shouldOpenDevTools) {
       this.window.webContents.openDevTools();
     }
 
@@ -159,187 +186,27 @@ class MainWindow {
     // Save window state on resize/move
     this.window.on('resize', () => this.scheduleSaveWindowState());
     this.window.on('move', () => this.scheduleSaveWindowState());
-    this.window.on('maximize', () => this.scheduleSaveWindowState());
-    this.window.on('unmaximize', () => this.scheduleSaveWindowState());
-
-    // Security: Prevent new window creation
-    this.window.webContents.setWindowOpenHandler(() => {
-      return { action: 'deny' };
-    });
-
-    // Security: Handle external links
-    this.window.webContents.on('will-navigate', (event, navigationUrl) => {
-      const parsedUrl = new URL(navigationUrl);
-      
-      if (parsedUrl.origin !== 'http://localhost:5174' && !isDev) {
-        event.preventDefault();
-        void shell.openExternal(navigationUrl);
-      }
-    });
   }
 
-  private getWindowState(): WindowState | null {
-    if (!this.window) return null;
-    
-    const bounds = this.window.getBounds();
-    const isMaximized = this.window.isMaximized();
-    
-    return {
-      width: bounds.width,
-      height: bounds.height,
-      x: bounds.x,
-      y: bounds.y,
-      isMaximized
-    };
-  }
-
-  private setupIPC(): void {
-    // Window management
-    ipcMain.handle('window:minimize', () => {
-      this.window?.minimize();
-    });
-
-    ipcMain.handle('window:maximize', () => {
-      if (this.window?.isMaximized()) {
-        this.window.unmaximize();
-      } else {
-        this.window?.maximize();
-      }
-    });
-
-    ipcMain.handle('window:close', () => {
-      this.window?.close();
-    });
-
-    ipcMain.handle('window:getState', () => {
-      return this.getWindowState();
-    });
-
-    ipcMain.handle('window:setBounds', (_, bounds: { width: number; height: number; x?: number; y?: number }) => {
-      if (this.window) {
-        this.window.setBounds(bounds);
-        this.scheduleSaveWindowState();
-      }
-    });
-
-    // File operations
-    ipcMain.handle('file:select', async (_, options?: { filters?: Array<{ name: string; extensions: string[] }> }) => {
-      if (!this.window) return null;
-      
-      const result = await dialog.showOpenDialog(this.window, {
-        properties: ['openFile'],
-        filters: options?.filters ?? [
-          { name: 'Audio Files', extensions: ['mp3', 'wav', 'flac', 'aac', 'm4a'] },
-          { name: 'All Files', extensions: ['*'] }
-        ]
-      });
-      
-      return result.canceled ? null : result.filePaths[0];
-    });
-
-    ipcMain.handle('file:selectDirectory', async () => {
-      if (!this.window) return null;
-      
-      const result = await dialog.showOpenDialog(this.window, {
-        properties: ['openDirectory']
-      });
-      
-      return result.canceled ? null : result.filePaths[0];
-    });
-
-    // Settings (placeholder - will be implemented with actual storage)
-    ipcMain.handle('settings:get', async () => {
-      // TODO: Implement actual settings storage
-      return {};
-    });
-
-    ipcMain.handle('settings:update', async (_, settings: Record<string, unknown>) => {
-      // TODO: Implement actual settings storage
-      console.log('Settings updated:', settings);
-    });
-
-    // Theme management
-    ipcMain.handle('theme:set', async (_, theme: 'light' | 'dark') => {
-      // TODO: Implement theme persistence
-      console.log('Theme set to:', theme);
-    });
-
-    ipcMain.handle('theme:get', async () => {
-      // TODO: Implement theme persistence
-      return 'light' as const;
-    });
-
-    // Notifications
-    ipcMain.handle('notification:show', async (_, title: string, body: string) => {
-      if (Notification.isSupported()) {
-        new Notification({ title, body }).show();
-      }
-    });
-
-    // Python backend communication (placeholder)
-    ipcMain.handle('python:call', async (_, service: string, method: string, payload: unknown) => {
-      // TODO: Implement actual Python backend communication
-      console.log(`Python call: ${service}.${method}`, payload);
-      return { success: true, data: null };
-    });
-  }
-
-  public getWindow(): BrowserWindow | null {
-    return this.window;
+  private setupIPC() {
+    // IPC handlers
   }
 }
 
-// App event handlers
 app.whenReady().then(() => {
-  // Security: Set app user model ID for Windows
-  if (process.platform === 'win32') {
-    app.setAppUserModelId('com.audiochatstudio.electron');
-  }
-
-  const mainWindow = new MainWindow();
-
-  app.on('activate', () => {
-    // On macOS, re-create window when dock icon is clicked
-    if (BrowserWindow.getAllWindows().length === 0) {
-      new MainWindow();
-    }
-  });
-
-  // Security: Prevent new window creation from renderer
-  app.on('web-contents-created', (_, contents) => {
-    contents.setWindowOpenHandler(() => {
-      return { action: 'deny' };
-    });
-  });
+  startPythonBackend(); // Start Python backend when app is ready
+  new MainWindow();
 });
 
-// Quit when all windows are closed
 app.on('window-all-closed', () => {
-  // On macOS, keep app running even when all windows are closed
+  stopPythonBackend(); // Stop Python backend when all windows are closed
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-// Security: Prevent navigation to external URLs
-app.on('web-contents-created', (_, contents) => {
-  contents.on('will-navigate', (event, navigationUrl) => {
-    const parsedUrl = new URL(navigationUrl);
-    
-    if (parsedUrl.origin !== 'http://localhost:5174' && !isDev) {
-      event.preventDefault();
-    }
-  });
-});
-
-// Handle certificate errors
-app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
-  if (isDev) {
-    // In development, ignore certificate errors for localhost
-    event.preventDefault();
-    callback(true);
-  } else {
-    // In production, use default behavior
-    callback(false);
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    new MainWindow();
   }
 });

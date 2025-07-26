@@ -11,7 +11,7 @@ interface AppProvidersProps {
 export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         {children}
         {/* React Query DevTools - only shows in development */}
         <ReactQueryDevtools 

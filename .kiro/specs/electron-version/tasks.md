@@ -40,6 +40,9 @@
 
 
 
+
+
+
   - Build responsive main layout component with sidebar and content area
   - Implement sidebar navigation using shadcn/ui components
   - Create routing system with React Router for page navigation

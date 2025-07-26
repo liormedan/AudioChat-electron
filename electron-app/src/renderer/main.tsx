@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { AppProviders } from './providers/app-providers'; // Import AppProviders
 
 // Ensure we have a root element
 const rootElement = document.getElementById('root');
@@ -13,6 +14,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <AppProviders> {/* Wrap App with AppProviders */}
+      <App />
+    </AppProviders>
   </React.StrictMode>
 );
