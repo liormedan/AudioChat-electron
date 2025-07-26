@@ -107,12 +107,16 @@ class MainWindow {
     
     if (existsSync(testPath)) {
       void this.window.loadFile(testPath);
-      // Always open DevTools for debugging
-      this.window.webContents.openDevTools();
+      // Open DevTools automatically during development
+      if (isDev) {
+        this.window.webContents.openDevTools();
+      }
     } else if (existsSync(indexPath)) {
       void this.window.loadFile(indexPath);
-      // Always open DevTools for debugging
-      this.window.webContents.openDevTools();
+      // Open DevTools automatically during development
+      if (isDev) {
+        this.window.webContents.openDevTools();
+      }
     } else {
       console.error('No renderer found. Paths checked:');
       console.error('Test path:', testPath);
