@@ -1,13 +1,16 @@
 # Core GUI Framework
 PyQt6>=6.4.0
-PyQt6-QtCharts>=6.4.0
 qt-material>=2.14
 
 # Data Processing & Visualization
 numpy>=1.24.0
 scipy>=1.10.0
-matplotlib>=3.6.0
 pandas>=1.5.0
+
+# Modern Visualization Libraries (Alternatives to QtCharts)
+plotly>=5.17.0          # Interactive web-based charts
+pyqtgraph>=0.13.3       # High-performance real-time plotting for PyQt
+matplotlib>=3.6.0       # Fallback for static charts
 
 # Audio Processing
 librosa>=0.10.0
@@ -20,7 +23,7 @@ pydub>=0.25.0
 # torch>=2.0.0
 
 # Database & Storage
-sqlite3  # Built-in with Python
+# sqlite3 is built-in with Python
 # Cloud providers
 boto3>=1.28.0
 google-cloud-storage>=2.12.0

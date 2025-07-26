@@ -1,0 +1,7 @@
+# Minimal requirements for basic functionality
+PyQt6>=6.4.0
+qt-material>=2.14
+numpy>=1.21.0
+pyqtgraph>=0.13.0
+requests>=2.25.0
+python-dateutil>=2.8.0
