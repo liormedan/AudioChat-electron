@@ -8,6 +8,8 @@ const validateIPCCall = (channel: string, ...args: unknown[]): boolean => {
     'window:minimize',
     'window:maximize', 
     'window:close',
+    'window:getState',
+    'window:setBounds',
     'file:select',
     'file:selectDirectory',
     'settings:get',
@@ -44,6 +46,19 @@ const electronAPI: ElectronAPI = {
   close: async (): Promise<void> => {
     if (validateIPCCall('window:close')) {
       return ipcRenderer.invoke('window:close');
+    }
+  },
+
+  getWindowState: async (): Promise<{ width: number; height: number; x?: number; y?: number; isMaximized?: boolean } | null> => {
+    if (validateIPCCall('window:getState')) {
+      return ipcRenderer.invoke('window:getState');
+    }
+    return null;
+  },
+
+  setWindowBounds: async (bounds: { width: number; height: number; x?: number; y?: number }): Promise<void> => {
+    if (validateIPCCall('window:setBounds', bounds)) {
+      return ipcRenderer.invoke('window:setBounds', bounds);
     }
   },
 

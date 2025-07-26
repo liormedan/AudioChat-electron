@@ -1,25 +1,80 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Notification } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, Notification, screen } from 'electron';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 
 // Security: Disable node integration and enable context isolation
 const isDev = process.env.NODE_ENV === 'development';
 
+interface WindowState {
+  width: number;
+  height: number;
+  x?: number;
+  y?: number;
+  isMaximized?: boolean;
+}
+
 class MainWindow {
   private window: BrowserWindow | null = null;
-  private readonly windowState = {
+  private windowState: WindowState = {
     width: 1200,
     height: 800,
-    x: undefined as number | undefined,
-    y: undefined as number | undefined,
   };
+  private windowStateFile = join(app.getPath('userData'), 'window-state.json');
 
   constructor() {
+    this.loadWindowState();
     this.createWindow();
     this.setupIPC();
   }
 
+  private loadWindowState(): void {
+    try {
+      if (existsSync(this.windowStateFile)) {
+        const data = readFileSync(this.windowStateFile, 'utf8');
+        this.windowState = { ...this.windowState, ...JSON.parse(data) };
+      }
+    } catch (error) {
+      console.error('Failed to load window state:', error);
+    }
+  }
+
+  private saveWindowState(): void {
+    if (!this.window) return;
+    
+    try {
+      const bounds = this.window.getBounds();
+      const isMaximized = this.window.isMaximized();
+      
+      const state: WindowState = {
+        width: bounds.width,
+        height: bounds.height,
+        x: bounds.x,
+        y: bounds.y,
+        isMaximized
+      };
+      
+      writeFileSync(this.windowStateFile, JSON.stringify(state, null, 2));
+      this.windowState = state;
+    } catch (error) {
+      console.error('Failed to save window state:', error);
+    }
+  }
+
   private createWindow(): void {
+    // Ensure window is within screen bounds
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    
+    // Validate and adjust window position
+    if (this.windowState.x !== undefined && this.windowState.y !== undefined) {
+      if (this.windowState.x < 0 || this.windowState.x > screenWidth - 100) {
+        this.windowState.x = undefined;
+      }
+      if (this.windowState.y < 0 || this.windowState.y > screenHeight - 100) {
+        this.windowState.y = undefined;
+      }
+    }
+
     // Create the browser window with security best practices
     this.window = new BrowserWindow({
       width: this.windowState.width,
@@ -68,6 +123,9 @@ class MainWindow {
 
     // Show window when ready
     this.window.once('ready-to-show', () => {
+      if (this.windowState.isMaximized) {
+        this.window?.maximize();
+      }
       this.window?.show();
       
       // Focus window on creation
@@ -78,12 +136,15 @@ class MainWindow {
 
     // Handle window closed
     this.window.on('closed', () => {
+      this.saveWindowState();
       this.window = null;
     });
 
     // Save window state on resize/move
     this.window.on('resize', () => this.saveWindowState());
     this.window.on('move', () => this.saveWindowState());
+    this.window.on('maximize', () => this.saveWindowState());
+    this.window.on('unmaximize', () => this.saveWindowState());
 
     // Security: Prevent new window creation
     this.window.webContents.setWindowOpenHandler(() => {
@@ -101,14 +162,19 @@ class MainWindow {
     });
   }
 
-  private saveWindowState(): void {
-    if (!this.window) return;
+  private getWindowState(): WindowState | null {
+    if (!this.window) return null;
     
     const bounds = this.window.getBounds();
-    this.windowState.width = bounds.width;
-    this.windowState.height = bounds.height;
-    this.windowState.x = bounds.x;
-    this.windowState.y = bounds.y;
+    const isMaximized = this.window.isMaximized();
+    
+    return {
+      width: bounds.width,
+      height: bounds.height,
+      x: bounds.x,
+      y: bounds.y,
+      isMaximized
+    };
   }
 
   private setupIPC(): void {
@@ -127,6 +193,17 @@ class MainWindow {
 
     ipcMain.handle('window:close', () => {
       this.window?.close();
+    });
+
+    ipcMain.handle('window:getState', () => {
+      return this.getWindowState();
+    });
+
+    ipcMain.handle('window:setBounds', (_, bounds: { width: number; height: number; x?: number; y?: number }) => {
+      if (this.window) {
+        this.window.setBounds(bounds);
+        this.saveWindowState();
+      }
     });
 
     // File operations
