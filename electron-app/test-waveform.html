@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaveSurfer.js Integration Test</title>
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .waveform {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #f0f0f0;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .file-input {
+            margin: 20px 0;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .slider {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>בדיקת אינטגרציה עם WaveSurfer.js</h1>
+        
+        <div class="file-input">
+            <label for="audioFile">בחר קובץ אודיו:</label>
+            <input type="file" id="audioFile" accept="audio/*">
+        </div>
+
+        <div id="waveform" class="waveform"></div>
+        
+        <div class="controls">
+            <button id="playBtn">▶️ נגן</button>
+            <button id="pauseBtn">⏸️ השהה</button>
+            <button id="stopBtn">⏹️ עצור</button>
+            <button id="skipBackBtn">⏪ 10s</button>
+            <button id="skipForwardBtn">⏩ 10s</button>
+        </div>
+
+        <div class="slider-container">
+            <label>עוצמת קול:</label>
+            <input type="range" id="volumeSlider" class="slider" min="0" max="1" step="0.1" value="0.7">
+            <span id="volumeValue">70%</span>
+        </div>
+
+        <div class="slider-container">
+            <label>מהירות נגינה:</label>
+            <input type="range" id="speedSlider" class="slider" min="0.25" max="2" step="0.25" value="1">
+            <span id="speedValue">1x</span>
+        </div>
+
+        <div class="slider-container">
+            <label>זום:</label>
+            <input type="range" id="zoomSlider" class="slider" min="1" max="10" step="1" value="1">
+            <span id="zoomValue">1x</span>
+        </div>
+
+        <div class="info">
+            <div>זמן נוכחי: <span id="currentTime">0:00</span></div>
+            <div>משך כולל: <span id="duration">0:00</span></div>
+            <div>סטטוס: <span id="status">ממתין לקובץ</span></div>
+        </div>
+    </div>
+
+    <script>
+        let wavesurfer = null;
+        let isPlaying = false;
+
+        // Initialize WaveSurfer
+        function initWaveSurfer() {
+            if (wavesurfer) {
+                wavesurfer.destroy();
+            }
+
+            wavesurfer = WaveSurfer.create({
+                container: '#waveform',
+                waveColor: '#6b7280',
+                progressColor: '#3b82f6',
+                cursorColor: '#3b82f6',
+                barWidth: 2,
+                barRadius: 1,
+                height: 80,
+                normalize: true,
+                mediaControls: false,
+            });
+
+            // Event listeners
+            wavesurfer.on('ready', () => {
+                updateStatus('מוכן לנגינה');
+                updateDuration();
+                enableControls(true);
+            });
+
+            wavesurfer.on('audioprocess', updateCurrentTime);
+            wavesurfer.on('seek', updateCurrentTime);
+
+            wavesurfer.on('play', () => {
+                isPlaying = true;
+                updateStatus('מנגן');
+            });
+
+            wavesurfer.on('pause', () => {
+                isPlaying = false;
+                updateStatus('מושהה');
+            });
+
+            wavesurfer.on('finish', () => {
+                isPlaying = false;
+                updateStatus('הסתיים');
+            });
+
+            wavesurfer.on('loading', (percent) => {
+                updateStatus(`טוען... ${percent}%`);
+            });
+        }
+
+        // Helper functions
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function updateCurrentTime() {
+            if (wavesurfer) {
+                const current = wavesurfer.getCurrentTime();
+                document.getElementById('currentTime').textContent = formatTime(current);
+            }
+        }
+
+        function updateDuration() {
+            if (wavesurfer) {
+                const duration = wavesurfer.getDuration();
+                document.getElementById('duration').textContent = formatTime(duration);
+            }
+        }
+
+        function updateStatus(status) {
+            document.getElementById('status').textContent = status;
+        }
+
+        function enableControls(enabled) {
+            const buttons = ['playBtn', 'pauseBtn', 'stopBtn', 'skipBackBtn', 'skipForwardBtn'];
+            buttons.forEach(id => {
+                document.getElementById(id).disabled = !enabled;
+            });
+        }
+
+        // File input handler
+        document.getElementById('audioFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                updateStatus('טוען קובץ...');
+                enableControls(false);
+                
+                if (!wavesurfer) {
+                    initWaveSurfer();
+                }
+                
+                const url = URL.createObjectURL(file);
+                wavesurfer.load(url);
+            }
+        });
+
+        // Control buttons
+        document.getElementById('playBtn').addEventListener('click', () => {
+            if (wavesurfer) {
+                wavesurfer.play();
+            }
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (wavesurfer) {
+                wavesurfer.pause();
+            }
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            if (wavesurfer) {
+                wavesurfer.stop();
+            }
+        });
+
+        document.getElementById('skipBackBtn').addEventListener('click', () => {
+            if (wavesurfer) {
+                const current = wavesurfer.getCurrentTime();
+                const duration = wavesurfer.getDuration();
+                wavesurfer.seekTo(Math.max(0, current - 10) / duration);
+            }
+        });
+
+        document.getElementById('skipForwardBtn').addEventListener('click', () => {
+            if (wavesurfer) {
+                const current = wavesurfer.getCurrentTime();
+                const duration = wavesurfer.getDuration();
+                wavesurfer.seekTo(Math.min(duration, current + 10) / duration);
+            }
+        });
+
+        // Volume control
+        document.getElementById('volumeSlider').addEventListener('input', (e) => {
+            const volume = parseFloat(e.target.value);
+            if (wavesurfer) {
+                wavesurfer.setVolume(volume);
+            }
+            document.getElementById('volumeValue').textContent = Math.round(volume * 100) + '%';
+        });
+
+        // Speed control
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            const speed = parseFloat(e.target.value);
+            if (wavesurfer) {
+                wavesurfer.setPlaybackRate(speed);
+            }
+            document.getElementById('speedValue').textContent = speed + 'x';
+        });
+
+        // Zoom control
+        document.getElementById('zoomSlider').addEventListener('input', (e) => {
+            const zoom = parseInt(e.target.value);
+            if (wavesurfer) {
+                wavesurfer.zoom(zoom);
+            }
+            document.getElementById('zoomValue').textContent = zoom + 'x';
+        });
+
+        // Initialize on page load
+        enableControls(false);
+        updateStatus('ממתין לקובץ');
+    </script>
+</body>
+</html>

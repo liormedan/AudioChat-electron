@@ -33,7 +33,7 @@
 ```
 
 **משימות ספציפיות:**
-- [ ] שיפור AudioPage עם רכיב FileUploader מתקדם
+- [x] שיפור AudioPage עם רכיב FileUploader מתקדם
 - [ ] אינטגרציה עם wavesurfer.js לwaveform
 - [ ] רכיב AudioFileManager לניהול קבצים
 - [ ] חיבור AudioPage ל-ChatPage

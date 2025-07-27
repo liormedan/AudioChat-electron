@@ -19,6 +19,8 @@ export interface ElectronAPI {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
+  getWindowState: () => Promise<{ width: number; height: number; x?: number; y?: number; isMaximized?: boolean } | null>;
+  setWindowBounds: (bounds: { width: number; height: number; x?: number; y?: number }) => Promise<void>;
   
   // File operations
   selectFile: (options?: { filters?: Array<{ name: string; extensions: string[] }> }) => Promise<string | null>;

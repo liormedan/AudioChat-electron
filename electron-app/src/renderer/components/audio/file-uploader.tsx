@@ -40,7 +40,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     }
 
     if (acceptedFiles.length > 0) {
-      onFileSelect(acceptedFiles[0]);
+      if (acceptedFiles[0]) {
+        onFileSelect(acceptedFiles[0]);
+      }
     }
   }, [onFileSelect, maxSize]);
 

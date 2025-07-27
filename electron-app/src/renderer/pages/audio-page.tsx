@@ -2,8 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Music, Upload, Play, Pause, Square, MessageSquare, Loader2, Send, FileAudio, Waveform } from 'lucide-react';
+import { MessageSquare, Loader2, Send, FileAudio } from 'lucide-react';
 import { FileUploader } from '../components/audio/file-uploader';
+import { SimpleWaveformPlayer } from '../components/audio/simple-waveform-player';
+import { CommandSuggestions } from '../components/audio/command-suggestions';
+import { AudioFileInfo } from '../components/audio/audio-file-info';
 
 interface ChatMessage {
   id: string;
@@ -27,6 +30,8 @@ export const AudioPage: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  
+
 
   useEffect(() => {
     if (audioUrl) {
@@ -58,7 +63,7 @@ export const AudioPage: React.FC = () => {
       setIsPlaying(false);
       setCurrentTime(0);
       setDuration(0);
-      setTranscriptionResult(null); // Clear previous transcription
+      // Clear previous transcription if needed
     }
   };
 
@@ -190,6 +195,10 @@ What would you like me to do with this audio?`,
     }
   };
 
+  const handleCommandSelect = (command: string) => {
+    setCurrentMessage(command);
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="space-y-2">
@@ -209,46 +218,36 @@ What would you like me to do with this audio?`,
             onClearFile={handleClearFile}
           />
 
-          {/* Audio Player */}
+          {/* Simple Waveform Player */}
+          <SimpleWaveformPlayer
+            audioFile={selectedFile}
+            audioUrl={audioUrl}
+            onTimeUpdate={(current, dur) => {
+              setCurrentTime(current);
+              setDuration(dur);
+            }}
+            onPlayStateChange={setIsPlaying}
+          />
+
+          {/* File Information */}
           {selectedFile && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Waveform className="h-5 w-5" />
-                  <span>Audio Player</span>
-                </CardTitle>
-                <CardDescription>
-                  Preview your audio file
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <Button size="sm" variant="outline" onClick={handlePlayPause} disabled={!audioUrl}>
-                      {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handleStop} disabled={!audioUrl}>
-                      <Square className="h-4 w-4" />
-                    </Button>
-                    <div className="flex-1 bg-muted rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full"
-                        style={{ width: `${(currentTime / duration) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>{formatTime(currentTime)}</span>
-                    <span>{formatTime(duration)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <AudioFileInfo
+              file={selectedFile}
+              duration={duration}
+            />
           )}
         </div>
 
         {/* Right Column - Chat Interface */}
         <div className="space-y-6">
+          {/* Command Suggestions */}
+          {selectedFile && (
+            <CommandSuggestions
+              onCommandSelect={handleCommandSelect}
+              disabled={isProcessing}
+            />
+          )}
+
           <Card className="h-[600px] flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">

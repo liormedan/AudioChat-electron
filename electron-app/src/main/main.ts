@@ -1,7 +1,6 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Notification, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron';
 import { join } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process'; // Import spawn
 
 // Security: Disable node integration and enable context isolation
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -15,50 +14,6 @@ interface WindowState {
   x?: number;
   y?: number;
   isMaximized?: boolean;
-}
-
-let pythonProcess: ChildProcessWithoutNullStreams | null = null; // Declare pythonProcess
-
-function startPythonBackend() {
-  const pythonExecutable = process.platform === 'win32' ? 'server_dist.exe' : 'server_dist';
-  const pythonPath = isDev
-    ? join(__dirname, '../../server.py') // Adjust path for development
-    : join(process.resourcesPath, 'python', pythonExecutable); // Path in packaged app
-
-  console.log(`Attempting to start Python backend from: ${pythonPath}`);
-
-  if (isDev) {
-    pythonProcess = spawn('python', [pythonPath]);
-  } else {
-    pythonProcess = spawn(pythonPath);
-  }
-
-  pythonProcess.stdout.on('data', (data) => {
-    console.log(`Python stdout: ${data.toString()}`);
-  });
-
-  pythonProcess.stderr.on('data', (data) => {
-    console.error(`Python stderr: ${data.toString()}`);
-  });
-
-  pythonProcess.on('close', (code) => {
-    console.log(`Python process exited with code ${code}`);
-    pythonProcess = null;
-  });
-
-  pythonProcess.on('error', (err) => {
-    console.error('Failed to start Python process:', err);
-    dialog.showErrorBox('Application Error', 'Failed to start Python backend. Please check logs.');
-    app.quit();
-  });
-}
-
-function stopPythonBackend() {
-  if (pythonProcess) {
-    console.log('Stopping Python backend...');
-    pythonProcess.kill(); // Send SIGTERM to the process
-    pythonProcess = null;
-  }
 }
 
 class MainWindow {
@@ -142,12 +97,15 @@ class MainWindow {
         allowRunningInsecureContent: false,
         experimentalFeatures: false,
         // Preload script for secure IPC
-        preload: join(__dirname, '../preload/preload.js'),
+        preload: join(__dirname, '../preload/preload/preload.js'),
       },
     });
 
     // Load the application UI
-    const indexPath = join(__dirname, '../renderer/index.html');
+    // __dirname is dist/main/main, so we need to go up to dist/renderer
+    const indexPath = join(__dirname, '../../renderer/index.html');
+    console.log('Loading renderer from:', indexPath);
+    console.log('File exists:', existsSync(indexPath));
 
     if (existsSync(indexPath)) {
       void this.window.loadFile(indexPath);
@@ -158,22 +116,28 @@ class MainWindow {
       return;
     }
 
-    // Optionally open DevTools in development
-    if (isDev && shouldOpenDevTools) {
-      this.window.webContents.openDevTools();
-    }
+    // Always open DevTools for debugging
+    this.window.webContents.openDevTools();
+    
+    // Add error handling
+    this.window.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error('Failed to load:', errorCode, errorDescription);
+    });
+    
+    this.window.webContents.on('crashed', () => {
+      console.error('Renderer process crashed');
+    });
 
     // Show window when ready
     this.window.once('ready-to-show', () => {
+      console.log('Window ready to show');
       if (this.windowState.isMaximized) {
         this.window?.maximize();
       }
       this.window?.show();
       
       // Focus window on creation
-      if (isDev) {
-        this.window?.webContents.focus();
-      }
+      this.window?.webContents.focus();
     });
 
     // Handle window closed
@@ -189,23 +153,104 @@ class MainWindow {
   }
 
   private setupIPC() {
-    // IPC handlers
+    // Window management handlers
+    ipcMain.handle('window:minimize', () => {
+      this.window?.minimize();
+    });
+
+    ipcMain.handle('window:maximize', () => {
+      if (this.window?.isMaximized()) {
+        this.window.unmaximize();
+      } else {
+        this.window?.maximize();
+      }
+    });
+
+    ipcMain.handle('window:close', () => {
+      this.window?.close();
+    });
+
+    ipcMain.handle('window:getState', () => {
+      if (!this.window) return null;
+      const bounds = this.window.getBounds();
+      return {
+        width: bounds.width,
+        height: bounds.height,
+        x: bounds.x,
+        y: bounds.y,
+        isMaximized: this.window.isMaximized()
+      };
+    });
+
+    ipcMain.handle('window:setBounds', (_, bounds) => {
+      this.window?.setBounds(bounds);
+    });
+
+    // File operations
+    ipcMain.handle('file:select', async (_, options) => {
+      if (!this.window) return null;
+      const result = await dialog.showOpenDialog(this.window, {
+        properties: ['openFile'],
+        filters: options?.filters || []
+      });
+      return result.canceled ? null : result.filePaths[0];
+    });
+
+    ipcMain.handle('file:selectDirectory', async () => {
+      if (!this.window) return null;
+      const result = await dialog.showOpenDialog(this.window, {
+        properties: ['openDirectory']
+      });
+      return result.canceled ? null : result.filePaths[0];
+    });
+
+    // Settings (placeholder)
+    ipcMain.handle('settings:get', () => {
+      return {};
+    });
+
+    ipcMain.handle('settings:update', (_, settings) => {
+      // Implement settings storage
+      console.log('Settings updated:', settings);
+    });
+
+    // Theme (placeholder)
+    ipcMain.handle('theme:set', (_, theme) => {
+      console.log('Theme set to:', theme);
+    });
+
+    ipcMain.handle('theme:get', () => {
+      return 'light';
+    });
+
+    // Notifications
+    ipcMain.handle('notification:show', (_, title, body) => {
+      new Notification({ title, body }).show();
+    });
+
+    // Python backend communication (placeholder)
+    ipcMain.handle('python:call', async (_, service, method, payload) => {
+      console.log(`Python call: ${service}.${method}`, payload);
+      // This would normally communicate with the Python backend
+      return { success: true, message: 'Python backend not implemented yet' };
+    });
   }
 }
 
 app.whenReady().then(() => {
-  startPythonBackend(); // Start Python backend when app is ready
+  console.log('App is ready, creating main window...');
   new MainWindow();
 });
 
 app.on('window-all-closed', () => {
-  stopPythonBackend(); // Stop Python backend when all windows are closed
+  console.log('All windows closed');
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
 app.on('activate', () => {
+  console.log('App activated');
   if (BrowserWindow.getAllWindows().length === 0) {
     new MainWindow();
   }
