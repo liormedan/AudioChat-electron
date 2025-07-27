@@ -36,8 +36,8 @@
 - [x] שיפור AudioPage עם רכיב FileUploader מתקדם
 - [x] אינטגרציה עם wavesurfer.js לwaveform
 - [x] רכיב AudioFileManager לניהול קבצים
-- [ ] חיבור AudioPage ל-ChatPage
-- [ ] Zustand store לניהול קבצי אודיו
+- [x] חיבור AudioPage ל-ChatPage
+- [x] Zustand store לניהול קבצי אודיו
 
 #### יום 3-4: Backend עיבוד אודיו בסיסי
 ```python
