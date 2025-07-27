@@ -35,7 +35,7 @@
 **משימות ספציפיות:**
 - [x] שיפור AudioPage עם רכיב FileUploader מתקדם
 - [x] אינטגרציה עם wavesurfer.js לwaveform
-- [ ] רכיב AudioFileManager לניהול קבצים
+- [x] רכיב AudioFileManager לניהול קבצים
 - [ ] חיבור AudioPage ל-ChatPage
 - [ ] Zustand store לניהול קבצי אודיו
 

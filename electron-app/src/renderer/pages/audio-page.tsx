@@ -1,42 +1,45 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { MessageSquare, Loader2, Send, FileAudio } from 'lucide-react';
+import { MessageSquare, Loader2, Send, FileAudio, ExternalLink } from 'lucide-react';
 import { FileUploader } from '../components/audio/file-uploader';
 import { SimpleWaveformPlayer } from '../components/audio/simple-waveform-player';
 import { CommandSuggestions } from '../components/audio/command-suggestions';
 import { AudioFileInfo } from '../components/audio/audio-file-info';
 import { AudioWorkspace } from '../components/audio/audio-workspace';
-
-interface ChatMessage {
-  id: string;
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  audioFile?: string;
-  processingStatus?: 'pending' | 'processing' | 'completed' | 'error';
-}
+import { AudioContextIndicator } from '../components/audio/audio-context-indicator';
+import { useAudioChatStore, type AudioFile } from '../stores/audio-chat-store';
+import { useNavigate } from 'react-router-dom';
 
 export const AudioPage: React.FC = () => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
   
-  // Chat-related state
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [currentMessage, setCurrentMessage] = useState<string>('');
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  // Use shared store
+  const {
+    selectedFile,
+    isPlaying,
+    currentTime,
+    duration,
+    chatMessages,
+    currentMessage,
+    isProcessing,
+    setSelectedFile,
+    addUploadedFile,
+    setPlayingState,
+    setCurrentTime,
+    setDuration,
+    setCurrentMessage,
+    selectFileAndNotifyChat,
+    sendAudioCommand
+  } = useAudioChatStore();
   
 
 
   useEffect(() => {
-    if (audioUrl) {
-      audioRef.current = new Audio(audioUrl);
+    if (selectedFile?.url) {
+      audioRef.current = new Audio(selectedFile.url);
       audioRef.current.onloadedmetadata = () => {
         setDuration(audioRef.current?.duration || 0);
       };
@@ -44,7 +47,7 @@ export const AudioPage: React.FC = () => {
         setCurrentTime(audioRef.current?.currentTime || 0);
       };
       audioRef.current.onended = () => {
-        setIsPlaying(false);
+        setPlayingState(false);
         setCurrentTime(0);
       };
     }
@@ -54,142 +57,45 @@ export const AudioPage: React.FC = () => {
         audioRef.current = null;
       }
     };
-  }, [audioUrl]);
+  }, [selectedFile?.url, setDuration, setCurrentTime, setPlayingState]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setAudioUrl(URL.createObjectURL(file));
-      setIsPlaying(false);
-      setCurrentTime(0);
-      setDuration(0);
-      // Clear previous transcription if needed
+  const createAudioFile = (file: File): AudioFile => ({
+    id: Date.now().toString(),
+    file,
+    name: file.name,
+    url: URL.createObjectURL(file),
+    metadata: {
+      size: file.size,
+      type: file.type,
+      lastModified: file.lastModified
     }
-  };
-
-  const handlePlayPause = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleStop = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-      setCurrentTime(0);
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
-  };
+  });
 
   const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    setAudioUrl(URL.createObjectURL(file));
-    setIsPlaying(false);
+    const audioFile = createAudioFile(file);
+    addUploadedFile(audioFile);
+    selectFileAndNotifyChat(audioFile);
+    setPlayingState(false);
     setCurrentTime(0);
     setDuration(0);
-    
-    // Add file to uploaded files list
-    setUploadedFiles(prev => [...prev, file]);
-    
-    // Add system message about file upload
-    const systemMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'assistant',
-      content: `Audio file "${file.name}" uploaded successfully! You can now give me editing commands like:
-      
-• "Remove background noise"
-• "Increase volume by 20%"
-• "Cut the first 30 seconds"
-• "Add fade in and fade out effects"
-• "Normalize the audio"
-
-What would you like me to do with this audio?`,
-      timestamp: new Date(),
-      audioFile: file.name
-    };
-    
-    setChatMessages(prev => [...prev, systemMessage]);
   };
 
   const handleClearFile = () => {
     setSelectedFile(null);
-    setAudioUrl(null);
-    setIsPlaying(false);
+    setPlayingState(false);
     setCurrentTime(0);
     setDuration(0);
   };
 
   const handleSendMessage = async () => {
-    if (!currentMessage.trim() || !selectedFile) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: currentMessage,
-      timestamp: new Date()
-    };
-
-    setChatMessages(prev => [...prev, userMessage]);
+    if (!currentMessage.trim()) return;
+    
+    const command = currentMessage;
     setCurrentMessage('');
-    setIsProcessing(true);
-
-    try {
-      // Here we'll call the backend to process the audio command
-      const response = await fetch('http://127.0.0.1:5000/api/audio/process-command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          command: currentMessage,
-          filename: selectedFile.name 
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: result.response || 'Audio processing completed successfully!',
-        timestamp: new Date(),
-        processingStatus: 'completed'
-      };
-
-      setChatMessages(prev => [...prev, assistantMessage]);
-    } catch (error: any) {
-      console.error('Error processing command:', error);
-      
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: `Sorry, I couldn't process that command. Error: ${error.message}`,
-        timestamp: new Date(),
-        processingStatus: 'error'
-      };
-
-      setChatMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsProcessing(false);
-    }
+    await sendAudioCommand(command);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -202,11 +108,14 @@ What would you like me to do with this audio?`,
 
   return (
     <div className="p-6 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Audio Chat Studio</h1>
-        <p className="text-muted-foreground">
-          Upload audio files and edit them using natural language commands
-        </p>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Audio Chat Studio</h1>
+          <p className="text-muted-foreground">
+            Upload audio files and edit them using natural language commands
+          </p>
+        </div>
+        <AudioContextIndicator />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -226,19 +135,19 @@ What would you like me to do with this audio?`,
 
           {/* Simple Waveform Player */}
           <SimpleWaveformPlayer
-            audioFile={selectedFile}
-            audioUrl={audioUrl}
+            audioFile={selectedFile?.file || null}
+            audioUrl={selectedFile?.url || null}
             onTimeUpdate={(current, dur) => {
               setCurrentTime(current);
               setDuration(dur);
             }}
-            onPlayStateChange={setIsPlaying}
+            onPlayStateChange={setPlayingState}
           />
 
           {/* File Information */}
           {selectedFile && (
             <AudioFileInfo
-              file={selectedFile}
+              file={selectedFile.file}
               duration={duration}
             />
           )}
@@ -256,9 +165,20 @@ What would you like me to do with this audio?`,
 
           <Card className="h-[600px] flex flex-col">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MessageSquare className="h-5 w-5" />
-                <span>Audio Editing Chat</span>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <MessageSquare className="h-5 w-5" />
+                  <span>Audio Editing Chat</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/chat')}
+                  className="flex items-center space-x-1"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Full Chat</span>
+                </Button>
               </CardTitle>
               <CardDescription>
                 Give me commands to edit your audio file
@@ -310,7 +230,7 @@ What would you like me to do with this audio?`,
                 <Input
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   placeholder={selectedFile ? "Type your editing command..." : "Upload an audio file first"}
                   disabled={!selectedFile || isProcessing}
                   className="flex-1"

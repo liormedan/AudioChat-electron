@@ -58,7 +58,8 @@
   - Integrate with Python backend for data fetching
   - _Requirements: 3.5, 6.3, 6.6, 8.2_
 
-- [x] 7. Implement file system integration and management
+- [ ] 7. Implement file system integration and management
+
 
 
   - Create native file picker dialogs using Electron APIs
