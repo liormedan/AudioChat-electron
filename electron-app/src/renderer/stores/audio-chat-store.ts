@@ -220,7 +220,7 @@ What would you like me to do with this audio?`,
           const errorMessage: ChatMessage = {
             id: Date.now().toString(),
             type: 'assistant',
-            content: 'Please select an audio file first before giving commands.',
+            content: '⚠️ **No File Selected**\n\nPlease select an audio file first before giving commands.',
             timestamp: new Date(),
             processingStatus: 'error'
           };
@@ -236,6 +236,17 @@ What would you like me to do with this audio?`,
         };
 
         addChatMessage(userMessage);
+
+        // Add processing status message
+        const processingMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `🔄 **Processing Command**\n\n"${command}"\n\nPlease wait while I process your audio...`,
+          timestamp: new Date(),
+          processingStatus: 'processing'
+        };
+
+        addChatMessage(processingMessage);
         setProcessing(true);
 
         try {
@@ -252,16 +263,33 @@ What would you like me to do with this audio?`,
             }),
           });
 
+          // Remove processing message
+          const currentState = get();
+          const filteredMessages = currentState.chatMessages.filter(msg => msg.id !== processingMessage.id);
+          set({ chatMessages: filteredMessages });
+
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Server error: ${response.status}`);
           }
 
           const result = await response.json();
           
+          let responseContent = '✅ **Command Completed Successfully**\n\n';
+          responseContent += result.response || 'Audio processing completed!';
+          
+          if (result.processed_file) {
+            responseContent += `\n\n📁 **Output File:** ${result.processed_file}`;
+          }
+          
+          if (result.details) {
+            responseContent += `\n\n📋 **Details:**\n${result.details}`;
+          }
+
           const assistantMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
+            id: Date.now().toString(),
             type: 'assistant',
-            content: result.response || 'Audio processing completed successfully!',
+            content: responseContent,
             timestamp: new Date(),
             processingStatus: 'completed'
           };
@@ -270,10 +298,29 @@ What would you like me to do with this audio?`,
         } catch (error: any) {
           console.error('Error processing command:', error);
           
+          // Remove processing message if still there
+          const currentState = get();
+          const filteredMessages = currentState.chatMessages.filter(msg => msg.id !== processingMessage.id);
+          set({ chatMessages: filteredMessages });
+          
+          let errorContent = '❌ **Command Failed**\n\n';
+          
+          if (error.message.includes('Server error: 500')) {
+            errorContent += 'Internal server error. The audio processing service may be unavailable.';
+          } else if (error.message.includes('Server error: 404')) {
+            errorContent += 'Audio file not found. Please make sure the file is properly uploaded.';
+          } else if (error.message.includes('Network')) {
+            errorContent += 'Network connection error. Please check your connection and try again.';
+          } else {
+            errorContent += `Error: ${error.message}`;
+          }
+          
+          errorContent += '\n\n💡 **Suggestions:**\n• Check if the file is uploaded to the server\n• Try a simpler command\n• Refresh the page and try again';
+
           const errorMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
+            id: Date.now().toString(),
             type: 'assistant',
-            content: `Sorry, I couldn't process that command. Error: ${error.message}`,
+            content: errorContent,
             timestamp: new Date(),
             processingStatus: 'error'
           };
