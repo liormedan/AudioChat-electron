@@ -14,12 +14,14 @@ if SRC_DIR not in sys.path:
 # Now we can safely import our services
 from services.llm_service import LLMService
 from services.audio_editing_service import AudioEditingService
+from services.file_upload_service import FileUploadService
 # from models.llm_models import LLMProvider # Import the model for type hinting and serialization
 
 # --- Initialize Services ---
 # Create an instance of the service that the server will use
 llm_service = LLMService()
 audio_editing_service = AudioEditingService()
+file_upload_service = FileUploadService()
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
@@ -51,6 +53,140 @@ def list_files_endpoint():
         return jsonify(files)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/audio/upload', methods=['POST'])
+def upload_audio_file():
+    """
+    Endpoint to upload audio files with validation and metadata extraction.
+    Expects multipart/form-data with 'file' field.
+    """
+    try:
+        # Check if file is present in request
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+        
+        file = request.files['file']
+        
+        # Check if file was actually selected
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Read file data
+        file_data = file.read()
+        original_filename = file.filename
+        
+        # Process upload using file upload service
+        result = file_upload_service.upload_file(file_data, original_filename)
+        
+        if result["success"]:
+            return jsonify({
+                "success": True,
+                "message": "File uploaded successfully",
+                "file_id": result["file_id"],
+                "original_filename": result["original_filename"],
+                "stored_filename": result["stored_filename"],
+                "file_size": result["file_size"],
+                "metadata": result["metadata"],
+                "validation": result["validation"]
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "error": result["error"],
+                "stage": result.get("stage", "unknown")
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Upload failed: {str(e)}",
+            "stage": "server_error"
+        }), 500
+
+@app.route('/api/audio/files', methods=['GET'])
+def list_uploaded_files():
+    """
+    Endpoint to list all uploaded audio files.
+    """
+    try:
+        files = file_upload_service.get_uploaded_files()
+        return jsonify({
+            "success": True,
+            "files": files,
+            "count": len(files)
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to list files: {str(e)}"
+        }), 500
+
+@app.route('/api/audio/files/<file_id>', methods=['DELETE'])
+def delete_uploaded_file(file_id):
+    """
+    Endpoint to delete an uploaded audio file by ID.
+    """
+    try:
+        result = file_upload_service.delete_uploaded_file(file_id)
+        
+        if result["success"]:
+            return jsonify({
+                "success": True,
+                "message": result["message"]
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": result["error"]
+            }), 404
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to delete file: {str(e)}"
+        }), 500
+
+@app.route('/api/audio/metadata/<file_id>', methods=['GET'])
+def get_file_metadata(file_id):
+    """
+    Endpoint to get metadata for a specific uploaded file.
+    """
+    try:
+        # Find file by ID
+        files = file_upload_service.get_uploaded_files()
+        target_file = None
+        
+        for file_info in files:
+            if file_id in file_info["filename"]:
+                target_file = file_info
+                break
+        
+        if not target_file:
+            return jsonify({
+                "success": False,
+                "error": f"File with ID {file_id} not found"
+            }), 404
+        
+        # Extract metadata
+        metadata_result = file_upload_service.extract_metadata(target_file["file_path"])
+        
+        if metadata_result["success"]:
+            return jsonify({
+                "success": True,
+                "file_info": target_file,
+                "metadata": metadata_result["metadata"]
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": metadata_result["error"]
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to get metadata: {str(e)}"
+        }), 500
 
 @app.route('/api/audio/transcribe', methods=['POST'])
 def transcribe_audio_endpoint():

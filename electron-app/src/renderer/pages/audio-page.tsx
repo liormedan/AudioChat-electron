@@ -25,6 +25,8 @@ export const AudioPage: React.FC = () => {
     chatMessages,
     currentMessage,
     isProcessing,
+    isUploading,
+    uploadProgress,
     setSelectedFile,
     addUploadedFile,
     setPlayingState,
@@ -32,7 +34,8 @@ export const AudioPage: React.FC = () => {
     setDuration,
     setCurrentMessage,
     selectFileAndNotifyChat,
-    sendAudioCommand
+    sendAudioCommand,
+    uploadFileToServer
   } = useAudioChatStore();
   
 
@@ -71,13 +74,22 @@ export const AudioPage: React.FC = () => {
     }
   });
 
-  const handleFileSelect = (file: File) => {
-    const audioFile = createAudioFile(file);
-    addUploadedFile(audioFile);
-    selectFileAndNotifyChat(audioFile);
+  const handleFileSelect = async (file: File) => {
+    // Create local audio file first
+    const localAudioFile = createAudioFile(file);
+    addUploadedFile(localAudioFile);
+    selectFileAndNotifyChat(localAudioFile);
     setPlayingState(false);
     setCurrentTime(0);
     setDuration(0);
+    
+    // Upload to server in background
+    const uploadedFile = await uploadFileToServer(file);
+    if (uploadedFile) {
+      // Update the selected file with server info
+      addUploadedFile(uploadedFile);
+      selectFileAndNotifyChat(uploadedFile);
+    }
   };
 
   const handleClearFile = () => {
@@ -202,6 +214,8 @@ export const AudioPage: React.FC = () => {
                         className={`max-w-[80%] rounded-lg p-3 ${
                           message.type === 'user'
                             ? 'bg-primary text-primary-foreground'
+                            : message.type === 'system'
+                            ? 'bg-blue-100 dark:bg-blue-900 border border-blue-200 dark:border-blue-800'
                             : 'bg-muted'
                         }`}
                       >
@@ -212,6 +226,22 @@ export const AudioPage: React.FC = () => {
                       </div>
                     </div>
                   ))
+                )}
+                {isUploading && (
+                  <div className="flex justify-start">
+                    <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                        <span>Uploading file... {Math.round(uploadProgress)}%</span>
+                      </div>
+                      <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mt-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
                 )}
                 {isProcessing && (
                   <div className="flex justify-start">

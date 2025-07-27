@@ -49,7 +49,7 @@
 ```
 
 **משימות ספציפיות:**
-- [ ] endpoint `/api/audio/upload` עם validation
+- [x] endpoint `/api/audio/upload` עם validation
 - [ ] endpoint `/api/audio/metadata` עם librosa
 - [ ] שירות `AudioCommandParser` לפרשנות פקודות
 - [ ] פעולות עריכה בסיסיות: trim, volume, normalize
