@@ -65,6 +65,32 @@ def transcribe_audio_endpoint():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/audio/process-command', methods=['POST'])
+def process_audio_command():
+    """
+    Endpoint to process natural language audio editing commands.
+    """
+    data = request.get_json()
+    command = data.get('command')
+    filename = data.get('filename')
+    
+    if not command:
+        return jsonify({"error": "command is required"}), 400
+    if not filename:
+        return jsonify({"error": "filename is required"}), 400
+
+    try:
+        # Use LLM to interpret the command and execute audio editing
+        response = audio_editing_service.process_natural_language_command(command, filename)
+        return jsonify({
+            "response": response.get("message", "Command processed successfully"),
+            "status": response.get("status", "completed"),
+            "processed_file": response.get("processed_file"),
+            "details": response.get("details")
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to process command: {str(e)}"}), 500
+
 # --- LLM Endpoints ---
 @app.route('/api/llm/providers', methods=['GET'])
 def get_all_providers():
