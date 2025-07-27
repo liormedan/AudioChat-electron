@@ -1,0 +1,10 @@
+export { FileUploader } from './file-uploader';
+export { AudioFileInfo } from './audio-file-info';
+export { AudioFileManager, type AudioFileData } from './audio-file-manager';
+export { AudioWorkspace } from './audio-workspace';
+export { SimpleWaveformPlayer } from './simple-waveform-player';
+export { WaveformPlayer } from './waveform-player';
+export { BasicAudioPlayer } from './basic-audio-player';
+export { CommandSuggestions } from './command-suggestions';
+export { WaveformControls } from './waveform-controls';
+export { AudioPlayer } from './audio-player';

@@ -7,6 +7,7 @@ import { FileUploader } from '../components/audio/file-uploader';
 import { SimpleWaveformPlayer } from '../components/audio/simple-waveform-player';
 import { CommandSuggestions } from '../components/audio/command-suggestions';
 import { AudioFileInfo } from '../components/audio/audio-file-info';
+import { AudioWorkspace } from '../components/audio/audio-workspace';
 
 interface ChatMessage {
   id: string;
@@ -208,8 +209,13 @@ What would you like me to do with this audio?`,
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - File Upload and Player */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - File Management */}
+        <div className="space-y-6">
+          <AudioWorkspace />
+        </div>
+
+        {/* Middle Column - File Upload and Player */}
         <div className="space-y-6">
           {/* File Upload Area */}
           <FileUploader
