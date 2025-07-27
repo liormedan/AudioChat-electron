@@ -15,6 +15,7 @@ if SRC_DIR not in sys.path:
 from services.llm_service import LLMService
 from services.audio_editing_service import AudioEditingService
 from services.file_upload_service import FileUploadService
+from services.audio_metadata_service import AudioMetadataService
 # from models.llm_models import LLMProvider # Import the model for type hinting and serialization
 
 # --- Initialize Services ---
@@ -22,6 +23,7 @@ from services.file_upload_service import FileUploadService
 llm_service = LLMService()
 audio_editing_service = AudioEditingService()
 file_upload_service = FileUploadService()
+audio_metadata_service = AudioMetadataService()
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
@@ -149,7 +151,7 @@ def delete_uploaded_file(file_id):
 @app.route('/api/audio/metadata/<file_id>', methods=['GET'])
 def get_file_metadata(file_id):
     """
-    Endpoint to get metadata for a specific uploaded file.
+    Endpoint to get basic metadata for a specific uploaded file.
     """
     try:
         # Find file by ID
@@ -186,6 +188,238 @@ def get_file_metadata(file_id):
         return jsonify({
             "success": False,
             "error": f"Failed to get metadata: {str(e)}"
+        }), 500
+
+@app.route('/api/audio/metadata/advanced/<file_id>', methods=['GET'])
+def get_advanced_metadata(file_id):
+    """
+    Endpoint to get comprehensive metadata analysis using librosa.
+    """
+    try:
+        # Find file by ID
+        files = file_upload_service.get_uploaded_files()
+        target_file = None
+        
+        for file_info in files:
+            if file_id in file_info["filename"]:
+                target_file = file_info
+                break
+        
+        if not target_file:
+            return jsonify({
+                "success": False,
+                "error": f"File with ID {file_id} not found"
+            }), 404
+        
+        # Get query parameters
+        include_advanced = request.args.get('include_advanced', 'true').lower() == 'true'
+        
+        # Extract comprehensive metadata
+        metadata = audio_metadata_service.extract_comprehensive_metadata(
+            target_file["file_path"], 
+            include_advanced=include_advanced
+        )
+        
+        return jsonify(metadata)
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to extract advanced metadata: {str(e)}"
+        }), 500
+
+@app.route('/api/audio/summary/<file_id>', methods=['GET'])
+def get_audio_summary(file_id):
+    """
+    Endpoint to get a quick summary of audio characteristics.
+    """
+    try:
+        # Find file by ID
+        files = file_upload_service.get_uploaded_files()
+        target_file = None
+        
+        for file_info in files:
+            if file_id in file_info["filename"]:
+                target_file = file_info
+                break
+        
+        if not target_file:
+            return jsonify({
+                "success": False,
+                "error": f"File with ID {file_id} not found"
+            }), 404
+        
+        # Get audio summary
+        summary = audio_metadata_service.get_audio_summary(target_file["file_path"])
+        
+        return jsonify(summary)
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to generate audio summary: {str(e)}"
+        }), 500
+
+@app.route('/api/audio/waveform/<file_id>', methods=['GET'])
+def get_waveform_data(file_id):
+    """
+    Endpoint to get waveform data for visualization.
+    """
+    try:
+        # Find file by ID
+        files = file_upload_service.get_uploaded_files()
+        target_file = None
+        
+        for file_info in files:
+            if file_id in file_info["filename"]:
+                target_file = file_info
+                break
+        
+        if not target_file:
+            return jsonify({
+                "success": False,
+                "error": f"File with ID {file_id} not found"
+            }), 404
+        
+        # Get query parameters
+        max_points = int(request.args.get('max_points', 1000))
+        
+        # Extract waveform data
+        waveform_data = audio_metadata_service.extract_waveform_data(
+            target_file["file_path"], 
+            max_points=max_points
+        )
+        
+        return jsonify(waveform_data)
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to extract waveform data: {str(e)}"
+        }), 500
+
+@app.route('/api/audio/spectrogram/<file_id>', methods=['GET'])
+def get_spectrogram_data(file_id):
+    """
+    Endpoint to get spectrogram data for visualization.
+    """
+    try:
+        # Find file by ID
+        files = file_upload_service.get_uploaded_files()
+        target_file = None
+        
+        for file_info in files:
+            if file_id in file_info["filename"]:
+                target_file = file_info
+                break
+        
+        if not target_file:
+            return jsonify({
+                "success": False,
+                "error": f"File with ID {file_id} not found"
+            }), 404
+        
+        # Get query parameters
+        n_fft = int(request.args.get('n_fft', 2048))
+        hop_length = int(request.args.get('hop_length', 512))
+        
+        # Extract spectrogram data
+        spectrogram_data = audio_metadata_service.extract_spectrogram_data(
+            target_file["file_path"], 
+            n_fft=n_fft,
+            hop_length=hop_length
+        )
+        
+        return jsonify(spectrogram_data)
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to extract spectrogram data: {str(e)}"
+        }), 500
+
+@app.route('/api/audio/metadata', methods=['POST'])
+def extract_audio_metadata():
+    """
+    General endpoint to extract audio metadata using librosa.
+    Accepts either file_path or file_id in the request body.
+    
+    Request body:
+    {
+        "file_path": "/path/to/audio/file.wav",  // OR
+        "file_id": "uploaded_file_id",
+        "include_advanced": true,  // optional, default: true
+        "analysis_type": "full"    // optional: "full", "basic", "summary"
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Request body is required"
+            }), 400
+        
+        file_path = data.get('file_path')
+        file_id = data.get('file_id')
+        include_advanced = data.get('include_advanced', True)
+        analysis_type = data.get('analysis_type', 'full')
+        
+        # Determine the file path
+        if file_path:
+            # Direct file path provided
+            if not os.path.exists(file_path):
+                return jsonify({
+                    "success": False,
+                    "error": f"File not found: {file_path}"
+                }), 404
+            target_path = file_path
+            
+        elif file_id:
+            # Find file by ID from uploaded files
+            files = file_upload_service.get_uploaded_files()
+            target_file = None
+            
+            for file_info in files:
+                if file_id in file_info["filename"]:
+                    target_file = file_info
+                    break
+            
+            if not target_file:
+                return jsonify({
+                    "success": False,
+                    "error": f"File with ID {file_id} not found"
+                }), 404
+            
+            target_path = target_file["file_path"]
+            
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Either 'file_path' or 'file_id' must be provided"
+            }), 400
+        
+        # Extract metadata based on analysis type
+        if analysis_type == 'summary':
+            result = audio_metadata_service.get_audio_summary(target_path)
+        elif analysis_type == 'basic':
+            result = audio_metadata_service.extract_comprehensive_metadata(
+                target_path, 
+                include_advanced=False
+            )
+        else:  # full analysis
+            result = audio_metadata_service.extract_comprehensive_metadata(
+                target_path, 
+                include_advanced=include_advanced
+            )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to extract metadata: {str(e)}"
         }), 500
 
 @app.route('/api/audio/transcribe', methods=['POST'])
@@ -226,6 +460,83 @@ def process_audio_command():
         })
     except Exception as e:
         return jsonify({"error": f"Failed to process command: {str(e)}"}), 500
+
+@app.route('/api/audio/execute-command', methods=['POST'])
+def execute_audio_command():
+    """
+    Endpoint to execute audio editing commands with file ID support.
+    Supports both filename and file_id for better integration.
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Request body is required"
+            }), 400
+        
+        command = data.get('command')
+        filename = data.get('filename')
+        file_id = data.get('file_id')
+        
+        if not command:
+            return jsonify({
+                "success": False,
+                "error": "command is required"
+            }), 400
+        
+        # Determine target file
+        target_filename = filename
+        target_file_path = None
+        
+        if file_id:
+            # Find file by ID from uploaded files
+            files = file_upload_service.get_uploaded_files()
+            target_file = None
+            
+            for file_info in files:
+                if file_id in file_info["filename"]:
+                    target_file = file_info
+                    break
+            
+            if not target_file:
+                return jsonify({
+                    "success": False,
+                    "error": f"File with ID {file_id} not found"
+                }), 404
+            
+            target_filename = target_file["original_filename"]
+            target_file_path = target_file["file_path"]
+        
+        elif not filename:
+            return jsonify({
+                "success": False,
+                "error": "Either 'filename' or 'file_id' must be provided"
+            }), 400
+        
+        # Process the command
+        response = audio_editing_service.process_natural_language_command(command, target_filename)
+        
+        # Add file path info if available
+        if target_file_path:
+            response["source_file_path"] = target_file_path
+        
+        return jsonify({
+            "success": response.get("status") == "completed",
+            "command": command,
+            "target_file": target_filename,
+            "message": response.get("message"),
+            "processed_file": response.get("processed_file"),
+            "details": response.get("details"),
+            "status": response.get("status")
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to execute command: {str(e)}"
+        }), 500
 
 # --- LLM Endpoints ---
 @app.route('/api/llm/providers', methods=['GET'])

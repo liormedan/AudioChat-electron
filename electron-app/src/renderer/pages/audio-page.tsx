@@ -9,6 +9,7 @@ import { CommandSuggestions } from '../components/audio/command-suggestions';
 import { AudioFileInfo } from '../components/audio/audio-file-info';
 import { AudioWorkspace } from '../components/audio/audio-workspace';
 import { AudioContextIndicator } from '../components/audio/audio-context-indicator';
+import { AudioMetadataViewer } from '../components/audio/audio-metadata-viewer';
 import { useAudioChatStore, type AudioFile } from '../stores/audio-chat-store';
 import { useNavigate } from 'react-router-dom';
 
@@ -130,7 +131,7 @@ export const AudioPage: React.FC = () => {
         <AudioContextIndicator />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Left Column - File Management */}
         <div className="space-y-6">
           <AudioWorkspace />
@@ -275,6 +276,14 @@ export const AudioPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Far Right Column - Metadata Analysis */}
+        <div className="space-y-6">
+          <AudioMetadataViewer 
+            fileId={selectedFile?.serverFileId || null}
+            fileName={selectedFile?.name}
+          />
         </div>
       </div>
     </div>

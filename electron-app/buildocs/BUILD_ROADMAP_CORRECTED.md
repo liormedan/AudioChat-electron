@@ -50,10 +50,10 @@
 
 **משימות ספציפיות:**
 - [x] endpoint `/api/audio/upload` עם validation
-- [ ] endpoint `/api/audio/metadata` עם librosa
-- [ ] שירות `AudioCommandParser` לפרשנות פקודות
-- [ ] פעולות עריכה בסיסיות: trim, volume, normalize
-- [ ] endpoint `/api/audio/execute-command`
+- [x] endpoint `/api/audio/metadata` עם librosa
+- [x] שירות `AudioCommandParser` לפרשנות פקודות
+- [x] פעולות עריכה בסיסיות: trim, volume, normalize
+- [x] endpoint `/api/audio/execute-command`
 
 #### יום 5: אינטגרציה צ'אט-אודיו
 - [ ] חיבור ChatPage לפונקציות אודיו
