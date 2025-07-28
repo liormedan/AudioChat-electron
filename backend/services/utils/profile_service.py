@@ -3,18 +3,16 @@ import sqlite3
 from datetime import datetime
 from typing import Optional
 
-from PyQt6.QtCore import QObject, pyqtSignal
+
 
 from models.user_profile import UserProfile
 
 
-class ProfileService(QObject):
+class ProfileService:
     """Service for storing and retrieving :class:`UserProfile`."""
 
-    profile_saved = pyqtSignal(object)
-
     def __init__(self, db_path: str = None):
-        super().__init__()
+        
         if db_path is None:
             app_data_dir = os.path.join(os.path.expanduser("~"), ".audio_chat_qt")
             os.makedirs(app_data_dir, exist_ok=True)
@@ -60,7 +58,7 @@ class ProfileService(QObject):
         )
         conn.commit()
         conn.close()
-        self.profile_saved.emit(profile)
+        
 
     def get_profile(self, profile_id: str) -> Optional[UserProfile]:
         conn = sqlite3.connect(self.db_path)

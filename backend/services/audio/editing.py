@@ -5,7 +5,7 @@ import re
 import asyncio
 from typing import Dict, Any, Optional
 
-from .advanced_audio_editing_service import AdvancedAudioEditingService
+from .advanced_editing import AdvancedAudioEditingService
 
 class AudioEditingService:
     def __init__(self):

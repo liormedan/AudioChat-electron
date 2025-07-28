@@ -4,19 +4,13 @@ import sqlite3
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from cryptography.fernet import Fernet
-from PyQt6.QtCore import QObject, pyqtSignal
+
 import base64
 import hashlib
 from services.api_key_manager import APIKeyManager
 
 
-class SettingsService(QObject):
-    """שירות לניהול הגדרות ואחסון מאובטח של API keys"""
-    
-    # אותות
-    setting_changed = pyqtSignal(str, object)  # key, value
-    api_key_added = pyqtSignal(str)  # provider_name
-    api_key_removed = pyqtSignal(str)  # provider_name
+class SettingsService:
     
     def __init__(self, db_path: str = None):
         """
@@ -25,7 +19,7 @@ class SettingsService(QObject):
         Args:
             db_path (str, optional): נתיב למסד הנתונים
         """
-        super().__init__()
+        
         
         # נתיב למסד הנתונים
         if db_path is None:
@@ -159,7 +153,7 @@ class SettingsService(QObject):
         conn.close()
         
         # שליחת אות
-        self.setting_changed.emit(key, value)
+        
     
     def get_setting(self, key: str, default: Any = None) -> Any:
         """
@@ -246,7 +240,7 @@ class SettingsService(QObject):
         conn.close()
         
         if success:
-            self.setting_changed.emit(key, None)
+            
         
         return success
     
@@ -293,7 +287,7 @@ class SettingsService(QObject):
             conn.close()
             
             # שליחת אות
-            self.api_key_added.emit(provider)
+            
             
             return True
         except Exception as e:
@@ -392,7 +386,7 @@ class SettingsService(QObject):
         conn.close()
         
         if success:
-            self.api_key_removed.emit(provider)
+            
         
         return success
     

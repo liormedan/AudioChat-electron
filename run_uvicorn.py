@@ -17,7 +17,7 @@ command = [
     "uvicorn",
     "backend.api.main:app",
     "--host", "0.0.0.0",
-    "--port", "5000"
+    "--port", "5001"
 ]
 
 print(f"Starting uvicorn with command: {' '.join(command)}")

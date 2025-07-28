@@ -18,8 +18,8 @@ except ImportError:
     LLMParameters = None
     ProviderStatus = None
     ModelCapability = None
-from backend.services.api_key_manager import APIKeyManager
-from backend.services.providers.provider_factory import ProviderFactory
+from backend.services.utils.api_key_manager import APIKeyManager
+from backend.services.ai.providers.provider_factory import ProviderFactory
 from backend.services.ai.providers.base_provider import BaseProvider, ProviderResponse
 
 

@@ -8,11 +8,11 @@ import time
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 
-from .audio_command_interpreter import AudioCommandInterpreter, ParsedCommand, CommandType
-from .audio_command_mapper import AudioCommandMapper, ExecutionResult, ExecutionStatus
+from .command_interpreter import AudioCommandInterpreter, ParsedCommand, CommandType
+from .command_mapper import AudioCommandMapper, ExecutionResult, ExecutionStatus
 from .llm_service import LLMService
-from .audio_editing_service import AudioEditingService
-from .audio_metadata_service import AudioMetadataService
+from backend.services.audio.editing import AudioEditingService
+from backend.services.audio.metadata import AudioMetadataService
 
 
 @dataclass

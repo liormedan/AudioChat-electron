@@ -8,8 +8,8 @@ from typing import Dict, List, Optional, Any, Callable, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
-from .audio_command_interpreter import ParsedCommand, CommandType, CommandParameter
-from .audio_editing_service import AudioEditingService
+from .command_interpreter import ParsedCommand, CommandType, CommandParameter
+from backend.services.audio.editing import AudioEditingService
 
 
 class ExecutionStatus(Enum):

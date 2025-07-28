@@ -7,16 +7,17 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
+from typing import Optional, List, Dict
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 # --- Import Services ---
-from services.ai.llm_service import LLMService
-from services.audio_editing_service import AudioEditingService
-from services.file_upload_service import FileUploadService
-from services.audio_metadata_service import AudioMetadataService
-from services.ai.command_processor import AudioCommandProcessor
+from backend.services.ai.llm_service import LLMService
+from backend.services.audio.editing import AudioEditingService
+from backend.services.storage.file_upload import FileUploadService
+from backend.services.audio.metadata import AudioMetadataService
+from backend.services.ai.command_processor import AudioCommandProcessor
 # from models.llm_models import LLMProvider # Import the model for type hinting and serialization
 
 # --- Initialize Services ---

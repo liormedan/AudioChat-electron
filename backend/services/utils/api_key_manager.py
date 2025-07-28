@@ -15,18 +15,11 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 
-from PyQt6.QtCore import QObject, pyqtSignal
 from backend.services.ai.providers.provider_factory import ProviderFactory
 
 
-class APIKeyManager(QObject):
+class APIKeyManager:
     """מנהל מאובטח למפתחות API"""
-    
-    # אותות
-    key_added = pyqtSignal(str)  # provider_name
-    key_updated = pyqtSignal(str)  # provider_name
-    key_deleted = pyqtSignal(str)  # provider_name
-    key_tested = pyqtSignal(str, bool)  # provider_name, success
     
     def __init__(self, db_path: str = None, master_password: str = None):
         """
@@ -36,7 +29,6 @@ class APIKeyManager(QObject):
             db_path (str, optional): נתיב למסד הנתונים
             master_password (str, optional): סיסמה ראשית להצפנה
         """
-        super().__init__()
         
         # נתיב למסד הנתונים
         if db_path is None:
@@ -279,12 +271,6 @@ class APIKeyManager(QObject):
             conn.commit()
             conn.close()
             
-            # שליחת אות
-            if exists:
-                self.key_updated.emit(provider_name)
-            else:
-                self.key_added.emit(provider_name)
-            
             return True
             
         except Exception as e:
@@ -367,9 +353,6 @@ class APIKeyManager(QObject):
             success = cursor.rowcount > 0
             conn.commit()
             conn.close()
-            
-            if success:
-                self.key_deleted.emit(provider_name)
             
             return success
             
@@ -512,9 +495,6 @@ class APIKeyManager(QObject):
             # שמירת תוצאת הבדיקה
             self._save_connection_test_result(provider_name, success, response_time, error_message)
             
-            # שליחת אות
-            self.key_tested.emit(provider_name, success)
-            
             return success, error_message or "Connection successful", response_time
             
         except Exception as e:
@@ -522,8 +502,6 @@ class APIKeyManager(QObject):
             error_message = f"Connection test failed: {str(e)}"
             
             self._save_connection_test_result(provider_name, False, response_time, error_message)
-            self.key_tested.emit(provider_name, False)
-            
             return False, error_message, response_time
     
     def _perform_connection_test(self, provider_name: str, api_key: str) -> Tuple[bool, str]:

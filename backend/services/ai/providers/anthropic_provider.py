@@ -15,7 +15,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from models.llm_models import LLMParameters, ModelCapability
+from backend.models.commands import LLMParameters, ModelCapability
 
 
 class AnthropicProvider(BaseProvider):

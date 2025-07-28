@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 
-from PyQt6.QtCore import QObject, pyqtSignal
+
 
 
 class ChatMessage:
@@ -160,13 +160,8 @@ class ChatSession:
         return session
 
 
-class ChatService(QObject):
+class ChatService:
     """שירות לניהול צ'אטים"""
-    
-    # אותות
-    session_loaded = pyqtSignal(object)  # אות שנשלח כאשר נטען סשן
-    session_saved = pyqtSignal(str)  # אות שנשלח כאשר נשמר סשן
-    session_deleted = pyqtSignal(str)  # אות שנשלח כאשר נמחק סשן
     
     def __init__(self, db_path: str = None, llm_service=None):
         """
@@ -175,7 +170,7 @@ class ChatService(QObject):
         Args:
             db_path (str, optional): נתיב למסד הנתונים
         """
-        super().__init__()
+        
         self.llm_service = llm_service
         
         # נתיב למסד הנתונים
@@ -265,7 +260,7 @@ class ChatService(QObject):
         conn.close()
         
         # שליחת אות
-        self.session_saved.emit(session.session_id)
+        
     
     def load_session(self, session_id: str, page: int = 1, page_size: int = 50) -> Optional[ChatSession]:
         """
@@ -330,7 +325,7 @@ class ChatService(QObject):
         self.current_session = session
         
         # שליחת אות
-        self.session_loaded.emit(session)
+        
         
         return session
     
@@ -384,8 +379,7 @@ class ChatService(QObject):
         conn.close()
         
         if success:
-            # שליחת אות
-            self.session_deleted.emit(session_id)
+            
             
             # איפוס הסשן הנוכחי אם זה הסשן שנמחק
             if self.current_session and self.current_session.session_id == session_id:

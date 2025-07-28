@@ -14,7 +14,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from models.llm_models import LLMModel, LLMParameters, UsageRecord
+from backend.models.commands import LLMModel, LLMParameters, UsageRecord
 
 
 class ProviderError(Exception):

@@ -3,7 +3,7 @@ import json
 import sqlite3
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer
+
 
 import sys
 import os
@@ -12,13 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.llm_models import UsageRecord
 
 
-class UsageService(QObject):
-    """שירות למעקב וניתוח שימוש ב-LLM"""
-    
-    # אותות
-    usage_recorded = pyqtSignal(object)  # UsageRecord
-    usage_limit_reached = pyqtSignal(str, float)  # limit_type, current_value
-    usage_warning = pyqtSignal(str, float, float)  # limit_type, current_value, limit_value
+class UsageService:
     
     def __init__(self, db_path: str = None):
         """
@@ -27,7 +21,7 @@ class UsageService(QObject):
         Args:
             db_path (str, optional): נתיב למסד הנתונים
         """
-        super().__init__()
+        
         
         # נתיב למסד הנתונים
         if db_path is None:
@@ -46,8 +40,7 @@ class UsageService(QObject):
             "hourly_requests": 100  # 100 בקשות לשעה
         }
 
-        # טיימר לניטור רקע
-        self._monitor_timer: Optional[QTimer] = None
+        
 
         # יצירת מסד נתונים אם לא קיים
         self._init_db()
@@ -163,7 +156,7 @@ class UsageService(QObject):
         self._check_limits(usage_record)
         
         # שליחת אות
-        self.usage_recorded.emit(usage_record)
+        
     
     def _update_daily_stats(self, usage_record: UsageRecord) -> None:
         """עדכון סטטיסטיקות יומיות"""
@@ -272,9 +265,8 @@ class UsageService(QObject):
                 warning_threshold = limit_info["warning_threshold"]
                 
                 if current_value >= limit_value:
-                    self.usage_limit_reached.emit(limit_type, current_value)
-                elif current_value >= (limit_value * warning_threshold):
-                    self.usage_warning.emit(limit_type, current_value, limit_value)
+                    
+                
     
     # Usage Retrieval
     def get_usage_records(self, 
@@ -628,28 +620,7 @@ class UsageService(QObject):
 
         return deleted_count
 
-    # Background Monitoring
-    def start_background_monitoring(self, interval_seconds: int = 60) -> None:
-        """הפעלת ניטור שימוש ברקע"""
-        if self._monitor_timer is None:
-            self._monitor_timer = QTimer()
-            self._monitor_timer.timeout.connect(self._background_check)
-        self._monitor_timer.start(interval_seconds * 1000)
-
-    def stop_background_monitoring(self) -> None:
-        """עצירת ניטור הרקע"""
-        if self._monitor_timer and self._monitor_timer.isActive():
-            self._monitor_timer.stop()
-
-    def _background_check(self) -> None:
-        """בדיקה תקופתית של מגבלות והוצאת אותות במידת הצורך"""
-        summary = self.get_usage_summary()
-        self._check_limits(
-            UsageRecord(
-                id="background", timestamp=datetime.now(), model_id="", provider="", tokens_used=0,
-                cost=0.0, response_time=0.0, success=True
-            )
-        )
+    
 
     def get_usage_recommendations(self) -> List[str]:
         """הפקת המלצות לשיפור וייעול השימוש"""

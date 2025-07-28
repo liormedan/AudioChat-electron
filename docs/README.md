@@ -17,7 +17,7 @@ The project consists of multiple integrated components:
 
 ### 🌐 **Frontend Applications**
 - **Electron App** (`electron-app/`) - Modern React/TypeScript desktop application
-- **PyQt6 App** (`my_audio_app/`) - Original Python desktop application
+-
 - **Admin Dashboard** - Real-time system monitoring interface
 
 ### 🤖 **AI Integration**
