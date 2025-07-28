@@ -1,0 +1,40 @@
+
+> audio-chat-studio-electron@1.0.0 start
+> concurrently "npm run start:servers" "npm run dev:electron"
+
+[1] 
+[1] > audio-chat-studio-electron@1.0.0 dev:electron
+[1] > wait-on http://localhost:5174 && electron .
+[1] 
+[0] 
+[0] > audio-chat-studio-electron@1.0.0 start:servers
+[0] > concurrently "npm run start:api" "npm run start:admin"
+[0] 
+[0] [1] 
+[0] [1] > audio-chat-studio-electron@1.0.0 start:admin
+[0] [1] > python ../admin_server.py
+[0] [1] 
+[0] [0] 
+[0] [0] > audio-chat-studio-electron@1.0.0 start:api
+[0] [0] > python ../fastapi_server.py
+[0] [0] 
+[0] [1] INFO:     Will watch for changes in these directories: ['C:\\Audio-Chat-main\\Audio-Chat-qt\\electron-app']
+[1] INFO:     Uvicorn running on http://127.0.0.1:5001 (Press CTRL+C to quit)
+[0] [1] INFO:     Started reloader process [17116] using StatReload
+[0] [0] WARNING:root:noisereduce not available. Noise reduction will be limited.
+[0] [0] WARNING:root:noisereduce not available. Noise reduction will be limited.
+[0] [1] INFO:     Started server process [4220]
+[0] [1] INFO:     Waiting for application startup.
+[0] [1] INFO:     Application startup complete.
+[0] [0] INFO:     Will watch for changes in these directories: ['C:\\Audio-Chat-main\\Audio-Chat-qt\\electron-app']
+[0] [0] INFO:     Uvicorn running on http://127.0.0.1:5000 (Press CTRL+C to quit)
+[0] [0] INFO:     Started reloader process [18320] using StatReload
+[0] [0] WARNING:root:noisereduce not available. Noise reduction will be limited.
+[0] [0] WARNING:root:noisereduce not available. Noise reduction will be limited.
+[0] [0] INFO:     Started server process [18824]
+[0] [0] INFO:     Waiting for application startup.
+[0] [0] INFO:     Application startup complete.
+[0] [0] ^C^C^C^CTerminate batch job (Y/N)? Terminate batch job (Y/N)? npm run start:api exited with code 3221225786
+[0] [1] npm run start:admin exited with code 3221225786
+[0] npm run start:servers exited with code 3221225786
+[1] npm run dev:electron exited with code 3221225786
