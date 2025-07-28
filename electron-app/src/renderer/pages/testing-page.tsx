@@ -16,6 +16,8 @@ import { ErrorHandler } from '../components/testing/error-handler';
 import { UXImprovements } from '../components/testing/ux-improvements';
 import { CommandDocumentation } from '../components/testing/command-documentation';
 import { CommandInterpreterTester } from '../components/testing/command-interpreter-tester';
+import { AdvancedEditingTester } from '../components/testing/advanced-editing-tester';
+import { InteractiveAudioEditor } from '../components/audio/interactive-audio-editor';
 
 export const TestingPage: React.FC = () => {
   return (
@@ -95,10 +97,18 @@ export const TestingPage: React.FC = () => {
 
       {/* Testing Tabs */}
       <Tabs defaultValue="command-interpreter" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="command-interpreter" className="flex items-center space-x-2">
             <Settings className="h-4 w-4" />
             <span>Command Interpreter</span>
+          </TabsTrigger>
+          <TabsTrigger value="advanced-editing" className="flex items-center space-x-2">
+            <Zap className="h-4 w-4" />
+            <span>Advanced Editing</span>
+          </TabsTrigger>
+          <TabsTrigger value="interactive-editor" className="flex items-center space-x-2">
+            <FileAudio className="h-4 w-4" />
+            <span>Interactive Editor</span>
           </TabsTrigger>
           <TabsTrigger value="flow-testing" className="flex items-center space-x-2">
             <TestTube className="h-4 w-4" />
@@ -131,6 +141,40 @@ export const TestingPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <CommandInterpreterTester />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="advanced-editing" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Zap className="h-5 w-5" />
+                <span>Advanced Audio Editing</span>
+              </CardTitle>
+              <CardDescription>
+                Test advanced audio editing functions with pydub and librosa
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdvancedEditingTester />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="interactive-editor" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileAudio className="h-5 w-5" />
+                <span>Interactive Audio Editor</span>
+              </CardTitle>
+              <CardDescription>
+                Interactive audio editor with preview, history, and undo/redo functionality
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <InteractiveAudioEditor />
             </CardContent>
           </Card>
         </TabsContent>

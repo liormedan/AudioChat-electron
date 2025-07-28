@@ -617,7 +617,7 @@ def chat_completion_endpoint():
 # --- Audio Command Processing Endpoints ---
 
 @app.route('/api/audio/command/interpret', methods=['POST'])
-def interpret_audio_command():
+async def interpret_audio_command():
     """
     Endpoint to interpret natural language audio commands.
     Returns parsed command information without executing.
@@ -657,7 +657,7 @@ def interpret_audio_command():
 
 
 @app.route('/api/audio/command/execute', methods=['POST'])
-def execute_audio_command_new():
+async def execute_audio_command_new():
     """
     Enhanced endpoint to execute natural language audio commands.
     Uses the new command processor for better interpretation and execution.
@@ -698,7 +698,7 @@ def execute_audio_command_new():
 
 
 @app.route('/api/audio/command/suggestions', methods=['POST'])
-def get_command_suggestions():
+async def get_command_suggestions():
     """
     Endpoint to get command suggestions based on partial input.
     """
@@ -762,7 +762,7 @@ def get_command_help():
 
 
 @app.route('/api/audio/command/validate', methods=['POST'])
-def validate_command_parameters():
+async def validate_command_parameters():
     """
     Endpoint to validate command parameters before execution.
     """
@@ -800,7 +800,7 @@ def validate_command_parameters():
 
 
 @app.route('/api/audio/command/stats', methods=['GET'])
-def get_command_processing_stats():
+async def get_command_processing_stats():
     """
     Endpoint to get statistics about command processing capabilities.
     """

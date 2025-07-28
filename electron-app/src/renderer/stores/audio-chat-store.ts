@@ -59,6 +59,8 @@ interface AudioChatState {
   setCurrentMessage: (message: string) => void;
   setProcessing: (isProcessing: boolean) => void;
   clearChat: () => void;
+  clearAll: () => void;
+  startNewSession: () => void;
   
   // Combined actions
   selectFileAndNotifyChat: (file: AudioFile) => void;
@@ -135,7 +137,7 @@ export const useAudioChatStore = create<AudioChatState>()(
               file,
               name: file.name,
               url: URL.createObjectURL(file),
-              serverFileId: result.file_id || undefined,
+              serverFileId: result.file_id,
               uploadResult: result,
               metadata: result.metadata
             };
@@ -189,6 +191,34 @@ export const useAudioChatStore = create<AudioChatState>()(
       setProcessing: (isProcessing) => set({ isProcessing }),
       
       clearChat: () => set({ chatMessages: [], currentMessage: '' }),
+      
+      clearAll: () => set({
+        selectedFile: null,
+        uploadedFiles: [],
+        chatMessages: [],
+        currentMessage: '',
+        isProcessing: false,
+        isUploading: false,
+        uploadProgress: 0,
+        isPlaying: false,
+        currentTime: 0,
+        duration: 0
+      }),
+      
+      startNewSession: () => {
+        const { clearAll, addChatMessage } = get();
+        clearAll();
+        
+        // Add welcome message
+        const welcomeMessage: ChatMessage = {
+          id: Date.now().toString(),
+          type: 'system',
+          content: `🎵 **Welcome to Audio Chat Studio!**\n\nI'm here to help you edit audio files using natural language commands.\n\n**Getting Started:**\n1. Upload an audio file (drag & drop or click Upload)\n2. Give me editing commands like:\n   • "Remove background noise"\n   • "Increase volume by 20%"\n   • "Cut the first 30 seconds"\n   • "Add fade effects"\n\nWhat audio would you like to work with today?`,
+          timestamp: new Date()
+        };
+        
+        addChatMessage(welcomeMessage);
+      },
       
       // Combined actions
       selectFileAndNotifyChat: (file) => {
@@ -337,7 +367,7 @@ What would you like me to do with this audio?`,
         uploadedFiles: state.uploadedFiles,
         chatMessages: state.chatMessages.filter(msg => msg.type !== 'system').map(msg => ({
           ...msg,
-          timestamp: msg.timestamp.toISOString() // Convert Date to string for storage
+          timestamp: typeof msg.timestamp === 'string' ? msg.timestamp : msg.timestamp.toISOString()
         }))
       }),
       onRehydrateStorage: () => (state) => {

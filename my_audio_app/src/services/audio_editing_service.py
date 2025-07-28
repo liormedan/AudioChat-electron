@@ -2,7 +2,10 @@ import base64
 import os
 import json
 import re
+import asyncio
 from typing import Dict, Any, Optional
+
+from .advanced_audio_editing_service import AdvancedAudioEditingService
 
 class AudioEditingService:
     def __init__(self):
@@ -15,6 +18,9 @@ class AudioEditingService:
             "noise": ["remove noise", "denoise", "clean", "filter noise"],
             "silence": ["remove silence", "trim silence", "cut silence"]
         }
+        
+        # Initialize advanced audio editing service
+        self.advanced_service = AdvancedAudioEditingService()
 
     def transcribe_audio(self, audio_base64: str) -> str:
         """
@@ -219,3 +225,69 @@ class AudioEditingService:
             "processed_file": f"processed_{filename}",
             "details": "Audio processing completed"
         }
+
+    # Advanced Audio Editing Functions
+    
+    async def trim_audio(self, input_file: str, start_time: float, end_time: Optional[float] = None) -> Dict[str, Any]:
+        """חיתוך קובץ אודיו"""
+        return await self.advanced_service.trim_audio(input_file, start_time, end_time)
+    
+    async def adjust_volume(self, input_file: str, volume_change_db: float) -> Dict[str, Any]:
+        """שינוי עוצמת קול"""
+        return await self.advanced_service.adjust_volume(input_file, volume_change_db)
+    
+    async def apply_fade(self, input_file: str, fade_in_duration: float = 0.0, fade_out_duration: float = 0.0) -> Dict[str, Any]:
+        """הוספת אפקטי fade"""
+        return await self.advanced_service.apply_fade(input_file, fade_in_duration, fade_out_duration)
+    
+    async def normalize_audio(self, input_file: str, target_level_db: float = -3.0, normalization_type: str = 'peak') -> Dict[str, Any]:
+        """נורמליזציה של אודיו"""
+        return await self.advanced_service.normalize_audio(input_file, target_level_db, normalization_type)
+    
+    async def remove_silence(self, input_file: str, silence_threshold_db: float = -40.0, min_silence_duration: float = 1.0) -> Dict[str, Any]:
+        """הסרת שקט"""
+        return await self.advanced_service.remove_silence(input_file, silence_threshold_db, min_silence_duration)
+    
+    async def combine_audio_files(self, input_files: list, method: str = 'concatenate', crossfade_duration: float = 0.0) -> Dict[str, Any]:
+        """חיבור קבצי אודיו"""
+        return await self.advanced_service.combine_audio_files(input_files, method, crossfade_duration)
+    
+    async def reduce_noise(self, input_file: str, reduction_amount: float = 0.5, noise_type: str = 'auto') -> Dict[str, Any]:
+        """הפחתת רעש"""
+        return await self.advanced_service.reduce_noise(input_file, reduction_amount, noise_type)
+    
+    async def get_audio_info(self, input_file: str) -> Dict[str, Any]:
+        """קבלת מידע על קובץ אודיו"""
+        return self.advanced_service.get_audio_info(input_file)
+    
+    async def apply_eq(self, input_file: str, frequency: float, gain_db: float, q_factor: float = 1.0, filter_type: str = 'bell') -> Dict[str, Any]:
+        """הוספת EQ - placeholder לעתיד"""
+        return {'success': False, 'error': 'EQ functionality not yet implemented'}
+    
+    async def apply_reverb(self, input_file: str, reverb_type: str = 'hall', decay_time: float = 2.0, wet_dry_mix: float = 0.3) -> Dict[str, Any]:
+        """הוספת reverb - placeholder לעתיד"""
+        return {'success': False, 'error': 'Reverb functionality not yet implemented'}
+    
+    async def apply_delay(self, input_file: str, delay_time: float = 0.25, feedback: float = 0.3, wet_dry_mix: float = 0.25) -> Dict[str, Any]:
+        """הוספת delay - placeholder לעתיד"""
+        return {'success': False, 'error': 'Delay functionality not yet implemented'}
+    
+    async def apply_compression(self, input_file: str, ratio: float = 3.0, threshold_db: float = -20.0, attack_time: float = 0.003, release_time: float = 0.1) -> Dict[str, Any]:
+        """הוספת compression - placeholder לעתיד"""
+        return {'success': False, 'error': 'Compression functionality not yet implemented'}
+    
+    async def convert_format(self, input_file: str, output_format: str = 'wav', sample_rate: Optional[int] = None, bit_depth: Optional[int] = None, channels: Optional[int] = None) -> Dict[str, Any]:
+        """המרת פורמט - placeholder לעתיד"""
+        return {'success': False, 'error': 'Format conversion functionality not yet implemented'}
+    
+    async def analyze_audio(self, input_file: str, analysis_type: str = 'full') -> Dict[str, Any]:
+        """ניתוח אודיו - placeholder לעתיד"""
+        return {'success': False, 'error': 'Audio analysis functionality not yet implemented'}
+    
+    def get_capabilities(self) -> Dict[str, Any]:
+        """קבלת יכולות השירות"""
+        return self.advanced_service.get_capabilities()
+    
+    def validate_file(self, file_path: str) -> Dict[str, Any]:
+        """אימות קובץ אודיו"""
+        return self.advanced_service.validate_file(file_path)

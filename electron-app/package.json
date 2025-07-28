@@ -4,8 +4,11 @@
   "description": "Audio Chat Studio - Modern Electron Application",
   "main": "dist/main/main/main.js",
   "scripts": {
-    "start": "concurrently \"npm run start:python\" \"npm run dev:electron\"",
-    "start:python": "python ../server.py",
+    "start": "concurrently \"npm run start:servers\" \"npm run dev:electron\"",
+    "start:servers": "concurrently \"npm run start:api\" \"npm run start:admin\"",
+    "start:api": "python ../fastapi_server.py",
+    "start:admin": "python ../admin_server.py",
+    "start:all": "concurrently \"npm run start:api\" \"npm run start:admin\" \"npm run dev:electron\"",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
     "dev:electron": "wait-on http://localhost:5174 && electron .",

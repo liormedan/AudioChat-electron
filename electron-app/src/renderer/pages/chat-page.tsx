@@ -4,7 +4,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
-import { FileAudio, ArrowLeft, Loader2, Send, Upload, Volume2, BarChart3, Info, Clock } from 'lucide-react';
+import { FileAudio, ArrowLeft, Loader2, Send, Upload, Volume2, BarChart3, Info, Clock, Trash2, RotateCcw, MessageSquare } from 'lucide-react';
 import { useAudioChatStore } from '../stores/audio-chat-store';
 import { AudioContextIndicator } from '../components/audio/audio-context-indicator';
 import { AudioMetadataService } from '../services/audio-metadata-service';
@@ -38,7 +38,10 @@ export const ChatPage: React.FC = () => {
     sendAudioCommand,
     uploadFileToServer,
     addUploadedFile,
-    selectFileAndNotifyChat
+    selectFileAndNotifyChat,
+    clearChat,
+    clearAll,
+    startNewSession
   } = useAudioChatStore();
 
   // Scroll to the bottom of the chat history
@@ -47,6 +50,13 @@ export const ChatPage: React.FC = () => {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  // Initialize with welcome message on first load
+  useEffect(() => {
+    if (chatMessages.length === 0 && !selectedFile) {
+      startNewSession();
+    }
+  }, []);
 
   // Load metadata when file is selected
   useEffect(() => {
@@ -288,6 +298,37 @@ export const ChatPage: React.FC = () => {
                     Info
                   </Button>
                 )}
+                {chatMessages.length > 0 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearChat}
+                      disabled={isProcessing}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Clear Chat
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={startNewSession}
+                      disabled={isProcessing}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      New Session
+                    </Button>
+                  </>
+                )}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={clearAll}
+                  disabled={isProcessing}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Clear All
+                </Button>
               </div>
             </CardTitle>
             <CardDescription className="space-y-2">

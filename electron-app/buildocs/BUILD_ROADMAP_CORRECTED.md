@@ -115,10 +115,10 @@
 ```
 
 **משימות ספציפיות:**
-- [ ] שירות `AudioCommandInterpreter` עם LLM
-- [ ] מיפוי פקודות לפונקציות: trim, volume, fade, normalize
-- [ ] validation פרמטרים (זמנים, רמות קול, וכו')
-- [ ] מערכת הצעות לפקודות לא ברורות
+- [x] שירות `AudioCommandInterpreter` עם LLM
+- [x] מיפוי פקודות לפונקציות: trim, volume, fade, normalize
+- [x] validation פרמטרים (זמנים, רמות קול, וכו')
+- [x] מערכת הצעות לפקודות לא ברורות
 
 #### יום 3-4: פעולות עריכה מתקדמות
 ```python
@@ -146,10 +146,10 @@
 ```
 
 **משימות ספציפיות:**
-- [ ] רכיב `AudioEditPreview` עם before/after
-- [ ] מערכת undo/redo לפעולות עריכה
-- [ ] היסטוריית פקודות עם אפשרות חזרה
-- [ ] save/discard changes
+- [x] רכיב `AudioEditPreview` עם before/after
+- [x] מערכת undo/redo לפעולות עריכה
+- [x] היסטוריית פקודות עם אפשרות חזרה
+- [x] save/discard changes
 
 ### שבוע 4: עיבוד אודיו מתקדם
 
