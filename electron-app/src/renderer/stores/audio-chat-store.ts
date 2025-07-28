@@ -6,7 +6,7 @@ export interface ChatMessage {
   id: string;
   type: 'user' | 'assistant' | 'system';
   content: string;
-  timestamp: Date;
+  timestamp: Date | string; // Allow both Date and string for persistence
   audioFile?: string;
   processingStatus?: 'pending' | 'processing' | 'completed' | 'error';
 }
@@ -135,7 +135,7 @@ export const useAudioChatStore = create<AudioChatState>()(
               file,
               name: file.name,
               url: URL.createObjectURL(file),
-              serverFileId: result.file_id,
+              serverFileId: result.file_id || undefined,
               uploadResult: result,
               metadata: result.metadata
             };
@@ -335,8 +335,20 @@ What would you like me to do with this audio?`,
       name: 'audio-chat-storage',
       partialize: (state) => ({
         uploadedFiles: state.uploadedFiles,
-        chatMessages: state.chatMessages.filter(msg => msg.type !== 'system') // Don't persist system messages
-      })
+        chatMessages: state.chatMessages.filter(msg => msg.type !== 'system').map(msg => ({
+          ...msg,
+          timestamp: msg.timestamp.toISOString() // Convert Date to string for storage
+        }))
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.chatMessages) {
+          // Convert timestamp strings back to Date objects
+          state.chatMessages = state.chatMessages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+        }
+      }
     }
   )
 );

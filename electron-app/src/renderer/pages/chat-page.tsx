@@ -4,23 +4,22 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
-import { MessageSquare, FileAudio, ArrowLeft, Loader2, Send, Upload, Play, Pause, Volume2, BarChart3, Info } from 'lucide-react';
+import { FileAudio, ArrowLeft, Loader2, Send, Upload, Volume2, BarChart3, Info, Clock } from 'lucide-react';
 import { useAudioChatStore } from '../stores/audio-chat-store';
 import { AudioContextIndicator } from '../components/audio/audio-context-indicator';
 import { AudioMetadataService } from '../services/audio-metadata-service';
 import { useNavigate } from 'react-router-dom';
+import { AudioChatMessage } from '../components/chat/AudioChatMessage';
+import { AudioCommandSuggestions } from '../components/chat/audio-command-suggestions';
+import { AudioPreview } from '../components/chat/audio-preview';
+import { AudioProcessingStatus } from '../components/chat/audio-processing-status';
 
 export const ChatPage: React.FC = () => {
   const navigate = useNavigate();
   const chatHistoryRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // General chat state (separate from audio chat)
-  const [generalConversation, setGeneralConversation] = useState<{ role: string; content: string }[]>([
-    { role: 'assistant', content: 'Hello! How can I help you today?' },
-  ]);
-  const [generalChatInput, setGeneralChatInput] = useState<string>('');
-  const [isGeneralChatProcessing, setIsGeneralChatProcessing] = useState<boolean>(false);
+  // Audio metadata service
   
   // Audio metadata service
   const [metadataService] = useState(() => new AudioMetadataService());
@@ -30,7 +29,6 @@ export const ChatPage: React.FC = () => {
   // Audio chat state from shared store
   const {
     selectedFile,
-    uploadedFiles,
     chatMessages,
     currentMessage,
     isProcessing,
@@ -40,8 +38,7 @@ export const ChatPage: React.FC = () => {
     sendAudioCommand,
     uploadFileToServer,
     addUploadedFile,
-    selectFileAndNotifyChat,
-    setSelectedFile
+    selectFileAndNotifyChat
   } = useAudioChatStore();
 
   // Scroll to the bottom of the chat history
@@ -49,7 +46,7 @@ export const ChatPage: React.FC = () => {
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
-  }, [generalConversation, chatMessages]);
+  }, [chatMessages]);
 
   // Load metadata when file is selected
   useEffect(() => {
@@ -118,51 +115,6 @@ export const ChatPage: React.FC = () => {
     "Apply low-pass filter",
     "Analyze the frequency spectrum"
   ];
-
-  const handleGeneralChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const userInput = generalChatInput.trim();
-    if (!userInput) return;
-
-    const newUserMessage = { role: 'user', content: userInput };
-    setGeneralConversation((prev) => [...prev, newUserMessage]);
-    setGeneralChatInput('');
-    setIsGeneralChatProcessing(true);
-
-    // Add a loading indicator
-    const loadingMessage = { role: 'assistant', content: 'Thinking...' };
-    setGeneralConversation((prev) => [...prev, loadingMessage]);
-
-    try {
-      const response = await fetch('http://127.0.0.1:5000/api/llm/chat/completion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...generalConversation, newUserMessage] }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const aiResponse = await response.json();
-      
-      // Remove loading indicator and add AI response
-      setGeneralConversation((prev) => {
-        const newConv = prev.slice(0, -1); // Remove loading message
-        return [...newConv, { role: 'assistant', content: aiResponse.content }];
-      });
-
-    } catch (error: any) {
-      console.error('Error during chat completion:', error);
-      setGeneralConversation((prev) => {
-        const newConv = prev.slice(0, -1); // Remove loading message
-        return [...newConv, { role: 'assistant', content: `Sorry, an error occurred: ${error.message}` }];
-      });
-    } finally {
-      setIsGeneralChatProcessing(false);
-    }
-  };
 
   const handleAudioChatSubmit = async () => {
     if (!currentMessage.trim()) return;
@@ -270,14 +222,10 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, isAudioChat: boolean = false) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (isAudioChat) {
-        handleAudioChatSubmit();
-      } else {
-        handleGeneralChatSubmit(e as any);
-      }
+      handleAudioChatSubmit();
     }
   };
 
@@ -295,18 +243,18 @@ export const ChatPage: React.FC = () => {
             <span>Back to Audio</span>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Full Chat Interface</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Audio Chat Interface</h1>
             <p className="text-muted-foreground">
-              Extended chat interface with both general and audio-specific conversations
+              Advanced chat interface for audio editing with AI commands and preview
             </p>
           </div>
         </div>
         <AudioContextIndicator />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Audio Chat Section */}
-        <Card className="h-[600px] flex flex-col">
+        <Card className="xl:col-span-2 h-[700px] flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -448,10 +396,18 @@ export const ChatPage: React.FC = () => {
                           : 'bg-muted'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                      {message.audioFile ? (
+                        <AudioChatMessage audioUrl={message.audioFile} fileName={message.content} />
+                      ) : (
+                        <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                      )}
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-xs opacity-70">
-                          {message.timestamp.toLocaleTimeString()}
+                          {message.timestamp ? (
+                            typeof message.timestamp === 'string' 
+                              ? new Date(message.timestamp).toLocaleTimeString()
+                              : message.timestamp.toLocaleTimeString()
+                          ) : ''}
                         </p>
                         {message.processingStatus && (
                           <Badge 
@@ -467,31 +423,32 @@ export const ChatPage: React.FC = () => {
                   </div>
                 ))
               )}
-              {isProcessing && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-lg p-3">
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Processing your command...</span>
-                    </div>
-                  </div>
-                </div>
+              {(isProcessing || isUploading) && (
+                <AudioProcessingStatus
+                  status={isUploading ? 'uploading' : 'processing'}
+                  progress={isUploading ? uploadProgress : 50}
+                  fileName={selectedFile?.name || ''}
+                  message={isUploading ? 'Uploading audio file...' : 'Processing your audio command...'}
+                  estimatedTime={isUploading ? '30 seconds' : '1-2 minutes'}
+                />
               )}
             </div>
 
             {/* Quick Commands */}
-            {selectedFile && chatMessages.length > 0 && (
-              <div className="mb-2">
+            {selectedFile && (
+              <div className="mb-2 p-2 bg-muted/30 rounded-lg">
+                <div className="text-xs text-muted-foreground mb-2 font-medium">Quick Commands:</div>
                 <div className="flex flex-wrap gap-1">
-                  {getQuickCommands().slice(0, 6).map((command, index) => (
+                  {getQuickCommands().slice(0, 4).map((command, index) => (
                     <Button
                       key={index}
                       variant="ghost"
                       size="sm"
                       onClick={() => setCurrentMessage(command)}
-                      className="text-xs h-6 px-2"
+                      className="text-xs h-6 px-2 hover:bg-primary/10"
+                      disabled={isProcessing}
                     >
-                      {command.length > 20 ? command.substring(0, 20) + '...' : command}
+                      {command.length > 15 ? command.substring(0, 15) + '...' : command}
                     </Button>
                   ))}
                 </div>
@@ -502,7 +459,7 @@ export const ChatPage: React.FC = () => {
               <Input
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
-                onKeyDown={(e) => handleKeyDown(e, true)}
+                onKeyDown={handleKeyDown}
                 placeholder={selectedFile ? "Type your audio editing command..." : "Upload an audio file first"}
                 disabled={!selectedFile || isProcessing}
                 className="flex-1"
@@ -518,66 +475,34 @@ export const ChatPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* General Chat Section */}
-        <Card className="h-[600px] flex flex-col">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <MessageSquare className="h-5 w-5" />
-              <span>General AI Chat</span>
-            </CardTitle>
-            <CardDescription>
-              Chat with your AI assistant about anything
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col">
-            <div ref={chatHistoryRef} className="flex-1 overflow-y-auto space-y-4 mb-4 p-2">
-              {generalConversation.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
-                      msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                  </div>
-                </div>
-              ))}
-              {isGeneralChatProcessing && (
-                <div className="flex justify-start">
-                  <div className="bg-muted rounded-lg p-3">
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Thinking...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <form onSubmit={handleGeneralChatSubmit} className="flex space-x-2">
-              <Input
-                value={generalChatInput}
-                onChange={(e) => setGeneralChatInput(e.target.value)}
-                onKeyDown={(e) => handleKeyDown(e, false)}
-                placeholder="Type your message..."
-                disabled={isGeneralChatProcessing}
-                className="flex-1"
-              />
-              <Button 
-                type="submit" 
-                disabled={!generalChatInput.trim() || isGeneralChatProcessing}
-                size="sm"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        {/* Right Sidebar - Commands & Preview */}
+        <div className="space-y-6">
+          {/* Audio Command Suggestions */}
+          <AudioCommandSuggestions
+            onCommandSelect={(command) => setCurrentMessage(command)}
+            selectedFile={selectedFile ? {
+              name: selectedFile.name,
+              duration: audioMetadata?.duration || undefined
+            } : null}
+            isProcessing={isProcessing}
+          />
+          
+          {/* Audio Preview */}
+          {selectedFile && (
+            <AudioPreview
+              originalFile={{
+                name: selectedFile.name,
+                url: selectedFile.url || '',
+                duration: audioMetadata?.duration || undefined,
+                size: audioMetadata?.file_size || undefined
+              }}
+              processingStatus={isProcessing ? 'processing' : 'idle'}
+              processingProgress={uploadProgress}
+              processingMessage="Processing your audio command..."
+              showComparison={false}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
