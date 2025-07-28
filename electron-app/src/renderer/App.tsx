@@ -13,7 +13,8 @@ import {
   LLMPage,
   ProfilePage,
   SettingsPage,
-  ChatPage // Import ChatPage
+  ChatPage,
+  TestingPage // Import TestingPage
 } from './pages';
 
 const AppContent: React.FC = () => {
@@ -45,6 +46,7 @@ const AppContent: React.FC = () => {
             <Route path="stats" element={<StatsPage />} />
             <Route path="llm" element={<LLMPage />} />
             <Route path="chat" element={<ChatPage />} />
+            <Route path="testing" element={<TestingPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

@@ -6,3 +6,4 @@ export { LLMPage } from './llm-page';
 export { ProfilePage } from './profile-page';
 export { SettingsPage } from './settings-page';
 export { ChatPage } from './chat-page';
+export { TestingPage } from './testing-page';
