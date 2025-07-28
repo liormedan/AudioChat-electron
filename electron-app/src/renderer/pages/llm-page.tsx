@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input'; // Assuming you have an Input component
-import { Bot, MessageSquare, Settings, Zap, CheckCircle, XCircle, Loader } from 'lucide-react';
+import { Input } from '../components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Bot, MessageSquare, Settings, Zap, CheckCircle, XCircle, Loader, FileAudio, Brain, TestTube, List } from 'lucide-react';
+import { AudioSystemPrompts } from '../components/llm/audio-system-prompts';
+import { AudioCommandTester } from '../components/llm/audio-command-tester';
+import { AudioModelSettings } from '../components/llm/audio-model-settings';
+import { SupportedCommandsList } from '../components/llm/supported-commands-list';
 
 interface LLMProvider {
   name: string;
@@ -161,38 +166,56 @@ export const LLMPage: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">AI Assistant Manager</h1>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center space-x-2">
+          <FileAudio className="h-8 w-8" />
+          <span>Audio AI Assistant</span>
+        </h1>
         <p className="text-muted-foreground">
-          Manage AI models and chat with your audio processing assistant
+          Configure and optimize AI models for audio editing and processing
         </p>
       </div>
 
       {/* AI Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">AI Status</CardTitle>
             <Bot className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-              Offline
+            <div className={`text-2xl font-bold ${
+              activeModel ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
+            }`}>
+              {activeModel ? 'Online' : 'Offline'}
             </div>
             <p className="text-xs text-muted-foreground">
-              AI services not connected
+              {activeModel ? `Using ${activeModel.name}` : 'No model selected'}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Chats</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Audio Commands</CardTitle>
+            <FileAudio className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">50+</div>
             <p className="text-xs text-muted-foreground">
-              Open conversations
+              Supported commands
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Prompts</CardTitle>
+            <Brain className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">4</div>
+            <p className="text-xs text-muted-foreground">
+              System prompts available
             </p>
           </CardContent>
         </Card>
@@ -211,91 +234,134 @@ export const LLMPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* AI Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Settings className="h-5 w-5" />
-            <span>AI Configuration</span>
-          </CardTitle>
-          <CardDescription>
-            Configure AI models and API settings
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {providers.map(provider => (
-              <Card key={provider.name} className="p-4">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-medium">{provider.name}</CardTitle>
-                  <span
-                    className={`h-3 w-3 rounded-full ${
-                      provider.connection_status === 'connected' ? 'bg-green-500' :
-                      provider.connection_status === 'testing' ? 'bg-yellow-500' :
-                      'bg-red-500'
-                    }`}
-                    title={provider.connection_status}
-                  ></span>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      type="password"
-                      placeholder="Enter API Key"
-                      value={apiKeys[provider.name] || ''}
-                      onChange={(e) => handleApiKeyChange(provider.name, e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button onClick={() => handleSaveApiKey(provider.name)}>Save</Button>
-                  </div>
-                  <Button
-                    onClick={() => handleTestConnection(provider.name)}
-                    disabled={testingProvider === provider.name}
-                    className="w-full"
-                  >
-                    {testingProvider === provider.name ? (
-                      <Loader className="animate-spin mr-2" size={16} />
-                    ) : provider.is_connected ? (
-                      <CheckCircle className="mr-2" size={16} />
-                    ) : (
-                      <XCircle className="mr-2" size={16} />
-                    )}
-                    {testingProvider === provider.name ? 'Testing...' : 'Test Connection'}
-                  </Button>
-                  {provider.error_message && (
-                    <p className="text-red-500 text-sm">Error: {provider.error_message}</p>
-                  )}
-                  <Button variant="outline" onClick={() => toggleProviderModels(provider.name)} className="w-full mt-2">
-                    {expandedProvider === provider.name ? 'Hide Models' : 'Show Models'}
-                  </Button>
-                  {expandedProvider === provider.name && (
-                    <div className="mt-4 space-y-2">
-                      {providerModels[provider.name] ? (
-                        providerModels[provider.name].map(model => (
-                          <div key={model.id} className={`flex items-center justify-between p-2 border rounded-md ${
-                            activeModel?.id === model.id ? 'bg-blue-500 text-white' : 'bg-gray-700'
-                          }`}>
-                            <span>{model.name}</span>
-                            <Button
-                              size="sm"
-                              onClick={() => handleSetActiveModel(model.id)}
-                              disabled={activeModel?.id === model.id}
-                            >
-                              {activeModel?.id === model.id ? 'Active' : 'Set Active'}
-                            </Button>
-                          </div>
-                        ))
-                      ) : (
-                        <p>Loading models...</p>
+      {/* Audio AI Configuration Tabs */}
+      <Tabs defaultValue="providers" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="providers" className="flex items-center space-x-2">
+            <Settings className="h-4 w-4" />
+            <span>Providers</span>
+          </TabsTrigger>
+          <TabsTrigger value="prompts" className="flex items-center space-x-2">
+            <Brain className="h-4 w-4" />
+            <span>System Prompts</span>
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center space-x-2">
+            <Zap className="h-4 w-4" />
+            <span>Model Settings</span>
+          </TabsTrigger>
+          <TabsTrigger value="testing" className="flex items-center space-x-2">
+            <TestTube className="h-4 w-4" />
+            <span>Command Testing</span>
+          </TabsTrigger>
+          <TabsTrigger value="commands" className="flex items-center space-x-2">
+            <List className="h-4 w-4" />
+            <span>Commands</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="providers" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Settings className="h-5 w-5" />
+                <span>AI Providers Configuration</span>
+              </CardTitle>
+              <CardDescription>
+                Configure AI model providers and API connections
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {providers.map(provider => (
+                  <Card key={provider.name} className="p-4">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-lg font-medium">{provider.name}</CardTitle>
+                      <span
+                        className={`h-3 w-3 rounded-full ${
+                          provider.connection_status === 'connected' ? 'bg-green-500' :
+                          provider.connection_status === 'testing' ? 'bg-yellow-500' :
+                          'bg-red-500'
+                        }`}
+                        title={provider.connection_status}
+                      ></span>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="password"
+                          placeholder="Enter API Key"
+                          value={apiKeys[provider.name] || ''}
+                          onChange={(e) => handleApiKeyChange(provider.name, e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button onClick={() => handleSaveApiKey(provider.name)}>Save</Button>
+                      </div>
+                      <Button
+                        onClick={() => handleTestConnection(provider.name)}
+                        disabled={testingProvider === provider.name}
+                        className="w-full"
+                      >
+                        {testingProvider === provider.name ? (
+                          <Loader className="animate-spin mr-2" size={16} />
+                        ) : provider.is_connected ? (
+                          <CheckCircle className="mr-2" size={16} />
+                        ) : (
+                          <XCircle className="mr-2" size={16} />
+                        )}
+                        {testingProvider === provider.name ? 'Testing...' : 'Test Connection'}
+                      </Button>
+                      {provider.error_message && (
+                        <p className="text-red-500 text-sm">Error: {provider.error_message}</p>
                       )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                      <Button variant="outline" onClick={() => toggleProviderModels(provider.name)} className="w-full mt-2">
+                        {expandedProvider === provider.name ? 'Hide Models' : 'Show Models'}
+                      </Button>
+                      {expandedProvider === provider.name && (
+                        <div className="mt-4 space-y-2">
+                          {providerModels[provider.name] ? (
+                            providerModels[provider.name].map(model => (
+                              <div key={model.id} className={`flex items-center justify-between p-2 border rounded-md ${
+                                activeModel?.id === model.id ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                              }`}>
+                                <span>{model.name}</span>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSetActiveModel(model.id)}
+                                  disabled={activeModel?.id === model.id}
+                                >
+                                  {activeModel?.id === model.id ? 'Active' : 'Set Active'}
+                                </Button>
+                              </div>
+                            ))
+                          ) : (
+                            <p>Loading models...</p>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="prompts" className="mt-6">
+          <AudioSystemPrompts />
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-6">
+          <AudioModelSettings />
+        </TabsContent>
+
+        <TabsContent value="testing" className="mt-6">
+          <AudioCommandTester />
+        </TabsContent>
+
+        <TabsContent value="commands" className="mt-6">
+          <SupportedCommandsList />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

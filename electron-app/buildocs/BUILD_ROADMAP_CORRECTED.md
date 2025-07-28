@@ -73,10 +73,10 @@
 ```
 
 **משימות ספציפיות:**
-- [ ] רכיב `AudioChatMessage` להצגת אודיו בצ'אט
-- [ ] רכיב `AudioCommandSuggestions` לפקודות מהירות
-- [ ] רכיב `AudioPreview` לתוצאות עיבוד
-- [ ] אינטגרציה עם audio player בצ'אט
+- [x] רכיב `AudioChatMessage` להצגת אודיו בצ'אט
+- [x] רכיב `AudioCommandSuggestions` לפקודות מהירות
+- [x] רכיב `AudioPreview` לתוצאות עיבוד
+- [x ] אינטגרציה עם audio player בצ'אט
 
 #### יום 3-4: LLMPage מותאם לעריכת אודיו
 ```typescript
@@ -88,10 +88,10 @@
 ```
 
 **משימות ספציפיות:**
-- [ ] system prompts מותאמים לעריכת אודיו
-- [ ] בדיקת חיבור עם פקודות אודיו לדוגמה
-- [ ] הגדרות מודל מותאמות (creativity vs precision)
-- [ ] רשימת פקודות נתמכות
+- [x] system prompts מותאמים לעריכת אודיו
+- [x] בדיקת חיבור עם פקודות אודיו לדוגמה
+- [x] הגדרות מודל מותאמות (creativity vs precision)
+- [x] רשימת פקודות נתמכות
 
 #### יום 5: בדיקות ושיפורים
 - [ ] בדיקות flow מלא: העלאה → צ'אט → עריכה
@@ -130,11 +130,11 @@
 ```
 
 **משימות ספציפיות:**
-- [ ] פונקציות עריכה עם pydub ו-librosa
-- [ ] trim_audio(start, end), adjust_volume(factor)
-- [ ] fade_in(duration), fade_out(duration)
-- [ ] normalize_audio(), remove_silence()
-- [ ] combine_audio_files(files, method)
+- [x] פונקציות עריכה עם pydub ו-librosa
+- [x] trim_audio(start, end), adjust_volume(factor)
+- [x] fade_in(duration), fade_out(duration)
+- [x] normalize_audio(), remove_silence()
+- [x] combine_audio_files(files, method)
 
 #### יום 5: ממשק עריכה אינטראקטיבי
 ```typescript
