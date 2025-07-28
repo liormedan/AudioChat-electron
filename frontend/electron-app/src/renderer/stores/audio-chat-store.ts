@@ -283,7 +283,7 @@ What would you like me to do with this audio?`,
           // Use server file ID if available, otherwise use filename
           const fileIdentifier = selectedFile.serverFileId || selectedFile.name;
           
-          const response = await fetch('http://127.0.0.1:5000/api/audio/process-command', {
+          const response = await fetch('/api/audio/process-command', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 

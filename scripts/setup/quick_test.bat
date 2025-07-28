@@ -1,122 +1,48 @@
 @echo off
 chcp 65001 >nul
-title Audio Chat Studio - בדיקה מהירה
+title Audio Chat Studio - Simple Test
 
 echo.
 echo ========================================
-echo    🧪 Audio Chat Studio Quick Test 🧪
-echo    בדיקה מהירה של כל המערכת
+echo    🎵 Audio Chat Studio 🎵
+echo    בדיקה פשוטה של המערכת
 echo ========================================
 echo.
 
-echo 🔄 מפעיל virtual environment...
+REM Activate virtual environment
 if exist ".venv" (
     call .venv\Scripts\activate.bat
 ) else (
-    echo ❌ Virtual environment לא נמצא! הרץ install_dependencies.bat
+    echo ❌ Virtual environment לא נמצא!
+    echo הרץ: scripts\setup\install_dependencies.bat
     pause
     exit /b 1
 )
 
-echo.
-echo 🧪 בודק imports של Python...
+echo 🔵 מפעיל שרת API פשוט (פורט 5000)...
+start "Simple API Server" cmd /k "call .venv\Scripts\activate.bat && cd backend\api && python simple_main.py"
 
-python -c "import fastapi; print('✅ FastAPI')" 2>nul || echo "❌ FastAPI"
-python -c "import uvicorn; print('✅ Uvicorn')" 2>nul || echo "❌ Uvicorn"
-python -c "import psutil; print('✅ psutil')" 2>nul || echo "❌ psutil"
-python -c "import jinja2; print('✅ Jinja2')" 2>nul || echo "❌ Jinja2"
-python -c "import librosa; print('✅ librosa')" 2>nul || echo "❌ librosa"
-python -c "import pydub; print('✅ pydub')" 2>nul || echo "❌ pydub"
+timeout /t 3 /nobreak >nul
 
-echo.
-echo 🧪 בודק קבצי Python...
+echo 🟢 מפעיל ממשק ניהול פשוט (פורט 5001)...
+start "Simple Admin Interface" cmd /k "call .venv\Scripts\activate.bat && cd backend\admin && python simple_main.py"
 
-if exist "fastapi_server.py" (
-    echo ✅ fastapi_server.py
-) else (
-    echo ❌ fastapi_server.py לא נמצא
-)
+timeout /t 5 /nobreak >nul
 
-if exist "admin_server.py" (
-    echo ✅ admin_server.py
-) else (
-    echo ❌ admin_server.py לא נמצא
-)
+echo 🌐 פותח דפדפנים...
+start http://127.0.0.1:5000/docs
+timeout /t 2 /nobreak >nul
+start http://127.0.0.1:5001
 
 echo.
-echo 🧪 בודק אפליקציית Electron...
-
-if exist "electron-app\package.json" (
-    echo ✅ package.json
-) else (
-    echo ❌ package.json לא נמצא
-)
-
-if exist "electron-app\node_modules" (
-    echo ✅ node_modules
-) else (
-    echo ❌ node_modules לא נמצא - הרץ npm install
-)
-
+echo ✅ המערכת הפשוטה הופעלה!
 echo.
-echo 🧪 בודק תיקיות...
-
-if exist "templates" (
-    echo ✅ templates
-) else (
-    echo ❌ templates
-    mkdir templates
-)
-
-if exist "uploads" (
-    echo ✅ uploads
-) else (
-    echo ❌ uploads
-    mkdir uploads
-)
-
-if exist "logs" (
-    echo ✅ logs
-) else (
-    echo ❌ logs
-    mkdir logs
-)
-
+echo 📱 ממשקים זמינים:
+echo    • API פשוט:      http://127.0.0.1:5000
+echo    • Swagger UI:    http://127.0.0.1:5000/docs
+echo    • ממשק ניהול:    http://127.0.0.1:5001
 echo.
-echo 🧪 בדיקת syntax של קבצי Python...
-
-echo בודק fastapi_server.py...
-python -m py_compile fastapi_server.py 2>nul && echo "✅ fastapi_server.py" || echo "❌ fastapi_server.py - שגיאת syntax"
-
-echo בודק admin_server.py...
-python -m py_compile admin_server.py 2>nul && echo "✅ admin_server.py" || echo "❌ admin_server.py - שגיאת syntax"
-
-echo.
-echo 🧪 בדיקת חיבור לאינטרנט...
-ping -n 1 8.8.8.8 >nul 2>&1 && echo "✅ חיבור לאינטרנט" || echo "❌ אין חיבור לאינטרנט"
-
-echo.
-echo 📊 סיכום בדיקה:
-echo.
-
-REM Count issues
-set issues=0
-
-if not exist ".venv" set /a issues+=1
-if not exist "electron-app\node_modules" set /a issues+=1
-if not exist "templates" set /a issues+=1
-if not exist "uploads" set /a issues+=1
-if not exist "logs" set /a issues+=1
-
-if %issues%==0 (
-    echo 🎉 כל הבדיקות עברו בהצלחה!
-    echo המערכת מוכנה לשימוש.
-    echo.
-    echo הרץ start_all.bat להפעלת המערכת
-) else (
-    echo ⚠️  נמצאו %issues% בעיות
-    echo הרץ install_dependencies.bat לתיקון
-)
-
+echo 🎯 זוהי גרסה פשוטה ללא תלויות מורכבות
+echo    לגרסה המלאה, תקן את בעיות ה-imports
 echo.
 pause

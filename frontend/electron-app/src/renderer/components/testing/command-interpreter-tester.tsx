@@ -167,7 +167,7 @@ export const CommandInterpreterTester: React.FC = () => {
       const formData = new FormData();
       formData.append('audio_file', file);
 
-      const response = await fetch('http://127.0.0.1:5000/api/audio/upload', {
+      const response = await fetch('/api/audio/upload', {
         method: 'POST',
         body: formData,
       });
@@ -198,7 +198,7 @@ export const CommandInterpreterTester: React.FC = () => {
     setInterpretationResult(null);
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/audio/command/interpret', {
+      const response = await fetch('/api/audio/command/interpret', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -242,7 +242,7 @@ export const CommandInterpreterTester: React.FC = () => {
     setExecutionResult(null);
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/audio/command/execute', {
+      const response = await fetch('/api/audio/command/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -277,7 +277,7 @@ export const CommandInterpreterTester: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/audio/command/suggestions', {
+      const response = await fetch('/api/audio/command/suggestions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

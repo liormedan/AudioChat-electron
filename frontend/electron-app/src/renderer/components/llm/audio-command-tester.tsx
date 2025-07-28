@@ -112,7 +112,7 @@ export const AudioCommandTester: React.FC = () => {
     const startTime = Date.now();
     
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/llm/test-command', {
+      const response = await fetch('/api/llm/test-command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

@@ -54,7 +54,7 @@ export const LLMPage: React.FC = () => {
 
   const fetchProviders = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/llm/providers');
+      const response = await fetch('/api/llm/providers');
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data: LLMProvider[] = await response.json();
       setProviders(data);
@@ -69,7 +69,7 @@ export const LLMPage: React.FC = () => {
 
   const fetchActiveModel = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/llm/active-model');
+      const response = await fetch('/api/llm/active-model');
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data: LLMModel | null = await response.json();
       setActiveModel(data);
@@ -84,7 +84,7 @@ export const LLMPage: React.FC = () => {
 
   const handleSaveApiKey = async (providerName: string) => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/llm/set-api-key', {
+      const response = await fetch('/api/llm/set-api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider_name: providerName, api_key: apiKeys[providerName] }),
@@ -105,7 +105,7 @@ export const LLMPage: React.FC = () => {
   const handleTestConnection = async (providerName: string) => {
     setTestingProvider(providerName);
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/llm/test-connection', {
+      const response = await fetch('/api/llm/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider_name: providerName }),
@@ -127,7 +127,7 @@ export const LLMPage: React.FC = () => {
 
   const handleSetActiveModel = async (modelId: string) => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/llm/active-model', {
+      const response = await fetch('/api/llm/active-model');
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model_id: modelId }),
@@ -152,7 +152,7 @@ export const LLMPage: React.FC = () => {
       setExpandedProvider(providerName);
       if (!providerModels[providerName]) {
         try {
-          const response = await fetch(`http://127.0.0.1:5000/api/llm/models?provider=${providerName}`);
+          const response = await fetch(`/api/llm/models?provider=${providerName}`);
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           const data: LLMModel[] = await response.json();
           setProviderModels(prev => ({ ...prev, [providerName]: data }));

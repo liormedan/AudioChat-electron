@@ -169,7 +169,7 @@ export const FullFlowTester: React.FC = () => {
     const formData = new FormData();
     formData.append('audio_file', testFile);
 
-    const response = await fetch('http://127.0.0.1:5000/api/audio/upload', {
+    const response = await fetch('/api/audio/upload', {
       method: 'POST',
       body: formData,
     });
@@ -192,7 +192,7 @@ export const FullFlowTester: React.FC = () => {
 
   const testChatInitialization = async (): Promise<boolean> => {
     // Test chat initialization
-    const response = await fetch('http://127.0.0.1:5000/api/llm/chat/init', {
+    const response = await fetch('/api/llm/chat/init', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ context: 'audio_editing' }),
@@ -207,7 +207,7 @@ export const FullFlowTester: React.FC = () => {
   };
 
   const testCommandProcessing = async (): Promise<boolean> => {
-    const response = await fetch('http://127.0.0.1:5000/api/llm/chat/completion', {
+    const response = await fetch('/api/llm/chat/completion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 

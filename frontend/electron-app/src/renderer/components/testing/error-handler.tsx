@@ -265,7 +265,7 @@ export const ErrorHandler: React.FC = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 1000);
       
-      await fetch('http://127.0.0.1:5000/api/timeout-test', {
+      await fetch('/api/timeout-test', {
         signal: controller.signal
       });
       
@@ -280,7 +280,7 @@ export const ErrorHandler: React.FC = () => {
 
   const testServerUnavailable = async (): Promise<boolean> => {
     try {
-      await fetch('http://127.0.0.1:9999/api/test'); // Non-existent server
+      await fetch('/api/timeout-test'); // Non-existent server
       return false;
     } catch (error) {
       addErrorLog('Server unavailable error handled');
@@ -305,7 +305,7 @@ export const ErrorHandler: React.FC = () => {
     const ambiguousCommand = 'Make it sound better';
     
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/llm/chat/completion', {
+      const response = await fetch('/api/llm/chat/completion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

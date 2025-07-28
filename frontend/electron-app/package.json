@@ -6,7 +6,7 @@
   "scripts": {
     "start": "concurrently \"npm run start:servers\" \"npm run dev:electron\"",
     "start:servers": "concurrently \"npm run start:api\" \"npm run start:admin\"",
-    "start:api": "python ../fastapi_server.py",
+    "start:api": "uvicorn backend.api.main:app --host 127.0.0.1 --port 5000",
     "start:admin": "python ../admin_server.py",
     "start:all": "concurrently \"npm run start:api\" \"npm run start:admin\" \"npm run dev:electron\"",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",

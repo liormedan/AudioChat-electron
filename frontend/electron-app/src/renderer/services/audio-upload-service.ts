@@ -65,7 +65,7 @@ export interface MetadataResult {
 export class AudioUploadService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://127.0.0.1:5000') {
+  constructor(baseUrl: string = '') {
     this.baseUrl = baseUrl;
   }
 

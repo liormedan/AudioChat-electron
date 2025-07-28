@@ -195,7 +195,7 @@ export const AudioSystemPrompts: React.FC = () => {
       // Also save to server if API is available
       const activePrompt = prompts.find(p => p.isActive);
       if (activePrompt) {
-        await fetch('http://127.0.0.1:5000/api/llm/system-prompt', {
+        await fetch('/api/llm/system-prompt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
