@@ -94,10 +94,10 @@
 - [x] רשימת פקודות נתמכות
 
 #### יום 5: בדיקות ושיפורים
-- [ ] בדיקות flow מלא: העלאה → צ'אט → עריכה
-- [ ] טיפול בשגיאות ופקודות לא ברורות
-- [ ] שיפורי UX
-- [ ] תיעוד פקודות
+- [x] בדיקות flow מלא: העלאה → צ'אט → עריכה
+- [x] טיפול בשגיאות ופקודות לא ברורות
+- [x] שיפורי UX
+- [x] תיעוד פקודות
 
 ---
 
@@ -130,11 +130,11 @@
 ```
 
 **משימות ספציפיות:**
-- [x] פונקציות עריכה עם pydub ו-librosa
-- [x] trim_audio(start, end), adjust_volume(factor)
-- [x] fade_in(duration), fade_out(duration)
-- [x] normalize_audio(), remove_silence()
-- [x] combine_audio_files(files, method)
+- [] פונקציות עריכה עם pydub ו-librosa
+- [] trim_audio(start, end), adjust_volume(factor)
+- [] fade_in(duration), fade_out(duration)
+- [] normalize_audio(), remove_silence()
+- [] combine_audio_files(files, method)
 
 #### יום 5: ממשק עריכה אינטראקטיבי
 ```typescript

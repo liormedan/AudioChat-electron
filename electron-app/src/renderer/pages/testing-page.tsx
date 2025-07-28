@@ -15,6 +15,7 @@ import { FullFlowTester } from '../components/testing/full-flow-tester';
 import { ErrorHandler } from '../components/testing/error-handler';
 import { UXImprovements } from '../components/testing/ux-improvements';
 import { CommandDocumentation } from '../components/testing/command-documentation';
+import { CommandInterpreterTester } from '../components/testing/command-interpreter-tester';
 
 export const TestingPage: React.FC = () => {
   return (
@@ -93,8 +94,12 @@ export const TestingPage: React.FC = () => {
       </div>
 
       {/* Testing Tabs */}
-      <Tabs defaultValue="flow-testing" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="command-interpreter" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="command-interpreter" className="flex items-center space-x-2">
+            <Settings className="h-4 w-4" />
+            <span>Command Interpreter</span>
+          </TabsTrigger>
           <TabsTrigger value="flow-testing" className="flex items-center space-x-2">
             <TestTube className="h-4 w-4" />
             <span>Flow Testing</span>
@@ -112,6 +117,23 @@ export const TestingPage: React.FC = () => {
             <span>Documentation</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="command-interpreter" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Settings className="h-5 w-5" />
+                <span>Command Interpreter Testing</span>
+              </CardTitle>
+              <CardDescription>
+                Test the natural language command interpretation engine
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CommandInterpreterTester />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="flow-testing" className="mt-6">
           <Card>

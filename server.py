@@ -16,6 +16,7 @@ from services.llm_service import LLMService
 from services.audio_editing_service import AudioEditingService
 from services.file_upload_service import FileUploadService
 from services.audio_metadata_service import AudioMetadataService
+from services.audio_command_processor import AudioCommandProcessor
 # from models.llm_models import LLMProvider # Import the model for type hinting and serialization
 
 # --- Initialize Services ---
@@ -24,6 +25,13 @@ llm_service = LLMService()
 audio_editing_service = AudioEditingService()
 file_upload_service = FileUploadService()
 audio_metadata_service = AudioMetadataService()
+
+# Initialize the command processor with all required services
+audio_command_processor = AudioCommandProcessor(
+    llm_service=llm_service,
+    audio_editing_service=audio_editing_service,
+    audio_metadata_service=audio_metadata_service
+)
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
@@ -604,6 +612,208 @@ def chat_completion_endpoint():
             return jsonify({"error": "Failed to get response from LLM"}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# --- Audio Command Processing Endpoints ---
+
+@app.route('/api/audio/command/interpret', methods=['POST'])
+def interpret_audio_command():
+    """
+    Endpoint to interpret natural language audio commands.
+    Returns parsed command information without executing.
+    """
+    try:
+        data = request.get_json()
+        command_text = data.get('command')
+        file_id = data.get('file_id')
+        context = data.get('context', {})
+        
+        if not command_text:
+            return jsonify({"error": "command is required"}), 400
+        
+        # Get file path if file_id provided
+        input_file = None
+        if file_id:
+            file_info = file_upload_service.get_file_info(file_id)
+            if file_info and file_info.get('success'):
+                input_file = file_info['file_path']
+            else:
+                return jsonify({"error": "File not found"}), 404
+        
+        # Validate command before execution
+        validation_result = await audio_command_processor.validate_command_before_execution(
+            command_text=command_text,
+            input_file=input_file,
+            context=context
+        )
+        
+        return jsonify({
+            "success": True,
+            "interpretation": validation_result
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to interpret command: {str(e)}"}), 500
+
+
+@app.route('/api/audio/command/execute', methods=['POST'])
+def execute_audio_command_new():
+    """
+    Enhanced endpoint to execute natural language audio commands.
+    Uses the new command processor for better interpretation and execution.
+    """
+    try:
+        data = request.get_json()
+        command_text = data.get('command')
+        file_id = data.get('file_id')
+        context = data.get('context', {})
+        
+        if not command_text:
+            return jsonify({"error": "command is required"}), 400
+        
+        if not file_id:
+            return jsonify({"error": "file_id is required"}), 400
+        
+        # Get file information
+        file_info = file_upload_service.get_file_info(file_id)
+        if not file_info or not file_info.get('success'):
+            return jsonify({"error": "File not found"}), 404
+        
+        input_file = file_info['file_path']
+        
+        # Process the command
+        result = await audio_command_processor.process_command(
+            command_text=command_text,
+            input_file=input_file,
+            context=context
+        )
+        
+        # Convert result to dictionary for JSON response
+        response_data = audio_command_processor.to_dict(result)
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to execute command: {str(e)}"}), 500
+
+
+@app.route('/api/audio/command/suggestions', methods=['POST'])
+def get_command_suggestions():
+    """
+    Endpoint to get command suggestions based on partial input.
+    """
+    try:
+        data = request.get_json()
+        partial_command = data.get('partial_command', '')
+        file_id = data.get('file_id')
+        context = data.get('context', {})
+        
+        # Prepare context if file provided
+        if file_id:
+            file_info = file_upload_service.get_file_info(file_id)
+            if file_info and file_info.get('success'):
+                context['file_info'] = file_info
+        
+        # Get suggestions
+        suggestions = await audio_command_processor.get_command_suggestions(
+            partial_command=partial_command,
+            context=context
+        )
+        
+        return jsonify({
+            "success": True,
+            "suggestions": suggestions
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to get suggestions: {str(e)}"}), 500
+
+
+@app.route('/api/audio/command/help', methods=['GET'])
+def get_command_help():
+    """
+    Endpoint to get help information about supported commands.
+    """
+    try:
+        command_type = request.args.get('command_type')
+        
+        if command_type:
+            # Get help for specific command
+            from services.audio_command_interpreter import CommandType
+            try:
+                cmd_type = CommandType(command_type)
+                help_info = audio_command_processor.interpreter.get_command_help(cmd_type)
+                return jsonify({
+                    "success": True,
+                    "command_help": help_info
+                })
+            except ValueError:
+                return jsonify({"error": f"Unknown command type: {command_type}"}), 400
+        else:
+            # Get all commands info
+            commands_info = audio_command_processor.get_supported_commands_info()
+            return jsonify({
+                "success": True,
+                "commands_info": commands_info
+            })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to get command help: {str(e)}"}), 500
+
+
+@app.route('/api/audio/command/validate', methods=['POST'])
+def validate_command_parameters():
+    """
+    Endpoint to validate command parameters before execution.
+    """
+    try:
+        data = request.get_json()
+        command_text = data.get('command')
+        file_id = data.get('file_id')
+        context = data.get('context', {})
+        
+        if not command_text:
+            return jsonify({"error": "command is required"}), 400
+        
+        # Get file path if provided
+        input_file = None
+        if file_id:
+            file_info = file_upload_service.get_file_info(file_id)
+            if file_info and file_info.get('success'):
+                input_file = file_info['file_path']
+                context['file_info'] = file_info
+        
+        # Validate command
+        validation_result = await audio_command_processor.validate_command_before_execution(
+            command_text=command_text,
+            input_file=input_file,
+            context=context
+        )
+        
+        return jsonify({
+            "success": True,
+            "validation": validation_result
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to validate command: {str(e)}"}), 500
+
+
+@app.route('/api/audio/command/stats', methods=['GET'])
+def get_command_processing_stats():
+    """
+    Endpoint to get statistics about command processing capabilities.
+    """
+    try:
+        stats = await audio_command_processor.get_processing_stats()
+        return jsonify({
+            "success": True,
+            "stats": stats
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to get stats: {str(e)}"}), 500
+
 
 # --- Main Execution Block ---
 if __name__ == '__main__':
