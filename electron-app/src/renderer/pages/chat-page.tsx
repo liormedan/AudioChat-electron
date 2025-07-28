@@ -18,14 +18,14 @@ export const ChatPage: React.FC = () => {
   const navigate = useNavigate();
   const chatHistoryRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Audio metadata service
-  
+
   // Audio metadata service
   const [metadataService] = useState(() => new AudioMetadataService());
   const [showMetadata, setShowMetadata] = useState<boolean>(false);
   const [audioMetadata, setAudioMetadata] = useState<any>(null);
-  
+
   // Audio chat state from shared store
   const {
     selectedFile,
@@ -85,7 +85,7 @@ export const ChatPage: React.FC = () => {
       addUploadedFile(uploadedFile);
       selectFileAndNotifyChat(uploadedFile);
     }
-    
+
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -100,10 +100,10 @@ export const ChatPage: React.FC = () => {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const files = Array.from(e.dataTransfer.files);
     const audioFile = files.find(file => file.type.startsWith('audio/'));
-    
+
     if (audioFile) {
       const uploadedFile = await uploadFileToServer(audioFile);
       if (uploadedFile) {
@@ -128,10 +128,10 @@ export const ChatPage: React.FC = () => {
 
   const handleAudioChatSubmit = async () => {
     if (!currentMessage.trim()) return;
-    
+
     const command = currentMessage.trim().toLowerCase();
     setCurrentMessage('');
-    
+
     // Handle metadata commands locally
     if (command.includes('metadata') || command.includes('show me') || command.includes('analyze')) {
       await handleMetadataCommand(command);
@@ -154,7 +154,7 @@ export const ChatPage: React.FC = () => {
         content: command,
         timestamp: new Date()
       };
-      
+
       // Add user message to chat
       addChatMessage(userMessage);
 
@@ -171,19 +171,19 @@ export const ChatPage: React.FC = () => {
 
       // Get comprehensive metadata
       const metadata = await metadataService.getAdvancedMetadata(selectedFile.serverFileId, true);
-      
+
       // Remove processing message
       const currentMessages = useAudioChatStore.getState().chatMessages;
       const filteredMessages = currentMessages.filter(msg => msg.id !== processingMessage.id);
       useAudioChatStore.setState({ chatMessages: filteredMessages });
-      
+
       if (metadata.success) {
         const formatted = metadataService.formatMetadataForDisplay(metadata);
         let response = `📊 **Audio Analysis Complete**\n\n`;
         response += `**File:** ${metadata.file_info.file_name}\n`;
         response += `**Size:** ${metadata.file_info.file_size_mb} MB\n`;
         response += `**Duration:** ${metadata.audio_properties.duration_formatted}\n\n`;
-        
+
         Object.entries(formatted).forEach(([category, data]) => {
           if (typeof data === 'object' && data !== null && category !== 'File Information') {
             response += `**${category}:**\n`;
@@ -201,7 +201,7 @@ export const ChatPage: React.FC = () => {
           timestamp: new Date(),
           processingStatus: 'completed' as const
         };
-        
+
         addChatMessage(assistantMessage);
       } else {
         const errorMessage = {
@@ -211,12 +211,12 @@ export const ChatPage: React.FC = () => {
           timestamp: new Date(),
           processingStatus: 'error' as const
         };
-        
+
         addChatMessage(errorMessage);
       }
     } catch (error) {
       console.error('Error handling metadata command:', error);
-      
+
       const errorMessage = {
         id: Date.now().toString(),
         type: 'assistant' as const,
@@ -224,7 +224,7 @@ export const ChatPage: React.FC = () => {
         timestamp: new Date(),
         processingStatus: 'error' as const
       };
-      
+
       const { addChatMessage } = useAudioChatStore.getState();
       addChatMessage(errorMessage);
     } finally {
@@ -378,7 +378,7 @@ export const ChatPage: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div 
+                <div
                   className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
@@ -429,13 +429,12 @@ export const ChatPage: React.FC = () => {
                     className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
-                        message.type === 'user'
+                      className={`max-w-[80%] rounded-lg p-3 ${message.type === 'user'
                           ? 'bg-primary text-primary-foreground'
                           : message.type === 'system'
-                          ? 'bg-blue-100 dark:bg-blue-900 border border-blue-200 dark:border-blue-800'
-                          : 'bg-muted'
-                      }`}
+                            ? 'bg-blue-100 dark:bg-blue-900 border border-blue-200 dark:border-blue-800'
+                            : 'bg-muted'
+                        }`}
                     >
                       {message.audioFile ? (
                         <AudioChatMessage audioUrl={message.audioFile} fileName={message.content} />
@@ -445,15 +444,15 @@ export const ChatPage: React.FC = () => {
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-xs opacity-70">
                           {message.timestamp ? (
-                            typeof message.timestamp === 'string' 
+                            typeof message.timestamp === 'string'
                               ? new Date(message.timestamp).toLocaleTimeString()
                               : message.timestamp.toLocaleTimeString()
                           ) : ''}
                         </p>
                         {message.processingStatus && (
-                          <Badge 
-                            variant={message.processingStatus === 'completed' ? 'default' : 
-                                   message.processingStatus === 'error' ? 'destructive' : 'secondary'}
+                          <Badge
+                            variant={message.processingStatus === 'completed' ? 'default' :
+                              message.processingStatus === 'error' ? 'destructive' : 'secondary'}
                             className="text-xs"
                           >
                             {message.processingStatus}
@@ -527,7 +526,7 @@ export const ChatPage: React.FC = () => {
             } : null}
             isProcessing={isProcessing}
           />
-          
+
           {/* Audio Preview */}
           {selectedFile && (
             <AudioPreview
