@@ -3,7 +3,7 @@ import json
 import sqlite3
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
-from PyQt6.QtCore import QObject, pyqtSignal
+
 
 try:
     from backend.models.commands import (
@@ -23,14 +23,10 @@ from backend.services.providers.provider_factory import ProviderFactory
 from backend.services.ai.providers.base_provider import BaseProvider, ProviderResponse
 
 
-class LLMService(QObject):
+class LLMService:
     """שירות לניהול מודלי LLM"""
     
-    # אותות
-    provider_connected = pyqtSignal(str)  # provider_name
-    provider_disconnected = pyqtSignal(str)  # provider_name
-    model_activated = pyqtSignal(str)  # model_id
-    usage_recorded = pyqtSignal(object)  # UsageRecord
+    
     
     def __init__(self, db_path: str = None):
         """
@@ -39,8 +35,6 @@ class LLMService(QObject):
         Args:
             db_path (str, optional): נתיב למסד הנתונים
         """
-        super().__init__()
-        
         # נתיב למסד הנתונים
         if db_path is None:
             app_data_dir = os.path.join(os.path.expanduser("~"), ".audio_chat_qt")
@@ -397,11 +391,8 @@ class LLMService(QObject):
         # שמירת תוצאה
         self.save_provider(provider)
         
-        # שליחת אות
-        if success:
-            self.provider_connected.emit(provider_name)
-        else:
-            self.provider_disconnected.emit(provider_name)
+        
+            
         
         return success
     
@@ -550,7 +541,7 @@ class LLMService(QObject):
         
         if success:
             self.active_model = self.get_model(model_id)
-            self.model_activated.emit(model_id)
+            
         
         return success
     
