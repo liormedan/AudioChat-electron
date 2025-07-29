@@ -21,6 +21,8 @@
 
 - [-] 3. Create improved startup scripts
 
+
+
 - [x] 3.1 Create main startup script
 
 
@@ -32,7 +34,8 @@
   - Include clear Hebrew status messages and error handling
   - _Requirements: 3.1, 3.2, 3.3, 5.1, 5.2, 5.3_
 
-- [-] 3.2 Create development startup script
+- [x] 3.2 Create development startup script
+
 
 
 
@@ -41,7 +44,8 @@
   - Add development-specific configuration
   - _Requirements: 4.1, 4.2_
 
-- [ ] 3.3 Create setup and installation script
+- [x] 3.3 Create setup and installation script
+
   - Write scripts/setup.bat for initial project setup
   - Add virtual environment creation and activation
   - Include dependency installation for both Python and Node.js
