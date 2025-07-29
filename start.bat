@@ -50,7 +50,7 @@ timeout /t 8 /nobreak >nul
 
 REM Open the application
 echo 🌐 Opening Audio Chat Studio...
-start http://127.0.0.1:5174
+start "" http://127.0.0.1:5174
 
 echo.
 echo ✅ Audio Chat Studio Started Successfully!
