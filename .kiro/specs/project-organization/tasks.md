@@ -117,7 +117,11 @@
 
 
 
+
+
 - [x] 6.1 Create health check utilities
+
+
 
 
 
@@ -129,6 +133,8 @@
 
 
 - [x] 6.2 Create stop and cleanup scripts
+
+
 
 
 

@@ -17,13 +17,13 @@ echo 🐍 עוצר תהליכי Python...
 tasklist | find "python.exe" >nul
 if not errorlevel 1 (
     taskkill /f /im python.exe >nul 2>&1
-    if errorlevel 1 (
-        echo ⚠️ לא ניתן לעצור חלק מתהליכי Python
-    ) else (
+    if not errorlevel 1 (
         echo ✅ תהליכי Python נעצרו
+    ) else (
+        echo ⚠️ לא ניתן לעצור חלק מתהליכי Python
     )
 ) else (
-    echo ℹ️ אין תהליכי Python פעילים
+    echo ✅ אין תהליכי Python פעילים
 )
 
 REM Stop Node.js processes (Frontend)
@@ -31,13 +31,13 @@ echo 🌐 עוצר תהליכי Node.js...
 tasklist | find "node.exe" >nul
 if not errorlevel 1 (
     taskkill /f /im node.exe >nul 2>&1
-    if errorlevel 1 (
-        echo ⚠️ לא ניתן לעצור חלק מתהליכי Node.js
-    ) else (
+    if not errorlevel 1 (
         echo ✅ תהליכי Node.js נעצרו
+    ) else (
+        echo ⚠️ לא ניתן לעצור חלק מתהליכי Node.js
     )
 ) else (
-    echo ℹ️ אין תהליכי Node.js פעילים
+    echo ✅ אין תהליכי Node.js פעילים
 )
 
 REM Stop Electron processes
@@ -45,13 +45,13 @@ echo 🖥️ עוצר תהליכי Electron...
 tasklist | find "electron.exe" >nul
 if not errorlevel 1 (
     taskkill /f /im electron.exe >nul 2>&1
-    if errorlevel 1 (
-        echo ⚠️ לא ניתן לעצור חלק מתהליכי Electron
-    ) else (
+    if not errorlevel 1 (
         echo ✅ תהליכי Electron נעצרו
+    ) else (
+        echo ⚠️ לא ניתן לעצור חלק מתהליכי Electron
     )
 ) else (
-    echo ℹ️ אין תהליכי Electron פעילים
+    echo ✅ אין תהליכי Electron פעילים
 )
 
 REM Stop any remaining Audio Chat Studio processes
@@ -59,81 +59,55 @@ echo 🎵 עוצר תהליכי Audio Chat Studio...
 tasklist | find "audio-chat-studio" >nul
 if not errorlevel 1 (
     taskkill /f /im "audio-chat-studio*" >nul 2>&1
-    echo ✅ תהליכי Audio Chat Studio נעצרו
+    if not errorlevel 1 (
+        echo ✅ תהליכי Audio Chat Studio נעצרו
+    ) else (
+        echo ⚠️ לא ניתן לעצור חלק מהתהליכים
+    )
 ) else (
-    echo ℹ️ אין תהליכי Audio Chat Studio פעילים
+    echo ✅ אין תהליכי Audio Chat Studio פעילים
 )
 
 REM Close specific command windows
 echo 🪟 סוגר חלונות פקודה...
-taskkill /fi "WindowTitle eq Audio Chat Studio*" /f >nul 2>&1
+taskkill /fi "WINDOWTITLE eq Audio Chat Studio*" /f >nul 2>&1
 
 REM Wait for processes to fully terminate
-echo ⏳ ממתין לסיום תהליכים...
+echo ⏳ ממתין לסיום התהליכים...
 timeout /t 3 /nobreak >nul
 
 REM Check if ports are now free
-echo 🔍 בודק שחרור פורטים...
+echo 🔌 בודק שחרור פורטים...
 netstat -an | find "127.0.0.1:5000" >nul
 if errorlevel 1 (
-    echo ✅ פורט 5000 שוחרר
+    echo ✅ פורט 5000 משוחרר
 ) else (
     echo ⚠️ פורט 5000 עדיין תפוס
 )
 
 netstat -an | find "127.0.0.1:5001" >nul
 if errorlevel 1 (
-    echo ✅ פורט 5001 שוחרר
+    echo ✅ פורט 5001 משוחרר
 ) else (
     echo ⚠️ פורט 5001 עדיין תפוס
 )
 
 netstat -an | find "127.0.0.1:5174" >nul
 if errorlevel 1 (
-    echo ✅ פורט 5174 שוחרר
+    echo ✅ פורט 5174 משוחרר (Vite)
 ) else (
-    echo ⚠️ פורט 5174 עדיין תפוס
+    echo ⚠️ פורט 5174 עדיין תפוס (Vite)
 )
 
 echo.
-echo 🧹 מנקה קבצים זמניים...
-
-REM Clean temporary files
-if exist "data\temp\*" (
-    del /q "data\temp\*" >nul 2>&1
-    echo ✅ קבצים זמניים נוקו
+echo 🧹 רוצה לנקות קבצים זמניים? (y/n)
+set /p cleanup="בחר: "
+if /i "%cleanup%"=="y" (
+    call scripts\utils\cleanup.bat
+) else if /i "%cleanup%"=="yes" (
+    call scripts\utils\cleanup.bat
 ) else (
-    echo ℹ️ אין קבצים זמניים לניקוי
-)
-
-REM Clean cache files (optional)
-echo 🗑️ רוצה לנקות גם קבצי cache? (y/n)
-set /p clean_cache="בחר: "
-if /i "%clean_cache%"=="y" (
-    if exist "data\cache\*" (
-        del /q "data\cache\*" >nul 2>&1
-        echo ✅ קבצי cache נוקו
-    ) else (
-        echo ℹ️ אין קבצי cache לניקוי
-    )
-) else if /i "%clean_cache%"=="yes" (
-    if exist "data\cache\*" (
-        del /q "data\cache\*" >nul 2>&1
-        echo ✅ קבצי cache נוקו
-    ) else (
-        echo ℹ️ אין קבצי cache לניקוי
-    )
-)
-
-REM Clean old log files (optional)
-echo 📋 רוצה לנקות לוגים ישנים? (y/n)
-set /p clean_logs="בחר: "
-if /i "%clean_logs%"=="y" (
-    forfiles /p logs /m *.log /d -7 /c "cmd /c del @path" >nul 2>&1
-    echo ✅ לוגים ישנים (מעל 7 ימים) נוקו
-) else if /i "%clean_logs%"=="yes" (
-    forfiles /p logs /m *.log /d -7 /c "cmd /c del @path" >nul 2>&1
-    echo ✅ לוגים ישנים (מעל 7 ימים) נוקו
+    echo ✅ דילוג על ניקוי
 )
 
 echo.
@@ -141,10 +115,10 @@ echo ========================================
 echo    ✅ המערכת נעצרה בהצלחה! ✅
 echo ========================================
 echo.
-echo 📊 סיכום:
+echo 📊 מצב המערכת:
 echo    • כל התהליכים נעצרו
-echo    • הפורטים שוחררו
-echo    • קבצים זמניים נוקו
+echo    • הפורטים משוחררים
+echo    • המערכת מוכנה להפעלה מחדש
 echo.
 echo 🚀 להפעלה מחדש:
 echo    • הפעלה רגילה:     scripts\start.bat
