@@ -25,3 +25,33 @@
 2025-07-29 14:58:35,342 - backend.main - INFO - 🚀 Audio Chat Studio Backend Starting...
 2025-07-29 14:58:35,343 - backend.main - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
 2025-07-29 14:58:35,344 - backend.main - INFO - 📁 Created necessary directories
+2025-07-29 15:22:04,581 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 15:22:04,581 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 15:22:05,092 - __main__ - INFO - ✅ All dependencies are available
+2025-07-29 15:22:05,101 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 15:22:05,106 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-29 15:22:05,106 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-29 15:22:05,110 - __main__ - ERROR - ❌ Failed to start server: No module named 'backend'
+2025-07-29 15:22:05,110 - __main__ - ERROR - שגיאה בהפעלת השרת: No module named 'backend'
+2025-07-29 15:23:46,438 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 15:23:46,439 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 15:23:47,052 - __main__ - INFO - ✅ All dependencies are available
+2025-07-29 15:23:47,054 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 15:29:37,666 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 15:29:37,667 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 15:29:38,384 - __main__ - INFO - ✅ All dependencies are available
+2025-07-29 15:29:38,385 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 15:30:33,343 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 15:30:33,368 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 15:30:34,064 - __main__ - INFO - ✅ All dependencies are available
+2025-07-29 15:30:34,066 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 15:30:34,072 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-29 15:30:34,073 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-29 15:30:35,292 - root - WARNING - noisereduce not available. Noise reduction will be limited.
+2025-07-29 15:33:19,413 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 15:33:19,414 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 15:33:20,095 - __main__ - INFO - ✅ All dependencies are available
+2025-07-29 15:33:20,096 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 15:33:20,100 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-29 15:33:20,100 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-29 15:33:21,105 - root - WARNING - noisereduce not available. Noise reduction will be limited.

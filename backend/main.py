@@ -10,10 +10,11 @@ import logging
 import uvicorn
 from pathlib import Path
 
-# Add the current directory to Python path for imports
+# Add the project root directory to Python path for imports
 current_dir = Path(__file__).parent
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
+project_root = current_dir.parent  # Go up one level to project root
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 def setup_logging(log_level: str = "INFO") -> None:
     """
@@ -106,7 +107,7 @@ def start_server(host: str = "127.0.0.1", port: int = 5000, reload: bool = False
         logger.info(f"מפעיל שרת על http://{host}:{port}")
         
         # Import the FastAPI app from api module
-        from api.main import app
+        from backend.api.main import app
         
         # Start the server
         uvicorn.run(
