@@ -69,6 +69,9 @@ class LLMService:
 
         # טעינת ספקים ברירת מחדל
         self._init_default_providers()
+        codex/add-model-download-helper-in-local_gemma_provider
+        # Ensure the latest local Gemma model is available
+        self._ensure_latest_local_gemma()
 
         # Ensure there is an active model after initialization
         active = self.get_active_model()
@@ -77,6 +80,7 @@ class LLMService:
             active = self.get_active_model()
         if active:
             logger.info(f"Active model set to {active.id}")
+        main
     
     def _init_db(self) -> None:
         """יצירת מסד נתונים אם לא קיים"""
@@ -292,6 +296,43 @@ class LLMService:
                     context_window=model_data["context_window"]
                 )
                 self.save_model(model)
+
+    def _ensure_latest_local_gemma(self) -> None:
+        """Download and register the latest local Gemma model."""
+        try:
+            from backend.services.ai.providers.gemma_utils import download_latest_gemma_model
+        except Exception as e:
+            print(f"Failed to import Gemma utilities: {e}")
+            return
+
+        path, repo_id = download_latest_gemma_model()
+        if not path or not repo_id:
+            return
+
+        local_models = self.get_models_by_provider("Local Gemma")
+        model = local_models[0] if local_models else None
+
+        if not model:
+            model = LLMModel(
+                id=f"local-{repo_id.replace('/', '-')}",
+                name=f"{repo_id.split('/')[-1]} (Local)",
+                provider="Local Gemma",
+                description=f"Local copy of {repo_id}",
+                max_tokens=4096,
+                cost_per_token=0.0,
+                capabilities=[
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.CHAT,
+                    ModelCapability.CODE_GENERATION,
+                ],
+                context_window=8192,
+            )
+        model.version = repo_id
+        model.metadata["local_path"] = path
+        self.save_model(model)
+
+        if not self.get_active_model():
+            self.set_active_model(model.id)
     
     # Provider Management
     def save_provider(self, provider: LLMProvider) -> None:
@@ -803,7 +844,10 @@ class LLMService:
         if not provider:
             return None
 
-        model_id = active.id.split("-", 1)[-1]
+        if active.provider == "Local Gemma" and active.metadata.get("local_path"):
+            model_id = active.metadata["local_path"]
+        else:
+            model_id = active.id.split("-", 1)[-1]
         params = self.get_parameters()
         response = provider.chat_completion(messages, model_id, params)
         return response
