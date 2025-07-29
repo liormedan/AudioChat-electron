@@ -2,6 +2,7 @@
 Provider for running local Gemma models using Hugging Face Transformers
 """
 
+import os
 import torch, gc
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 from typing import List, Dict, Optional
@@ -25,30 +26,44 @@ class LocalGemmaProvider(BaseProvider):
         self._loaded_models: Dict[str, pipeline] = {}
 
     def _load_model(self, model_id: str):
-        """Initializes the model and tokenizer pipeline."""
+        """Initializes the model and tokenizer pipeline.
+
+        The ``model_id`` argument can be either a Hugging Face model ID or a
+        path to a previously downloaded snapshot.  The loaded pipeline is
+        cached so subsequent calls are fast.
+        """
         if model_id in self._loaded_models:
             self.active_model_name = model_id
             print(f"Switched to already loaded model '{model_id}'.")
             return True
 
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print(f"INFO: Loading local model '{model_id}'.")
-        print("This might take a while, especially on the first run as the model (several GB) is downloaded.")
+        print(
+            "This might take a while, especially on the first run as the model (several GB) is downloaded."
+        )
         print("Please watch the console for a download progress bar.")
-        print("="*50 + "\n")
+        print("=" * 50 + "\n")
 
         try:
+            # Determine the actual path or model ID
+            path_to_use = model_id
+            if os.path.isdir(model_id):
+                path_to_use = model_id
+
             # Determine the device
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            
+
             # Set torch_dtype based on device
-            torch_dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float32
+            torch_dtype = (
+                torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float32
+            )
 
             model_pipeline = pipeline(
                 "text-generation",
-                model=model_id,
+                model=path_to_use,
                 device=device,
-                torch_dtype=torch_dtype
+                torch_dtype=torch_dtype,
             )
             self._loaded_models[model_id] = model_pipeline
             self.active_model_name = model_id

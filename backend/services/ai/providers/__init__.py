@@ -8,6 +8,7 @@ from .anthropic_provider import AnthropicProvider
 from .google_provider import GoogleProvider
 from .cohere_provider import CohereProvider
 from .huggingface_provider import HuggingFaceProvider
+from .local_gemma_provider import LocalGemmaProvider
 
 __all__ = [
     'BaseProvider',
@@ -16,5 +17,6 @@ __all__ = [
     'AnthropicProvider',
     'GoogleProvider',
     'CohereProvider',
-    'HuggingFaceProvider'
+    'HuggingFaceProvider',
+    'LocalGemmaProvider'
 ]
