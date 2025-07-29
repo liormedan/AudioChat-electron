@@ -190,6 +190,7 @@ templates/     # תבניות HTML
 2. **בדוק סטטוס**: `check_status.bat`
 3. **עצור והפעל מחדש**: `stop_all.bat` ואז `start_all.bat`
 4. **התקן מחדש**: `install_dependencies.bat`
+5. `start.bat` בודק כעת את `%ERRORLEVEL%` כדי לוודא ש-Node.js מותקן
 
 ---
 
