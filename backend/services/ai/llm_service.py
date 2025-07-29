@@ -1,6 +1,7 @@
 import os
 import json
 import sqlite3
+import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -21,6 +22,8 @@ except ImportError:
 from backend.services.utils.api_key_manager import APIKeyManager
 from backend.services.ai.providers.provider_factory import ProviderFactory
 from backend.services.ai.providers.base_provider import BaseProvider, ProviderResponse
+
+logger = logging.getLogger(__name__)
 
 
 class LLMService:
@@ -66,9 +69,18 @@ class LLMService:
 
         # טעינת ספקים ברירת מחדל
         self._init_default_providers()
-
+        codex/add-model-download-helper-in-local_gemma_provider
         # Ensure the latest local Gemma model is available
         self._ensure_latest_local_gemma()
+
+        # Ensure there is an active model after initialization
+        active = self.get_active_model()
+        if not active:
+            self.set_active_model("local-gemma-3-4b-it")
+            active = self.get_active_model()
+        if active:
+            logger.info(f"Active model set to {active.id}")
+        main
     
     def _init_db(self) -> None:
         """יצירת מסד נתונים אם לא קיים"""
