@@ -1,0 +1,34 @@
+
+> audio-chat-studio-electron@1.0.0 dev
+> concurrently "npm run dev:vite" "npm run dev:electron"
+
+[1] 
+[1] > audio-chat-studio-electron@1.0.0 dev:electron
+[1] > wait-on http://localhost:5174 && electron .
+[1] 
+[0] 
+[0] > audio-chat-studio-electron@1.0.0 dev:vite
+[0] > vite
+[0] 
+[0] [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+[0] 
+[0]   [32m[1mVITE[22m v5.4.19[39m  [2mready in [0m[1m461[22m[2m[0m ms[22m
+[0] 
+[0]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+[0] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[1] 
+[1] App is ready, creating main window...
+[1] Loading renderer from: C:\Audio-Chat-main\Audio-Chat-qt\frontend\electron-app\dist\renderer\index.html
+[1] File exists: true
+[1] Window ready to show
+[0] [2m15:52:31[22m [31m[1m[vite][22m[39m Pre-transform error: C:\Audio-Chat-main\Audio-Chat-qt\frontend\electron-app\src\renderer\pages\llm-page.tsx: Missing semicolon. (132:15)
+[0] 
+[0] [0m [90m 130 |[39m       [36mconst[39m response [33m=[39m [36mawait[39m fetch([32m'/api/llm/active-model'[39m)[33m;[39m
+[0]  [90m 131 |[39m         method[33m:[39m [32m'POST'[39m[33m,[39m
+[0] [31m[1m>[22m[39m[90m 132 |[39m         headers[33m:[39m { [32m'Content-Type'[39m[33m:[39m [32m'application/json'[39m }[33m,[39m
+[0]  [90m     |[39m                [31m[1m^[22m[39m
+[0]  [90m 133 |[39m         body[33m:[39m [33mJSON[39m[33m.[39mstringify({ model_id[33m:[39m modelId })[33m,[39m
+[0]  [90m 134 |[39m       })[33m;[39m
+[0]  [90m 135 |[39m       [36mif[39m ([33m![39mresponse[33m.[39mok) [36mthrow[39m [36mnew[39m [33mError[39m([32m`HTTP error! status: ${response.status}`[39m)[33m;[39m[0m
+[1] All windows closed
+[1] npm run dev:electron exited with code 0
