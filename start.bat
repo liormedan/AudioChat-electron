@@ -31,7 +31,8 @@ timeout /t 5 /nobreak >nul
 
 REM Check if Node.js is available
 where node >nul 2>&1
-if not errorlevel 1 (
+rem Using ERRORLEVEL to avoid "... was unexpected at this time" errors
+if %ERRORLEVEL%==0 (
     if exist "frontend\electron-app\package.json" (
         echo 🌐 Starting Frontend (Port 5174)...
         cd frontend\electron-app
