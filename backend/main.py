@@ -21,6 +21,9 @@ def setup_logging(log_level: str = "INFO") -> None:
     Configure logging for the application
     הגדרת מערכת הלוגים לאפליקציה
     """
+    # Create logs directory before setting up file handlers
+    os.makedirs('logs', exist_ok=True)
+
     logging.basicConfig(
         level=getattr(logging, log_level.upper()),
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -29,9 +32,6 @@ def setup_logging(log_level: str = "INFO") -> None:
             logging.FileHandler('logs/backend.log', encoding='utf-8')
         ]
     )
-    
-    # Create logs directory if it doesn't exist
-    os.makedirs('logs', exist_ok=True)
     
     logger = logging.getLogger(__name__)
     logger.info("🚀 Audio Chat Studio Backend Starting...")
