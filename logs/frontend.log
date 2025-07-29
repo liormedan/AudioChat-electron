@@ -37,4 +37,9 @@
 [0] [2m15:57:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/App.tsx, /index.css[22m
 [0] [2m16:00:30[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/components/layout/sidebar.tsx, /index.css[22m
 
+(.venv) C:\Audio-Chat-main\Audio-Chat-qt\frontend\electron-app>'.\start.bat' is not recognized as an internal or external command,
+operable program or batch file.
+
+(.venv) C:\Audio-Chat-main\Audio-Chat-qt\frontend\electron-app>PS was unexpected at this time.
+
 (.venv) C:\Audio-Chat-main\Audio-Chat-qt\frontend\electron-app>

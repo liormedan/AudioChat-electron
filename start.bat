@@ -63,5 +63,6 @@ echo.
 echo 🎛️ Use the Terminal page in the app for system control
 echo 🛑 To stop: Run scripts\stop.bat or use Terminal page
 echo.
-echo Press any key to continue...
-pause >nul
+echo The system is now running in the background.
+echo You can close this window safely.
+timeout /t 3 /nobreak >nul

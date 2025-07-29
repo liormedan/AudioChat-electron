@@ -15,3 +15,17 @@ Traceback (most recent call last):
     return open_func(self.baseFilename, self.mode,
                      encoding=self.encoding, errors=self.errors)
 PermissionError: [Errno 13] Permission denied: 'C:\\Audio-Chat-main\\Audio-Chat-qt\\logs\\backend.log'
+2025-07-29 16:18:39,473 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 16:18:39,473 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 16:18:40,326 - __main__ - INFO - ✅ All dependencies are available
+2025-07-29 16:18:40,330 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 16:18:40,335 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-29 16:18:40,335 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-29 16:18:41,585 - root - WARNING - noisereduce not available. Noise reduction will be limited.
+2025-07-29 16:25:58,575 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 16:25:58,576 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 16:25:59,136 - __main__ - INFO - ✅ All dependencies are available
+2025-07-29 16:25:59,137 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 16:25:59,140 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-29 16:25:59,141 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-29 16:25:59,942 - root - WARNING - noisereduce not available. Noise reduction will be limited.
