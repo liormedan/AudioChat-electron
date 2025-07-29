@@ -21,7 +21,8 @@
 
 - [-] 3. Create improved startup scripts
 
-- [ ] 3.1 Create main startup script
+- [-] 3.1 Create main startup script
+
   - Write scripts/start.bat with full system startup
   - Add environment validation and dependency checking
   - Include clear Hebrew status messages and error handling
