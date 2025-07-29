@@ -22,3 +22,6 @@
 2025-07-29 14:16:09,006 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
 2025-07-29 14:16:10,009 - __main__ - INFO - ✅ All dependencies are available
 2025-07-29 14:16:10,011 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 14:58:35,342 - backend.main - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 14:58:35,343 - backend.main - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 14:58:35,344 - backend.main - INFO - 📁 Created necessary directories
