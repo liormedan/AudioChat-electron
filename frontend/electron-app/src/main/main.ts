@@ -102,18 +102,26 @@ class MainWindow {
     });
 
     // Load the application UI
-    // __dirname is dist/main/main, so we need to go up to dist/renderer
-    const indexPath = join(__dirname, '../../renderer/index.html');
-    console.log('Loading renderer from:', indexPath);
-    console.log('File exists:', existsSync(indexPath));
-
-    if (existsSync(indexPath)) {
-      void this.window.loadFile(indexPath);
+    if (isDev) {
+      // In development, load from the Vite dev server
+      const devServerUrl =
+        process.env.VITE_DEV_SERVER_URL ?? 'http://localhost:5174';
+      console.log('Loading renderer from dev server:', devServerUrl);
+      void this.window.loadURL(devServerUrl);
     } else {
-      console.error('No renderer found. Path checked:', indexPath);
-      console.error('Current __dirname:', __dirname);
-      app.quit();
-      return;
+      // __dirname is dist/main/main, so go up to dist/renderer for production
+      const indexPath = join(__dirname, '../../renderer/index.html');
+      console.log('Loading renderer from:', indexPath);
+      console.log('File exists:', existsSync(indexPath));
+
+      if (existsSync(indexPath)) {
+        void this.window.loadFile(indexPath);
+      } else {
+        console.error('No renderer found. Path checked:', indexPath);
+        console.error('Current __dirname:', __dirname);
+        app.quit();
+        return;
+      }
     }
 
     // Always open DevTools for debugging
