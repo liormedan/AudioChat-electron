@@ -16,6 +16,8 @@ scripts\setup.bat
 scripts\start.bat
 ```
 
+> **שים לב**: קבצי ה-`BAT` נבנו עבור `cmd.exe`. ייתכן שתיתקלו בבעיות אם תריצו אותם דרך PowerShell.
+
 ## 📋 דרישות מערכת
 
 - **Python 3.8+** - לבקאנד
