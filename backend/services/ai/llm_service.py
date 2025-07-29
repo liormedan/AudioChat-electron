@@ -189,6 +189,13 @@ class LLMService:
                 "supported_models": ["command", "command-light"],
                 "rate_limit": 1000,
                 "cost_per_1k_tokens": 0.002
+            },
+            {
+                "name": "Local Gemma",
+                "api_base_url": "local",
+                "supported_models": ["google/gemma-3-4b-it", "google/gemma-2-2b-it"],
+                "rate_limit": 1000,
+                "cost_per_1k_tokens": 0
             }
         ]
         
@@ -248,6 +255,16 @@ class LLMService:
                 "cost_per_token": 0.000001,
                 "capabilities": [ModelCapability.TEXT_GENERATION, ModelCapability.CHAT],
                 "context_window": 32768
+            },
+            {
+                "id": "local-gemma-3-4b-it",
+                "name": "Gemma 3 4B-IT (Local)",
+                "provider": "Local Gemma",
+                "description": "Gemma 3 4B-IT running locally on your machine.",
+                "max_tokens": 4096,
+                "cost_per_token": 0,
+                "capabilities": [ModelCapability.TEXT_GENERATION, ModelCapability.CHAT, ModelCapability.CODE_GENERATION],
+                "context_window": 8192
             }
         ]
         

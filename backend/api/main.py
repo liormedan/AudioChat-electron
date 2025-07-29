@@ -18,32 +18,72 @@ from backend.services.audio.editing import AudioEditingService
 from backend.services.storage.file_upload import FileUploadService
 from backend.services.audio.metadata import AudioMetadataService
 from backend.services.ai.command_processor import AudioCommandProcessor
-# from models.llm_models import LLMProvider # Import the model for type hinting and serialization
+
+def initialize_services():
+    """
+    Initialize all backend services
+    אתחול כל שירותי הבקאנד
+    """
+    # Create an instance of the service that the server will use
+    llm_service = LLMService()
+    audio_editing_service = AudioEditingService()
+    file_upload_service = FileUploadService()
+    audio_metadata_service = AudioMetadataService()
+
+    # Initialize the command processor with all required services
+    audio_command_processor = AudioCommandProcessor(
+        llm_service=llm_service,
+        audio_editing_service=audio_editing_service,
+        audio_metadata_service=audio_metadata_service
+    )
+    
+    return {
+        'llm_service': llm_service,
+        'audio_editing_service': audio_editing_service,
+        'file_upload_service': file_upload_service,
+        'audio_metadata_service': audio_metadata_service,
+        'audio_command_processor': audio_command_processor
+    }
+
+def configure_middleware(app: FastAPI) -> None:
+    """
+    Configure FastAPI middleware
+    הגדרת middleware לאפליקציית FastAPI
+    """
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allows all origins
+        allow_credentials=True,
+        allow_methods=["*"],  # Allows all methods
+        allow_headers=["*"],  # Allows all headers
+    )
+
+def create_app() -> FastAPI:
+    """
+    Create and configure FastAPI application
+    יצירת והגדרת אפליקציית FastAPI
+    """
+    app = FastAPI(
+        title="Audio Chat Studio API",
+        description="Backend API for Audio Chat Studio",
+        version="1.0.0"
+    )
+    
+    # Configure middleware
+    configure_middleware(app)
+    
+    return app
 
 # --- Initialize Services ---
-# Create an instance of the service that the server will use
-llm_service = LLMService()
-audio_editing_service = AudioEditingService()
-file_upload_service = FileUploadService()
-audio_metadata_service = AudioMetadataService()
-
-# Initialize the command processor with all required services
-audio_command_processor = AudioCommandProcessor(
-    llm_service=llm_service,
-    audio_editing_service=audio_editing_service,
-    audio_metadata_service=audio_metadata_service
-)
+services = initialize_services()
+llm_service = services['llm_service']
+audio_editing_service = services['audio_editing_service']
+file_upload_service = services['file_upload_service']
+audio_metadata_service = services['audio_metadata_service']
+audio_command_processor = services['audio_command_processor']
 
 # --- FastAPI App Initialization ---
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
-)
+app = create_app()
 
 # --- API Endpoints ---
 

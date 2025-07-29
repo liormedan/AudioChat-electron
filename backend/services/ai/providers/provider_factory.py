@@ -9,6 +9,7 @@ from .anthropic_provider import AnthropicProvider
 from .google_provider import GoogleProvider
 from .cohere_provider import CohereProvider
 from .huggingface_provider import HuggingFaceProvider
+from .local_gemma_provider import LocalGemmaProvider
 
 
 class ProviderFactory:
@@ -20,7 +21,8 @@ class ProviderFactory:
         "Anthropic": AnthropicProvider,
         "Google": GoogleProvider,
         "Cohere": CohereProvider,
-        "Hugging Face": HuggingFaceProvider
+        "Hugging Face": HuggingFaceProvider,
+        "Local Gemma": LocalGemmaProvider
     }
     
     @classmethod
