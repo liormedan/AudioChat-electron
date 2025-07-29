@@ -127,7 +127,7 @@ export const LLMPage: React.FC = () => {
 
   const handleSetActiveModel = async (modelId: string) => {
     try {
-      const response = await fetch('/api/llm/active-model');
+      const response = await fetch('/api/llm/active-model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model_id: modelId }),
