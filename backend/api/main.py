@@ -12,38 +12,60 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-# --- Import Services ---
-from backend.services.ai.llm_service import LLMService
-from backend.services.audio.editing import AudioEditingService
-from backend.services.storage.file_upload import FileUploadService
-from backend.services.audio.metadata import AudioMetadataService
-from backend.services.ai.command_processor import AudioCommandProcessor
-
 def initialize_services():
     """
-    Initialize all backend services
-    אתחול כל שירותי הבקאנד
+    Initialize all backend services with lazy loading
+    אתחול כל שירותי הבקאנד עם טעינה עצלה
     """
-    # Create an instance of the service that the server will use
-    llm_service = LLMService()
-    audio_editing_service = AudioEditingService()
-    file_upload_service = FileUploadService()
-    audio_metadata_service = AudioMetadataService()
-
-    # Initialize the command processor with all required services
-    audio_command_processor = AudioCommandProcessor(
-        llm_service=llm_service,
-        audio_editing_service=audio_editing_service,
-        audio_metadata_service=audio_metadata_service
-    )
+    services = {}
     
-    return {
-        'llm_service': llm_service,
-        'audio_editing_service': audio_editing_service,
-        'file_upload_service': file_upload_service,
-        'audio_metadata_service': audio_metadata_service,
-        'audio_command_processor': audio_command_processor
-    }
+    try:
+        # Import services inside the function for lazy loading
+        from backend.services.storage.file_upload import FileUploadService
+        from backend.services.audio.metadata import AudioMetadataService
+        from backend.services.audio.editing import AudioEditingService
+        
+        # Try to initialize services one by one
+        services['file_upload_service'] = FileUploadService()
+        print("✅ File upload service initialized")
+        
+        services['audio_metadata_service'] = AudioMetadataService()
+        print("✅ Audio metadata service initialized")
+        
+        services['audio_editing_service'] = AudioEditingService()
+        print("✅ Audio editing service initialized")
+        
+        # LLM service might have issues with transformers, so we'll try it last
+        try:
+            from backend.services.ai.llm_service import LLMService
+            services['llm_service'] = LLMService()
+            print("✅ LLM service initialized")
+        except Exception as e:
+            print(f"⚠️ LLM service failed to initialize: {e}")
+            services['llm_service'] = None
+        
+        # Command processor depends on other services
+        try:
+            if services['llm_service']:
+                from backend.services.ai.command_processor import AudioCommandProcessor
+                services['audio_command_processor'] = AudioCommandProcessor(
+                    llm_service=services['llm_service'],
+                    audio_editing_service=services['audio_editing_service'],
+                    audio_metadata_service=services['audio_metadata_service']
+                )
+                print("✅ Audio command processor initialized")
+            else:
+                services['audio_command_processor'] = None
+                print("⚠️ Audio command processor skipped (LLM service unavailable)")
+        except Exception as e:
+            print(f"⚠️ Audio command processor failed to initialize: {e}")
+            services['audio_command_processor'] = None
+            
+    except Exception as e:
+        print(f"❌ Critical error during service initialization: {e}")
+        raise
+    
+    return services
 
 def configure_middleware(app: FastAPI) -> None:
     """
@@ -411,6 +433,8 @@ async def execute_audio_command(request: Request):
 @app.get('/api/llm/providers')
 async def get_all_providers():
     try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
         providers = llm_service.get_all_providers()
         provider_list = [p.to_dict() for p in providers]
         return JSONResponse(content=provider_list)
@@ -420,6 +444,8 @@ async def get_all_providers():
 @app.get('/api/llm/models')
 async def get_all_models(provider: Optional[str] = None):
     try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
         if provider:
             models = llm_service.get_models_by_provider(provider)
         else:
@@ -432,6 +458,8 @@ async def get_all_models(provider: Optional[str] = None):
 @app.get('/api/llm/active-model')
 async def get_active_model():
     try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
         active_model = llm_service.get_active_model()
         if active_model:
             return JSONResponse(content=active_model.to_dict())
@@ -443,6 +471,8 @@ async def get_active_model():
 @app.post('/api/llm/active-model')
 async def set_active_model(model_id: str = Form(...)):
     try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
         success = llm_service.set_active_model(model_id)
         return JSONResponse(content={"success": success})
     except Exception as e:
@@ -451,6 +481,8 @@ async def set_active_model(model_id: str = Form(...)):
 @app.post('/api/llm/chat/completion')
 async def chat_completion_endpoint(messages: List[Dict[str, str]]):
     try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
         response = llm_service.generate_chat_response(messages)
         if response:
             return JSONResponse(content=response.to_dict())
@@ -462,6 +494,9 @@ async def chat_completion_endpoint(messages: List[Dict[str, str]]):
 @app.post('/api/audio/command/interpret')
 async def interpret_audio_command(request: Request):
     try:
+        if audio_command_processor is None:
+            raise HTTPException(status_code=503, detail="Audio command processor is not available")
+            
         data = await request.json()
         command_text = data.get('command')
         file_id = data.get('file_id')
@@ -495,6 +530,9 @@ async def interpret_audio_command(request: Request):
 @app.post('/api/audio/command/execute')
 async def execute_audio_command_new(request: Request):
     try:
+        if audio_command_processor is None:
+            raise HTTPException(status_code=503, detail="Audio command processor is not available")
+            
         data = await request.json()
         command_text = data.get('command')
         file_id = data.get('file_id')
@@ -528,6 +566,9 @@ async def execute_audio_command_new(request: Request):
 @app.post('/api/audio/command/suggestions')
 async def get_command_suggestions(request: Request):
     try:
+        if audio_command_processor is None:
+            raise HTTPException(status_code=503, detail="Audio command processor is not available")
+            
         data = await request.json()
         partial_command = data.get('partial_command', '')
         file_id = data.get('file_id')
@@ -554,6 +595,9 @@ async def get_command_suggestions(request: Request):
 @app.get('/api/audio/command/help')
 async def get_command_help(command_type: Optional[str] = None):
     try:
+        if audio_command_processor is None:
+            raise HTTPException(status_code=503, detail="Audio command processor is not available")
+            
         if command_type:
             from backend.services.ai.command_interpreter import CommandType
             try:
@@ -578,6 +622,9 @@ async def get_command_help(command_type: Optional[str] = None):
 @app.post('/api/audio/command/validate')
 async def validate_command_parameters(request: Request):
     try:
+        if audio_command_processor is None:
+            raise HTTPException(status_code=503, detail="Audio command processor is not available")
+            
         data = await request.json()
         command_text = data.get('command')
         file_id = data.get('file_id')
@@ -610,6 +657,9 @@ async def validate_command_parameters(request: Request):
 @app.get('/api/audio/command/stats')
 async def get_command_processing_stats():
     try:
+        if audio_command_processor is None:
+            raise HTTPException(status_code=503, detail="Audio command processor is not available")
+            
         stats = await audio_command_processor.get_processing_stats()
         return JSONResponse(content={
             "success": True,
