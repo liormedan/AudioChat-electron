@@ -147,7 +147,8 @@
   - Include process termination for stuck services
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [-] 7. Update import paths and dependencies
+- [x] 7. Update import paths and dependencies
+
 
 - [x] 7.1 Fix Python import paths
 
@@ -157,21 +158,26 @@
   - Test that all backend functionality works
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [-] 7.2 Update requirements and dependencies
+- [x] 7.2 Update requirements and dependencies
+
 
   - Verify requirements.txt includes all necessary packages
   - Update frontend package.json if needed
   - Test dependency installation process
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 8. Create comprehensive testing
-- [ ] 8.1 Test backend functionality
+- [-] 8. Create comprehensive testing
+
+- [x] 8.1 Test backend functionality
+
+
   - Verify all API endpoints work with new structure
   - Test audio processing and file upload functionality
   - Validate LLM and command processing services
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 8.2 Test frontend integration
+- [-] 8.2 Test frontend integration
+
   - Verify Electron app starts and connects to backend
   - Test all UI functionality and API communication
   - Validate file upload and audio processing workflows
