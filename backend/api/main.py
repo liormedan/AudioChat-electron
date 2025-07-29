@@ -478,6 +478,56 @@ async def set_active_model(model_id: str = Form(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to set active model: {e}")
 
+
+@app.post('/api/llm/set-api-key')
+async def set_provider_api_key(request: Request):
+    """Set the API key for an LLM provider"""
+    try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
+
+        data = await request.json()
+        provider_name = data.get('provider_name')
+        api_key = data.get('api_key')
+
+        if not provider_name or not api_key:
+            raise HTTPException(status_code=400, detail="provider_name and api_key are required")
+
+        success = llm_service.set_provider_api_key(provider_name, api_key)
+
+        if success:
+            return JSONResponse(content={"success": True, "message": "API key saved"})
+        else:
+            return JSONResponse(content={"success": False, "error": "Failed to save API key"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to set API key: {e}")
+
+
+@app.post('/api/llm/test-connection')
+async def test_provider_connection(request: Request):
+    """Test connection for a specific LLM provider"""
+    try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
+
+        data = await request.json()
+        provider_name = data.get('provider_name')
+
+        if not provider_name:
+            raise HTTPException(status_code=400, detail="provider_name is required")
+
+        success = llm_service.test_provider_connection(provider_name)
+        provider = llm_service.get_provider(provider_name)
+        message = provider.error_message if provider and provider.error_message else "Connection successful"
+
+        return JSONResponse(content={"success": success, "message": message})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to test connection: {e}")
+
 @app.post('/api/llm/chat/completion')
 async def chat_completion_endpoint(messages: List[Dict[str, str]]):
     try:

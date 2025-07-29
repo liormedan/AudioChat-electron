@@ -54,6 +54,10 @@ After running `start_all.bat`, access:
 | 🛠️ **Admin Panel** | http://127.0.0.1:5001 | System monitoring & management |
 | 🔧 **API Server** | http://127.0.0.1:5000 | Backend API endpoints |
 
+### LLM Provider API Endpoints
+- **POST `/api/llm/set-api-key`** - save API key for a provider
+- **POST `/api/llm/test-connection`** - test provider connection status
+
 ---
 
 ## 📁 Project Structure
