@@ -19,7 +19,7 @@ export const AudioMetadataViewer: React.FC<AudioMetadataViewerProps> = ({ fileId
   const [activeTab, setActiveTab] = useState('summary');
   const [includeAdvanced, setIncludeAdvanced] = useState(false);
 
-  const metadataService = new AudioMetadataService();
+  const metadataService = new AudioMetadataService('http://127.0.0.1:5000');
 
   useEffect(() => {
     if (fileId) {

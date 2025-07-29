@@ -83,7 +83,7 @@ export const useAudioChatStore = create<AudioChatState>()(
       isProcessing: false,
       
       // Services
-      uploadService: new AudioUploadService(),
+      uploadService: new AudioUploadService('http://127.0.0.1:5000'),
       
       // Audio actions
       setSelectedFile: (file) => set({ selectedFile: file }),

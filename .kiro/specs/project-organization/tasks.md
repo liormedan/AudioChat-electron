@@ -19,7 +19,8 @@
   - Maintain all existing endpoints and functionality
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [x] 3. Create improved startup scripts
+- [ ] 3. Create improved startup scripts
+
 
 
 
@@ -58,14 +59,18 @@
   - Include dependency installation for both Python and Node.js
   - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 4. Update frontend configuration
-- [ ] 4.1 Update Electron app package.json scripts
+- [-] 4. Update frontend configuration
+
+- [x] 4.1 Update Electron app package.json scripts
+
+
   - Modify scripts to work with new backend entry point
   - Update API server startup command to use backend/main.py
   - Ensure proper coordination between frontend and backend startup
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 4.2 Verify frontend-backend communication
+- [-] 4.2 Verify frontend-backend communication
+
   - Test that Electron app connects to FastAPI on correct port
   - Validate all API endpoints work with new structure
   - Ensure CORS configuration works properly

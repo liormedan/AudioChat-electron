@@ -106,7 +106,7 @@ def start_server(host: str = "127.0.0.1", port: int = 5000, reload: bool = False
         logger.info(f"מפעיל שרת על http://{host}:{port}")
         
         # Import the FastAPI app from api module
-        from backend.api.main import app
+        from api.main import app
         
         # Start the server
         uvicorn.run(

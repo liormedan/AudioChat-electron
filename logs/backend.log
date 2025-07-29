@@ -10,3 +10,15 @@
 2025-07-29 14:04:40,941 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
 2025-07-29 14:04:41,414 - __main__ - INFO - ✅ All dependencies are available
 2025-07-29 14:04:41,416 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 14:15:36,408 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 14:15:36,409 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 14:15:37,112 - __main__ - INFO - ✅ All dependencies are available
+2025-07-29 14:15:37,114 - __main__ - INFO - 📁 Created necessary directories
+2025-07-29 14:15:37,123 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-29 14:15:37,124 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-29 14:15:37,124 - __main__ - ERROR - ❌ Failed to start server: No module named 'backend'
+2025-07-29 14:15:37,125 - __main__ - ERROR - שגיאה בהפעלת השרת: No module named 'backend'
+2025-07-29 14:16:09,004 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-29 14:16:09,006 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-29 14:16:10,009 - __main__ - INFO - ✅ All dependencies are available
+2025-07-29 14:16:10,011 - __main__ - INFO - 📁 Created necessary directories

@@ -22,7 +22,7 @@ export const ChatPage: React.FC = () => {
   // Audio metadata service
 
   // Audio metadata service
-  const [metadataService] = useState(() => new AudioMetadataService());
+  const [metadataService] = useState(() => new AudioMetadataService('http://127.0.0.1:5000'));
   const [showMetadata, setShowMetadata] = useState<boolean>(false);
   const [audioMetadata, setAudioMetadata] = useState<any>(null);
 
