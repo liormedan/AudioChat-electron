@@ -21,7 +21,8 @@
 
 - [-] 3. Create improved startup scripts
 
-- [ ] 3.1 Create main startup script
+- [x] 3.1 Create main startup script
+
 
 
 
@@ -32,6 +33,8 @@
   - _Requirements: 3.1, 3.2, 3.3, 5.1, 5.2, 5.3_
 
 - [-] 3.2 Create development startup script
+
+
 
   - Write scripts/start-dev.bat for development mode
   - Enable hot reload for both frontend and backend
