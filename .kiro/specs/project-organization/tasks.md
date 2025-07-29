@@ -9,7 +9,7 @@
   - Add server startup with configurable host and port
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 2. Refactor FastAPI application structure
+- [x] 2. Refactor FastAPI application structure
 
 
 
@@ -21,14 +21,18 @@
 
 - [-] 3. Create improved startup scripts
 
-- [-] 3.1 Create main startup script
+- [ ] 3.1 Create main startup script
+
+
+
 
   - Write scripts/start.bat with full system startup
   - Add environment validation and dependency checking
   - Include clear Hebrew status messages and error handling
   - _Requirements: 3.1, 3.2, 3.3, 5.1, 5.2, 5.3_
 
-- [ ] 3.2 Create development startup script
+- [-] 3.2 Create development startup script
+
   - Write scripts/start-dev.bat for development mode
   - Enable hot reload for both frontend and backend
   - Add development-specific configuration
