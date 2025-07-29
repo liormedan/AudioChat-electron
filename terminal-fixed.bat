@@ -65,6 +65,26 @@ goto MENU
 :START_ALL
 echo.
 echo 🚀 Starting Full System...
+echo.
+echo 🧹 Cleaning up existing processes...
+taskkill /f /im python.exe >nul 2>&1
+taskkill /f /im node.exe >nul 2>&1
+taskkill /f /im electron.exe >nul 2>&1
+echo ✅ Processes cleaned up
+echo.
+echo 🔌 Checking port availability...
+netstat -an | find "127.0.0.1:5000" >nul
+if not errorlevel 1 (
+    echo ⚠️ Port 5000 still in use, forcing cleanup...
+    for /f "tokens=5" %%a in ('netstat -aon ^| find "127.0.0.1:5000" ^| find "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
+)
+netstat -an | find "127.0.0.1:5174" >nul
+if not errorlevel 1 (
+    echo ⚠️ Port 5174 still in use, forcing cleanup...
+    for /f "tokens=5" %%a in ('netstat -aon ^| find "127.0.0.1:5174" ^| find "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
+)
+echo ✅ Ports are now available
+echo.
 call .venv\Scripts\activate.bat
 start /b "" python backend\main.py --port 5000 >logs\backend.log 2>&1
 echo ⏳ Starting Backend...
@@ -86,6 +106,19 @@ goto MENU
 :START_BACKEND
 echo.
 echo 🔵 Starting Backend Only...
+echo.
+echo 🧹 Cleaning up existing Python processes...
+taskkill /f /im python.exe >nul 2>&1
+echo ✅ Python processes cleaned up
+echo.
+echo 🔌 Checking port 5000...
+netstat -an | find "127.0.0.1:5000" >nul
+if not errorlevel 1 (
+    echo ⚠️ Port 5000 still in use, forcing cleanup...
+    for /f "tokens=5" %%a in ('netstat -aon ^| find "127.0.0.1:5000" ^| find "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
+)
+echo ✅ Port 5000 is now available
+echo.
 call .venv\Scripts\activate.bat
 start /b "" python backend\main.py --port 5000 >logs\backend.log 2>&1
 echo ⏳ Initializing...
@@ -98,6 +131,20 @@ goto MENU
 :START_FRONTEND
 echo.
 echo 🌐 Starting Frontend Only...
+echo.
+echo 🧹 Cleaning up existing Node.js processes...
+taskkill /f /im node.exe >nul 2>&1
+taskkill /f /im electron.exe >nul 2>&1
+echo ✅ Node.js processes cleaned up
+echo.
+echo 🔌 Checking port 5174...
+netstat -an | find "127.0.0.1:5174" >nul
+if not errorlevel 1 (
+    echo ⚠️ Port 5174 still in use, forcing cleanup...
+    for /f "tokens=5" %%a in ('netstat -aon ^| find "127.0.0.1:5174" ^| find "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
+)
+echo ✅ Port 5174 is now available
+echo.
 cd frontend\electron-app
 start /b "" npm run dev >..\..\logs\frontend.log 2>&1
 cd ..\..

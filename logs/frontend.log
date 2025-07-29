@@ -32,3 +32,7 @@
 [0]  [90m 135 |[39m       [36mif[39m ([33m![39mresponse[33m.[39mok) [36mthrow[39m [36mnew[39m [33mError[39m([32m`HTTP error! status: ${response.status}`[39m)[33m;[39m[0m
 [1] All windows closed
 [1] npm run dev:electron exited with code 0
+[0] [2m15:56:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/App.tsx, /index.css[22m
+[0] [2m15:57:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/App.tsx, /index.css[22m
+[0] [2m15:57:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/App.tsx, /index.css[22m
+[0] [2m16:00:30[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/components/layout/sidebar.tsx, /index.css[22m

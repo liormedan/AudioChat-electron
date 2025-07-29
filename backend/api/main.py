@@ -668,3 +668,89 @@ async def get_command_processing_stats():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+@app.get('/api/system/status')
+async def get_system_status():
+    """Get system status information"""
+    try:
+        import psutil
+        import os
+        
+        # Get system info
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        # Check if services are running
+        backend_status = "running"  # If we're responding, backend is running
+        
+        # Get recent logs (last 50 lines)
+        logs = []
+        log_file = "logs/backend.log"
+        if os.path.exists(log_file):
+            try:
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    logs = [line.strip() for line in lines[-50:] if line.strip()]
+            except Exception:
+                logs = ["Could not read log file"]
+        
+        return JSONResponse(content={
+            "success": True,
+            "system": {
+                "cpu_percent": cpu_percent,
+                "memory_percent": memory.percent,
+                "memory_used_gb": round(memory.used / (1024**3), 2),
+                "memory_total_gb": round(memory.total / (1024**3), 2),
+                "disk_percent": disk.percent,
+                "disk_used_gb": round(disk.used / (1024**3), 2),
+                "disk_total_gb": round(disk.total / (1024**3), 2)
+            },
+            "services": {
+                "backend": backend_status,
+                "frontend": "unknown"  # Frontend status would need to be checked separately
+            },
+            "logs": logs
+        })
+        
+    except Exception as e:
+        return JSONResponse(content={
+            "success": False,
+            "error": f"Failed to get system status: {str(e)}"
+        })
+
+@app.post('/api/system/logs')
+async def get_system_logs(request: Request):
+    """Get system logs with filtering options"""
+    try:
+        data = await request.json()
+        log_type = data.get('type', 'backend')  # backend, frontend, system
+        lines = data.get('lines', 100)
+        
+        logs = []
+        log_files = {
+            'backend': 'logs/backend.log',
+            'frontend': 'logs/frontend.log',
+            'system': 'logs/system.log'
+        }
+        
+        log_file = log_files.get(log_type, 'logs/backend.log')
+        
+        if os.path.exists(log_file):
+            try:
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    file_lines = f.readlines()
+                    logs = [line.strip() for line in file_lines[-lines:] if line.strip()]
+            except Exception as e:
+                logs = [f"Error reading log file: {str(e)}"]
+        else:
+            logs = [f"Log file {log_file} not found"]
+        
+        return JSONResponse(content={
+            "success": True,
+            "logs": logs,
+            "type": log_type,
+            "count": len(logs)
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get logs: {str(e)}")

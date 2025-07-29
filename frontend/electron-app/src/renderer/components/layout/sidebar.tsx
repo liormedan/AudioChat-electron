@@ -11,6 +11,7 @@ const Sidebar = () => {
       <nav>
         <ul>
           <li><NavLink to="/" className={navLinkClass}>Home</NavLink></li>
+          <li><NavLink to="/terminal" className={navLinkClass}>Terminal</NavLink></li>
           <li><NavLink to="/chat" className={navLinkClass}>Chat</NavLink></li>
           <li><NavLink to="/audio" className={navLinkClass}>Audio</NavLink></li>
           <li><NavLink to="/export" className={navLinkClass}>Export</NavLink></li>
