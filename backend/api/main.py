@@ -14,12 +14,27 @@ from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
 codex/remove-request-classes-and-update-imports
+codex/remove-request-classes-and-update-imports
 from backend.api.schemas import (
     SendMessageRequest,
     SessionCreateRequest,
     SessionUpdateRequest,
 )
 
+
+
+codex/add-chat-api-endpoints
+
+from pydantic import BaseModel
+from backend.models.chat import SessionNotFoundError, ModelNotAvailableError
+
+
+# Import shared request models from schemas module
+from .schemas import (
+    SendMessageRequest,
+    SessionCreateRequest,
+    SessionUpdateRequest,
+)
 
 
 def initialize_services():
