@@ -47,6 +47,9 @@ def initialize_services():
         from backend.services.storage.file_upload import FileUploadService
         from backend.services.audio.metadata import AudioMetadataService
         from backend.services.audio.editing import AudioEditingService
+        from backend.services.ai.session_service import SessionService
+        from backend.services.ai.chat_history_service import ChatHistoryService
+        from backend.services.ai.chat_service import ChatService
         
         # Try to initialize services one by one
         services['file_upload_service'] = FileUploadService()
@@ -74,13 +77,13 @@ def initialize_services():
             from backend.services.ai.chat_service import ChatService
 
             services['session_service'] = SessionService()
-            services['history_service'] = ChatHistoryService()
+            services['chat_history_service'] = ChatHistoryService()
 
             if services['llm_service']:
                 services['chat_service'] = ChatService(
-                    services['llm_service'],
-                    services['session_service'],
-                    services['history_service']
+                    llm_service=services['llm_service'],
+                    session_service=services['session_service'],
+                    history_service=services['chat_history_service'],
                 )
                 print("✅ Chat service initialized")
             else:
@@ -149,9 +152,15 @@ audio_editing_service = services['audio_editing_service']
 file_upload_service = services['file_upload_service']
 audio_metadata_service = services['audio_metadata_service']
 audio_command_processor = services['audio_command_processor']
+codex/add-session,-chathistory,-and-chat-services
+session_service = services['session_service']
+chat_history_service = services['chat_history_service']
+chat_service = services['chat_service']
+=======
 chat_service = services.get('chat_service')
 session_service = services.get('session_service')
 history_service = services.get('history_service')
+main
 
 # --- FastAPI App Initialization ---
 app = create_app()
