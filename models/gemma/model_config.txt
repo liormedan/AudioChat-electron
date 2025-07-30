@@ -1,0 +1,3 @@
+model_id=microsoft/DialoGPT-small
+local_path=C:\Audio-Chat-main\Audio-Chat-qt\models\gemma\models--microsoft--DialoGPT-small\snapshots\49c537161a457d5256512f9d2d38a87d81ae0f0e
+status=downloaded

@@ -1,0 +1,3 @@
+Model ID: microsoft/DialoGPT-medium
+Local Path: C:\Audio-Chat-main\Audio-Chat-qt\models\models--microsoft--DialoGPT-medium\snapshots\7b40bb0f92c45fefa957d088000d8648e5c7fa33
+Downloaded: 1753861869.4303343

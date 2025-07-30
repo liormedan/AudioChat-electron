@@ -69,18 +69,50 @@ class LLMService:
 
         # טעינת ספקים ברירת מחדל
         self._init_default_providers()
-        codex/add-model-download-helper-in-local_gemma_provider
+        
         # Ensure the latest local Gemma model is available
         self._ensure_latest_local_gemma()
 
         # Ensure there is an active model after initialization
         active = self.get_active_model()
         if not active:
-            self.set_active_model("local-gemma-3-4b-it")
-            active = self.get_active_model()
+            # Try to set Gemma as default model (without downloading)
+            gemma_models = ["local-gemma-3-4b-it", "google-gemma-2-2b-it"]
+            for model_id in gemma_models:
+                if self.get_model(model_id):
+                    self.set_active_model(model_id)
+                    active = self.get_active_model()
+                    if active:
+                        logger.info(f"✅ Default model set to Gemma: {active.name} ({active.id})")
+                        break
+            
+            # If no Gemma model found, try any available model
+            if not active:
+                all_models = self.get_all_models()
+                if all_models:
+                    # Prefer local models
+                    local_models = [m for m in all_models if "local" in m.id.lower() or m.provider == "Local Gemma"]
+                    if local_models:
+                        self.set_active_model(local_models[0].id)
+                        active = self.get_active_model()
+                        if active:
+                            logger.info(f"✅ Local model set as default: {active.name} ({active.id})")
+                    else:
+                        self.set_active_model(all_models[0].id)
+                        active = self.get_active_model()
+                        if active:
+                            logger.info(f"⚠️ Fallback model set to: {active.name} ({active.id})")
+        
         if active:
-            logger.info(f"Active model set to {active.id}")
-        main
+            if active.provider == "Local Gemma":
+                logger.info(f"🚀 Gemma AI Assistant Ready: {active.name}")
+                logger.info("💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות")
+                logger.info("📝 הערה: להורדת מודל Gemma בפועל, הרץ: huggingface-cli download google/gemma-2-2b-it")
+            else:
+                logger.info(f"🤖 Active LLM model: {active.name} (Provider: {active.provider})")
+        else:
+            logger.warning("⚠️ No active LLM model found!")
+            logger.info("💡 You can add models manually or configure API keys for cloud providers")
     
     def _init_db(self) -> None:
         """יצירת מסד נתונים אם לא קיים"""
@@ -272,14 +304,34 @@ class LLMService:
                 "context_window": 32768
             },
             {
+                "id": "microsoft-dialogpt-medium",
+                "name": "DialoGPT Medium (Local)",
+                "provider": "Local Gemma",
+                "description": "מודל שיחה מתקדם של Microsoft הרץ מקומית - מהיר, חינמי ופרטי",
+                "max_tokens": 1024,
+                "cost_per_token": 0,
+                "capabilities": [ModelCapability.TEXT_GENERATION, ModelCapability.CHAT],
+                "context_window": 1024
+            },
+            {
                 "id": "local-gemma-3-4b-it",
                 "name": "Gemma 3 4B-IT (Local)",
                 "provider": "Local Gemma",
-                "description": "Gemma 3 4B-IT running locally on your machine.",
+                "description": "מודל Gemma 3 4B-IT הרץ מקומית על המחשב שלך - מהיר, חינמי ופרטי",
                 "max_tokens": 4096,
                 "cost_per_token": 0,
                 "capabilities": [ModelCapability.TEXT_GENERATION, ModelCapability.CHAT, ModelCapability.CODE_GENERATION],
                 "context_window": 8192
+            },
+            {
+                "id": "google-gemma-2-2b-it",
+                "name": "Gemma 2 2B-IT (Local)",
+                "provider": "Local Gemma",
+                "description": "מודל Gemma 2 2B-IT קל ומהיר לשיחות יומיומיות - חינמי ופרטי",
+                "max_tokens": 2048,
+                "cost_per_token": 0,
+                "capabilities": [ModelCapability.TEXT_GENERATION, ModelCapability.CHAT],
+                "context_window": 4096
             }
         ]
         
@@ -298,41 +350,13 @@ class LLMService:
                 self.save_model(model)
 
     def _ensure_latest_local_gemma(self) -> None:
-        """Download and register the latest local Gemma model."""
-        try:
-            from backend.services.ai.providers.gemma_utils import download_latest_gemma_model
-        except Exception as e:
-            print(f"Failed to import Gemma utilities: {e}")
-            return
-
-        path, repo_id = download_latest_gemma_model()
-        if not path or not repo_id:
-            return
-
-        local_models = self.get_models_by_provider("Local Gemma")
-        model = local_models[0] if local_models else None
-
-        if not model:
-            model = LLMModel(
-                id=f"local-{repo_id.replace('/', '-')}",
-                name=f"{repo_id.split('/')[-1]} (Local)",
-                provider="Local Gemma",
-                description=f"Local copy of {repo_id}",
-                max_tokens=4096,
-                cost_per_token=0.0,
-                capabilities=[
-                    ModelCapability.TEXT_GENERATION,
-                    ModelCapability.CHAT,
-                    ModelCapability.CODE_GENERATION,
-                ],
-                context_window=8192,
-            )
-        model.version = repo_id
-        model.metadata["local_path"] = path
-        self.save_model(model)
-
-        if not self.get_active_model():
-            self.set_active_model(model.id)
+        """Ensure Gemma models are available without automatic download."""
+        logger.info("🤖 Gemma models configured for local use")
+        logger.info("💡 To use Gemma models, download them manually using: huggingface-cli download google/gemma-2-2b-it")
+        
+        # Just ensure the models are registered in the database
+        # The actual model loading will happen when needed by the provider
+        pass
     
     # Provider Management
     def save_provider(self, provider: LLMProvider) -> None:

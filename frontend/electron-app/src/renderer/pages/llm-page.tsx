@@ -189,8 +189,19 @@ export const LLMPage: React.FC = () => {
               {activeModel ? 'Online' : 'Offline'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {activeModel ? `Using ${activeModel.name}` : 'No model selected'}
+              {activeModel ? (
+                activeModel.provider === 'Local Gemma' ? 
+                  `🚀 ${activeModel.name} - חינמי ופרטי` : 
+                  `Using ${activeModel.name}`
+              ) : 'No model selected'}
             </p>
+            {activeModel && activeModel.provider === 'Local Gemma' && (
+              <div className="mt-2">
+                <div className="text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
+                  ✨ מודל מקומי - פרטי ומהיר
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

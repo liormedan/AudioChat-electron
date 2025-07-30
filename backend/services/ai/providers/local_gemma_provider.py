@@ -39,28 +39,40 @@ class LocalGemmaProvider(BaseProvider):
 
         print("\n" + "=" * 50)
         print(f"INFO: Loading local model '{model_id}'.")
-        print(
-            "This might take a while, especially on the first run as the model (several GB) is downloaded."
-        )
-        print("Please watch the console for a download progress bar.")
         print("=" * 50 + "\n")
 
         try:
-            # Determine the actual path or model ID
-            path_to_use = model_id
-            if os.path.isdir(model_id):
-                path_to_use = model_id
+            # Check for downloaded model first
+            local_path = self._get_local_model_path()
+            if local_path:
+                path_to_use = local_path
+                print(f"Using downloaded model: {local_path}")
+            else:
+                # Map model IDs to actual model paths/names
+                model_mapping = {
+                    "microsoft-dialogpt-medium": "microsoft/DialoGPT-medium",
+                    "local-gemma-3-4b-it": "google/gemma-3-4b-it", 
+                    "google-gemma-2-2b-it": "google/gemma-2-2b-it"
+                }
+                path_to_use = model_mapping.get(model_id, model_id)
+                print(f"Using model ID: {path_to_use}")
+            
+            print(f"Using model path: {path_to_use}")
 
             # Determine the device
             device = "cuda" if torch.cuda.is_available() else "cpu"
+            print(f"Using device: {device}")
 
             # Set torch_dtype based on device
             torch_dtype = (
                 torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float32
             )
 
+            # Choose appropriate task based on model
+            task = "conversational" if "dialogpt" in actual_model_name.lower() else "text-generation"
+            
             model_pipeline = pipeline(
-                "text-generation",
+                task,
                 model=path_to_use,
                 device=device,
                 torch_dtype=torch_dtype,
@@ -70,7 +82,7 @@ class LocalGemmaProvider(BaseProvider):
             print(f"Successfully loaded model '{model_id}' on {device}.")
             return True
         except Exception as e:
-            print(f"Error initializing local Gemma model: {e}")
+            print(f"Error initializing local model: {e}")
             return False
 
     def unload_model(self, model_id: Optional[str] = None):
@@ -107,24 +119,52 @@ class LocalGemmaProvider(BaseProvider):
         active_pipe = self._loaded_models[self.active_model_name]
 
         try:
-            # Convert messages to the format expected by the model's chat template
-            prompt = active_pipe.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-            
-            # Generate the response
-            outputs = active_pipe(
-                prompt,
-                max_new_tokens=params.max_tokens,
-                do_sample=True,
-                temperature=params.temperature,
-                top_p=params.top_p,
-                top_k=params.top_k
-            )
-            
-            # Extract only the generated text
-            generated_text = outputs[0]["generated_text"][len(prompt):]
-            
-            prompt_tokens = len(active_pipe.tokenizer.encode(prompt))
-            completion_tokens = len(active_pipe.tokenizer.encode(generated_text))
+            # Handle different model types
+            if hasattr(active_pipe, 'task') and active_pipe.task == 'conversational':
+                # DialoGPT conversational model
+                from transformers import Conversation
+                
+                # Convert messages to conversation format
+                conversation_text = ""
+                for msg in messages:
+                    if msg['role'] == 'user':
+                        conversation_text += msg['content'] + " "
+                
+                conversation = Conversation(conversation_text.strip())
+                result = active_pipe(conversation)
+                generated_text = result.generated_responses[-1] if result.generated_responses else "I'm sorry, I couldn't generate a response."
+                
+                prompt_tokens = len(conversation_text.split())
+                completion_tokens = len(generated_text.split())
+                
+            else:
+                # Standard text generation model
+                # Convert messages to simple prompt
+                prompt = ""
+                for msg in messages:
+                    if msg['role'] == 'user':
+                        prompt += f"User: {msg['content']}\n"
+                    elif msg['role'] == 'assistant':
+                        prompt += f"Assistant: {msg['content']}\n"
+                
+                prompt += "Assistant: "
+                
+                # Generate the response
+                outputs = active_pipe(
+                    prompt,
+                    max_new_tokens=params.max_tokens,
+                    do_sample=True,
+                    temperature=params.temperature,
+                    top_p=params.top_p,
+                    top_k=params.top_k,
+                    pad_token_id=active_pipe.tokenizer.eos_token_id
+                )
+                
+                # Extract only the generated text
+                generated_text = outputs[0]["generated_text"][len(prompt):].strip()
+                
+                prompt_tokens = len(active_pipe.tokenizer.encode(prompt))
+                completion_tokens = len(active_pipe.tokenizer.encode(generated_text))
 
             return ProviderResponse(
                 success=True,
@@ -149,10 +189,19 @@ class LocalGemmaProvider(BaseProvider):
         For local models, this just checks if the model is loaded.
         """
         # Try to load the default model to test functionality
-        default_model = "google/gemma-2-2b-it" # Use a smaller model for a quick test
+        default_model = "microsoft-dialogpt-medium" # Use the downloaded model
         if self._load_model(default_model):
-            # Unload it right after to save resources if not needed immediately
-            self.unload_model(default_model)
-            return True, "Model loaded successfully.", 0.0
+            # Test a simple generation
+            try:
+                from backend.models.commands import LLMParameters
+                test_messages = [{"role": "user", "content": "Hello"}]
+                params = LLMParameters()
+                response = self.chat_completion(test_messages, default_model, params)
+                if response and response.success:
+                    return True, "Model loaded and tested successfully.", 0.0
+                else:
+                    return False, "Model loaded but failed to generate response.", 0.0
+            except Exception as e:
+                return False, f"Model loaded but test failed: {e}", 0.0
         else:
             return False, "Model failed to initialize.", 0.0

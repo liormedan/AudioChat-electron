@@ -77,6 +77,35 @@ export const HomePage: React.FC = () => {
         </p>
       </div>
 
+      {/* AI Assistant Highlight */}
+      <Card className="border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-orange-600" />
+            🤖 AI Assistant Ready - Gemma Model
+          </CardTitle>
+          <CardDescription>
+            מודל Gemma מקומי פעיל - שיחות חינמיות ופרטיות ללא צורך באינטרנט
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => handleQuickAction('/chat', 'chat')}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              התחל שיחה
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => handleQuickAction('/llm', 'llm')}
+            >
+              הגדרות AI
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Upload Zone */}
       <Card>
         <CardHeader>

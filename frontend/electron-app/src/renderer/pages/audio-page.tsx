@@ -201,9 +201,20 @@ export const AudioPage: React.FC = () => {
               {/* Chat Messages */}
               <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-2">
                 {chatMessages.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    <FileAudio className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Upload an audio file to start editing with AI commands</p>
+                  <div className="text-center py-8">
+                    <div className="bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800 max-w-sm mx-auto">
+                      <div className="flex items-center justify-center mb-3">
+                        <div className="bg-orange-600 p-2 rounded-full">
+                          <FileAudio className="h-6 w-6 text-white" />
+                        </div>
+                      </div>
+                      <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-1">
+                        🤖 Gemma מוכן לעבודה
+                      </h4>
+                      <p className="text-xs text-orange-700 dark:text-orange-300">
+                        העלה קובץ אודיו כדי להתחיל לעבוד עם AI
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   chatMessages.map((message) => (

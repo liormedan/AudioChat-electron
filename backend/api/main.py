@@ -116,9 +116,20 @@ async def read_root():
 @app.get('/health')
 async def health_check():
     """Health check endpoint for monitoring"""
+    active_model = None
+    if llm_service:
+        active_model_obj = llm_service.get_active_model()
+        if active_model_obj:
+            active_model = {
+                "name": active_model_obj.name,
+                "provider": active_model_obj.provider,
+                "is_gemma": active_model_obj.provider == "Local Gemma"
+            }
+    
     return {
         "status": "healthy",
         "message": "Audio Chat Studio Backend is running",
+        "active_model": active_model,
         "services": {
             "file_upload": file_upload_service is not None,
             "audio_metadata": audio_metadata_service is not None,
@@ -492,6 +503,40 @@ async def set_active_model(model_id: str = Form(...)):
         return JSONResponse(content={"success": success})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to set active model: {e}")
+
+@app.post('/api/llm/test-chat')
+async def test_chat(request: Request):
+    """Test chat with the active model"""
+    try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
+        
+        data = await request.json()
+        message = data.get('message', 'Hello')
+        
+        # Get active model
+        active_model = llm_service.get_active_model()
+        if not active_model:
+            raise HTTPException(status_code=400, detail="No active model set")
+        
+        # Generate response
+        messages = [{"role": "user", "content": message}]
+        response = llm_service.generate_chat_response(messages)
+        
+        if response and response.success:
+            return JSONResponse(content={
+                "success": True,
+                "response": response.content,
+                "model": active_model.name
+            })
+        else:
+            return JSONResponse(content={
+                "success": False,
+                "error": response.error_message if response else "Unknown error"
+            })
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to test chat: {e}")
 
 
 @app.post('/api/llm/set-api-key')

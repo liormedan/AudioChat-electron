@@ -398,29 +398,42 @@ export const ChatPage: React.FC = () => {
           <CardContent className="flex-1 flex flex-col">
             <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-2">
               {chatMessages.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  <FileAudio className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No audio chat history</p>
-                  {selectedFile ? (
-                    <div className="mt-4 space-y-2">
-                      <p className="text-sm font-medium">Try these commands:</p>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        {getQuickCommands().slice(0, 4).map((command, index) => (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentMessage(command)}
-                            className="text-xs"
-                          >
-                            {command}
-                          </Button>
-                        ))}
+                <div className="text-center py-8">
+                  <div className="bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20 p-6 rounded-lg border-2 border-orange-200 dark:border-orange-800 max-w-md mx-auto">
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="bg-orange-600 p-3 rounded-full">
+                        <MessageSquare className="h-8 w-8 text-white" />
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-sm">Upload an audio file to start editing with AI commands</p>
-                  )}
+                    <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-200 mb-2">
+                      🤖 שלום! אני Gemma
+                    </h3>
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-4">
+                      העוזר הדיגיטלי שלך - רץ מקומית, חינמי ופרטי
+                    </p>
+                    {selectedFile ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">נסה את הפקודות האלה:</p>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {getQuickCommands().slice(0, 4).map((command, index) => (
+                            <Button
+                              key={index}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentMessage(command)}
+                              className="text-xs"
+                            >
+                              {command}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        העלה קובץ אודיו כדי להתחיל לעבוד איתי
+                      </p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 chatMessages.map((message) => (

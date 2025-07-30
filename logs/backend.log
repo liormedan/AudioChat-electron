@@ -138,3 +138,36 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Audio-Chat-main\\Audio-Chat-
 2025-07-30 10:24:20,773 - __main__ - INFO - 📁 Created necessary directories
 2025-07-30 10:24:20,777 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
 2025-07-30 10:24:20,777 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-30 10:27:31,618 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-30 10:27:31,618 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-30 10:27:32,167 - __main__ - INFO - ✅ All dependencies are available
+2025-07-30 10:27:32,168 - __main__ - INFO - 📁 Created necessary directories
+2025-07-30 10:27:32,172 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-30 10:27:32,172 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-30 10:43:03,339 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-30 10:43:03,339 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-30 10:43:03,340 - __main__ - INFO - 🤖 Gemma AI Assistant will be available for local, private conversations
+2025-07-30 10:43:03,965 - __main__ - INFO - ✅ All dependencies are available
+2025-07-30 10:43:03,967 - __main__ - INFO - 📁 Created necessary directories
+2025-07-30 10:43:03,971 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-30 10:43:03,971 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-30 13:47:47,546 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-30 13:47:47,546 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-30 13:47:47,546 - __main__ - INFO - 🤖 Gemma AI Assistant will be available for local, private conversations
+2025-07-30 13:47:48,116 - __main__ - INFO - ✅ All dependencies are available
+2025-07-30 13:47:48,117 - __main__ - INFO - 📁 Created necessary directories
+2025-07-30 13:47:48,120 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-30 13:47:48,120 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-30 13:47:59,580 - backend.services.ai.llm_service - INFO - 🤖 Gemma models configured for local use
+2025-07-30 13:47:59,580 - backend.services.ai.llm_service - INFO - 💡 To use Gemma models, download them manually using: huggingface-cli download google/gemma-2-2b-it
+2025-07-30 13:47:59,582 - backend.services.ai.llm_service - INFO - 🤖 Active LLM model: Gemini Pro (Provider: Google)
+2025-07-30 13:57:42,434 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-30 13:57:42,435 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-30 13:57:42,435 - __main__ - INFO - 🤖 Gemma AI Assistant will be available for local, private conversations
+2025-07-30 13:57:43,114 - __main__ - INFO - ✅ All dependencies are available
+2025-07-30 13:57:43,115 - __main__ - INFO - 📁 Created necessary directories
+2025-07-30 13:57:43,119 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-30 13:57:43,119 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-30 13:58:01,040 - backend.services.ai.llm_service - INFO - 🤖 Gemma models configured for local use
+2025-07-30 13:58:01,040 - backend.services.ai.llm_service - INFO - 💡 To use Gemma models, download them manually using: huggingface-cli download google/gemma-2-2b-it
+2025-07-30 13:58:01,041 - backend.services.ai.llm_service - INFO - 🤖 Active LLM model: Gemini Pro (Provider: Google)

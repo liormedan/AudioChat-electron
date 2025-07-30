@@ -36,6 +36,7 @@ def setup_logging(log_level: str = "INFO") -> None:
     logger = logging.getLogger(__name__)
     logger.info("🚀 Audio Chat Studio Backend Starting...")
     logger.info("מתחיל שרת הבקאנד של Audio Chat Studio")
+    logger.info("🤖 Gemma AI Assistant will be available for local, private conversations")
 
 def check_dependencies() -> bool:
     """
