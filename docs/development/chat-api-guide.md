@@ -42,3 +42,29 @@ Update example:
 ```
 
 Streaming behaviour is only supported by `/api/chat/stream` and returns incremental text chunks until the model finishes responding.
+
+## Streaming with SSE
+
+The `/api/chat/stream` endpoint can also be consumed using **Server Sent Events** (SSE).  When called, the server responds with the `text/event-stream` content type and sends chunks of text as the model generates them.
+
+Example request using `curl`:
+
+```bash
+curl -N -X POST http://localhost:5000/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "123e4567", "message": "Hello"}'
+```
+
+Read each event until you receive `[DONE]` which signals the end of the stream.  A typical sequence looks like:
+
+```
+data: Hello
+
+data:  there
+
+data:  friend
+
+data: [DONE]
+```
+
+If an error occurs the server will send an `event: error` block containing details so clients should listen for that event as well.
