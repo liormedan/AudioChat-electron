@@ -151,9 +151,11 @@ audio_editing_service = services['audio_editing_service']
 file_upload_service = services['file_upload_service']
 audio_metadata_service = services['audio_metadata_service']
 audio_command_processor = services['audio_command_processor']
-session_service = services.get('session_service')
+codex/remove-lines-155163-for-clean-assignments
+session_service = services['session_service']
 chat_history_service = services['chat_history_service']
-chat_service = services.get('chat_service')
+chat_service = services['chat_service']
+
 
 # --- FastAPI App Initialization ---
 app = create_app()
