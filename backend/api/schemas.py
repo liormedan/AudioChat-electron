@@ -19,3 +19,16 @@ class SessionUpdateRequest(BaseModel):
     model_id: Optional[str] = None
     is_archived: Optional[bool] = None
     metadata: Optional[Dict[str, Any]] = None
+
+
+class MessageCreateRequest(BaseModel):
+    role: str
+    content: str
+    model_id: Optional[str] = None
+    tokens_used: Optional[int] = None
+    response_time: Optional[float] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ExportSessionRequest(BaseModel):
+    format: str = "json"

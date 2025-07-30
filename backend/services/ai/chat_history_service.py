@@ -70,7 +70,7 @@ class ChatHistoryService:
         logger.info(f"Saved message {message.id} to session {session_id}")
         return message.id
 
-    def get_session_messages(self, session_id: str, limit: int = None, offset: int = 0) -> List[Message]:
+    def get_session_messages(self, session_id: str, limit: int = None, offset: int = 0, as_str: bool = True) -> List[Message]:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         query = "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY timestamp ASC"
@@ -81,7 +81,14 @@ class ChatHistoryService:
             cursor.execute(query, (session_id,))
         rows = cursor.fetchall()
         conn.close()
-        return [Message.from_row(r) for r in rows]
+        messages = [Message.from_row(r) for r in rows]
+        if as_str:
+            for m in messages:
+                if hasattr(m.role, "value"):
+                    m.role = m.role.value
+                if hasattr(m.type, "value"):
+                    m.type = m.type.value
+        return messages
 
     def search_messages(self, query: str, user_id: str = None, session_id: str = None) -> List[Message]:
         conn = sqlite3.connect(self.db_path)
@@ -101,7 +108,7 @@ class ChatHistoryService:
 
     def export_session(self, session_id: str, format: str = "json") -> str:
         """Export session messages in specified format"""
-        messages = self.get_session_messages(session_id)
+        messages = self.get_session_messages(session_id, as_str=False)
         
         if format == "json":
             data = [m.to_dict() for m in messages]
@@ -119,9 +126,10 @@ class ChatHistoryService:
         
         for message in messages:
             timestamp = message.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-            role_emoji = "👤" if message.role == "user" else "🤖" if message.role == "assistant" else "⚙️"
-            
-            lines.append(f"## {role_emoji} {message.role.title()} - {timestamp}\n")
+            role = message.role.value if hasattr(message.role, "value") else message.role
+            role_emoji = "👤" if role == "user" else "🤖" if role == "assistant" else "⚙️"
+
+            lines.append(f"## {role_emoji} {role.title()} - {timestamp}\n")
             lines.append(f"{message.content}\n")
             
             if message.model_id:
@@ -141,7 +149,8 @@ class ChatHistoryService:
         
         for message in messages:
             timestamp = message.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-            lines.append(f"[{timestamp}] {message.role.upper()}: {message.content}")
+            role = message.role.value if hasattr(message.role, "value") else message.role
+            lines.append(f"[{timestamp}] {role.upper()}: {message.content}")
             lines.append("")
         
         return "\n".join(lines)
@@ -177,7 +186,7 @@ class ChatHistoryService:
         logger.info(f"Deleted {count} messages from session {session_id}")
         return count
 
-    def get_message_by_id(self, message_id: str) -> Optional[Message]:
+    def get_message_by_id(self, message_id: str, as_str: bool = True) -> Optional[Message]:
         """Get a specific message by ID"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -186,7 +195,13 @@ class ChatHistoryService:
         conn.close()
         
         if row:
-            return Message.from_row(row)
+            msg = Message.from_row(row)
+            if as_str:
+                if hasattr(msg.role, "value"):
+                    msg.role = msg.role.value
+                if hasattr(msg.type, "value"):
+                    msg.type = msg.type.value
+            return msg
         return None
 
     def update_message(self, message_id: str, **updates) -> bool:

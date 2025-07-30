@@ -1,5 +1,6 @@
 import sys
 import os
+import asyncio
 
 # Add the parent directory (backend) to sys.path for module discovery
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -8,32 +9,30 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 from typing import Optional, List, Dict, Any
+import asyncio
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, Response
+from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
+from backend.api.schemas import (
+    SendMessageRequest,
+    SessionCreateRequest,
+    SessionUpdateRequest,
+    MessageCreateRequest,
+    ExportSessionRequest,
+)
+
 from pydantic import BaseModel
+from backend.models.chat import SessionNotFoundError, ModelNotAvailableError
 
 
-class SendMessageRequest(BaseModel):
-    """Request body for sending or streaming a chat message"""
-    session_id: str
-    message: str
-    user_id: Optional[str] = None
+# Import shared request models from schemas module
+from .schemas import (
+    SendMessageRequest,
+    SessionCreateRequest,
+    SessionUpdateRequest,
+)
 
-
-class SessionCreateRequest(BaseModel):
-    """Request body for creating a chat session"""
-    title: Optional[str] = None
-    model_id: Optional[str] = None
-    user_id: Optional[str] = None
-
-
-class SessionUpdateRequest(BaseModel):
-    """Request body for updating a chat session"""
-    title: Optional[str] = None
-    model_id: Optional[str] = None
-    is_archived: Optional[bool] = None
-    metadata: Optional[Dict[str, Any]] = None
 
 def initialize_services():
     """
@@ -152,9 +151,11 @@ audio_editing_service = services['audio_editing_service']
 file_upload_service = services['file_upload_service']
 audio_metadata_service = services['audio_metadata_service']
 audio_command_processor = services['audio_command_processor']
+codex/remove-lines-155163-for-clean-assignments
 session_service = services['session_service']
 chat_history_service = services['chat_history_service']
 chat_service = services['chat_service']
+
 
 # --- FastAPI App Initialization ---
 app = create_app()
@@ -710,20 +711,25 @@ async def send_chat_message(request: SendMessageRequest):
 
 @app.post('/api/chat/stream')
 async def stream_chat_message(request: SendMessageRequest):
-    """Stream chat response for a message"""
+    """Stream chat response using Server-Sent Events"""
     if chat_service is None:
         raise HTTPException(status_code=503, detail="Chat service is not available")
 
-    async def generator():
+    async def event_generator():
         try:
             async for chunk in chat_service.stream_message(request.session_id, request.message, request.user_id):
-                yield chunk
+                yield f"data: {chunk}\n\n"
+            yield "data: [DONE]\n\n"
         except SessionNotFoundError as e:
-            raise HTTPException(status_code=404, detail=str(e))
+            yield f"event: error\ndata: {str(e)}\n\n"
         except ModelNotAvailableError as e:
-            raise HTTPException(status_code=503, detail=str(e))
+            yield f"event: error\ndata: {str(e)}\n\n"
+        except Exception as e:
+            yield f"event: error\ndata: {str(e)}\n\n"
 
-    return StreamingResponse(generator(), media_type='text/plain')
+    return StreamingResponse(event_generator(), media_type='text/event-stream')
+
+
 
 
 @app.get('/api/chat/sessions')
@@ -771,6 +777,129 @@ async def delete_chat_session(session_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"success": True}
+
+
+# Message Management Endpoints
+
+@app.get('/api/chat/sessions/{session_id}/messages')
+async def get_session_messages(session_id: str, limit: Optional[int] = None, offset: int = 0):
+    """Get messages for a specific session"""
+    if chat_history_service is None:
+        raise HTTPException(status_code=503, detail="Chat history service is not available")
+    
+    # Verify session exists
+    if session_service:
+        session = session_service.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+    
+    try:
+        messages = chat_history_service.get_session_messages(session_id, limit=limit, offset=offset)
+        return [msg.to_dict() for msg in messages]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get messages: {str(e)}")
+
+
+@app.post('/api/chat/sessions/{session_id}/messages')
+async def add_message_to_session(session_id: str, request: MessageCreateRequest):
+    """Add a message to a session (for importing or manual entry)"""
+    if chat_history_service is None:
+        raise HTTPException(status_code=503, detail="Chat history service is not available")
+    
+    # Verify session exists
+    if session_service:
+        session = session_service.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+    
+    try:
+        if not request.content:
+            raise HTTPException(status_code=400, detail="Message content is required")
+        
+        if request.role not in ['user', 'assistant', 'system']:
+            raise HTTPException(status_code=400, detail="Invalid role. Must be 'user', 'assistant', or 'system'")
+        
+        from backend.models.chat import Message
+        from datetime import datetime
+        import uuid
+        
+        message = Message(
+            id=str(uuid.uuid4()),
+            session_id=session_id,
+            role=request.role,
+            content=request.content,
+            timestamp=datetime.utcnow(),
+            model_id=request.model_id,
+            tokens_used=request.tokens_used,
+            response_time=request.response_time,
+            metadata=request.metadata or {}
+        )
+        
+        message_id = chat_history_service.save_message(session_id, message)
+        
+        # Update session message count
+        if session_service:
+            session_service.increment_message_count(session_id, 1)
+        
+        return {"success": True, "message_id": message_id}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to add message: {str(e)}")
+
+
+@app.get('/api/chat/search')
+async def search_messages(query: str, user_id: Optional[str] = None, session_id: Optional[str] = None, limit: int = 50):
+    """Search messages across sessions"""
+    if chat_history_service is None:
+        raise HTTPException(status_code=503, detail="Chat history service is not available")
+    
+    if not query or len(query.strip()) < 2:
+        raise HTTPException(status_code=400, detail="Search query must be at least 2 characters")
+    
+    try:
+        messages = chat_history_service.search_messages(query, user_id=user_id, session_id=session_id)
+        return [msg.to_dict() for msg in messages[:limit]]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to search messages: {str(e)}")
+
+
+@app.post('/api/chat/export/{session_id}')
+async def export_session(session_id: str, request: ExportSessionRequest):
+    """Export session messages in various formats"""
+    if chat_history_service is None:
+        raise HTTPException(status_code=503, detail="Chat history service is not available")
+    
+    # Verify session exists
+    if session_service:
+        session = session_service.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+    
+    try:
+        format_type = request.format.lower()
+        
+        if format_type not in ['json', 'markdown', 'txt']:
+            raise HTTPException(status_code=400, detail="Invalid format. Must be 'json', 'markdown', or 'txt'")
+        
+        exported_data = chat_history_service.export_session(session_id, format=format_type)
+        
+        # Set appropriate content type
+        content_types = {
+            'json': 'application/json',
+            'markdown': 'text/markdown',
+            'txt': 'text/plain'
+        }
+        
+        return Response(
+            content=exported_data,
+            media_type=content_types[format_type],
+            headers={
+                "Content-Disposition": f"attachment; filename=session_{session_id}.{format_type}"
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to export session: {str(e)}")
 
 @app.post('/api/audio/command/interpret')
 async def interpret_audio_command(request: Request):
