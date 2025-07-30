@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from backend.models.chat import SessionNotFoundError, ModelNotAvailableError
 
 
 class SendMessageRequest(BaseModel):
