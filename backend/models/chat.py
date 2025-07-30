@@ -2,6 +2,24 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Dict, Any
 import json
+from enum import Enum
+
+
+class MessageRole(Enum):
+    """Possible roles for a chat message."""
+
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
+class MessageType(Enum):
+    """Supported message types."""
+
+    TEXT = "text"
+    AUDIO = "audio"
+    IMAGE = "image"
+    FILE = "file"
 
 @dataclass
 class ChatSession:
@@ -62,20 +80,28 @@ class Message:
     """Single chat message."""
     id: str
     session_id: str
-    role: str  # "user", "assistant", "system"
     content: str
     timestamp: datetime
+    role: MessageRole = MessageRole.USER
+    type: MessageType = MessageType.TEXT
     model_id: Optional[str] = None
     tokens_used: Optional[int] = None
     response_time: Optional[float] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        if isinstance(self.role, str):
+            self.role = MessageRole(self.role)
+        if isinstance(self.type, str):
+            self.type = MessageType(self.type)
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
             "session_id": self.session_id,
-            "role": self.role,
+            "role": self.role.value,
             "content": self.content,
+            "type": self.type.value,
             "timestamp": self.timestamp.isoformat(),
             "model_id": self.model_id,
             "tokens_used": self.tokens_used,
@@ -102,8 +128,9 @@ class Message:
         return cls(
             id=data["id"],
             session_id=data["session_id"],
-            role=data["role"],
+            role=data.get("role", MessageRole.USER.value),
             content=data["content"],
+            type=data.get("type", MessageType.TEXT.value),
             timestamp=datetime.fromisoformat(data["timestamp"]),
             model_id=data.get("model_id"),
             tokens_used=data.get("tokens_used"),

@@ -6,7 +6,7 @@ from datetime import datetime
 from backend.services.ai.chat_service import ChatService
 from backend.services.ai.session_service import SessionService
 from backend.services.ai.chat_history_service import ChatHistoryService
-from backend.models import Message
+from backend.models import Message, MessageRole
 from dataclasses import dataclass, field
 
 
@@ -68,7 +68,7 @@ class ChatServiceTests(unittest.TestCase):
         self.assertTrue(response.success)
         msgs = self.history_service.get_session_messages(self.session.id)
         self.assertEqual(len(msgs), 2)  # user + assistant
-        self.assertEqual(msgs[1].role, "assistant")
+        self.assertEqual(msgs[1].role, MessageRole.ASSISTANT)
 
 
 if __name__ == "__main__":
