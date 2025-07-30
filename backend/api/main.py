@@ -1,5 +1,6 @@
 import sys
 import os
+import asyncio
 
 # Add the parent directory (backend) to sys.path for module discovery
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -712,29 +713,35 @@ async def send_chat_message(request: SendMessageRequest):
 
 @app.post('/api/chat/stream')
 async def stream_chat_message(request: SendMessageRequest):
-    """Stream chat response for a message"""
+    """Stream chat response using Server-Sent Events"""
     if chat_service is None:
         raise HTTPException(status_code=503, detail="Chat service is not available")
 
-    async def generator(req: Request):
+    codex/implement-streaming-responses-with-sse
+    async def event_generator():
         try:
-            async for chunk in chat_service.stream_message(
-                request.session_id,
-                request.message,
-                request.user_id,
-                request=req,
-                timeout=60,
-            ):
+            gen = chat_service.stream_message(request.session_id, request.message, request.user_id)
+            while True:
+                try:
+                    chunk = await asyncio.wait_for(gen.__anext__(), timeout=30)
+                except StopAsyncIteration:
+                    break
+                except asyncio.TimeoutError:
+                    yield f"event: error\ndata: timeout\n\n"
+                    break
+                if await request.is_disconnected():
+                    break
                 yield f"data: {chunk}\n\n"
-        except asyncio.CancelledError:
-            print("Client disconnected from SSE")
-            raise
-        except SessionNotFoundError as e:
-            raise HTTPException(status_code=404, detail=str(e))
-        except ModelNotAvailableError as e:
-            raise HTTPException(status_code=503, detail=str(e))
 
-    return EventSourceResponse(generator(request))
+        except SessionNotFoundError as e:
+            yield f"event: error\ndata: {str(e)}\n\n"
+        except ModelNotAvailableError as e:
+            yield f"event: error\ndata: {str(e)}\n\n"
+
+        codex/implement-streaming-responses-with-sse
+        return StreamingResponse(event_generator(), media_type='text/event-stream')
+
+
 
 
 @app.get('/api/chat/sessions')
