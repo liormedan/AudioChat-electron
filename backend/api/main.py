@@ -13,6 +13,16 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
+codex/remove-request-classes-and-update-imports
+codex/remove-request-classes-and-update-imports
+from backend.api.schemas import (
+    SendMessageRequest,
+    SessionCreateRequest,
+    SessionUpdateRequest,
+)
+
+
+
 codex/add-chat-api-endpoints
 
 from pydantic import BaseModel
@@ -25,6 +35,7 @@ from .schemas import (
     SessionCreateRequest,
     SessionUpdateRequest,
 )
+
 
 def initialize_services():
     """
