@@ -700,14 +700,14 @@ async def send_chat_message(request: SendMessageRequest):
 
 
 @app.post('/api/chat/stream')
-async def stream_chat_message(request: SendMessageRequest):
+async def stream_chat_message(payload: SendMessageRequest, request: Request):
     """Stream chat response using Server-Sent Events"""
     if chat_service is None:
         raise HTTPException(status_code=503, detail="Chat service is not available")
 
     async def event_generator():
         try:
-            async for chunk in chat_service.stream_message(request.session_id, request.message, request.user_id):
+            async for chunk in chat_service.stream_message(payload.session_id, payload.message, payload.user_id, request=request):
                 yield f"data: {chunk}\n\n"
             yield "data: [DONE]\n\n"
         except SessionNotFoundError as e:
