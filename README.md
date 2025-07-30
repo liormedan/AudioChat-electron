@@ -165,6 +165,7 @@ frontend/electron-app/src/
 | `POST` | `/api/audio/command/execute` | ביצוע פקודה |
 
 למידע על Endpoints של מערכת הצ'אט ראו `docs/development/chat-api-guide.md`.
+המסמך כולל כעת גם סעיף **"Streaming with SSE"** המתאר כיצד לקרוא את `/api/chat/stream` כ־`text/event-stream`.
 
 ## 🛠️ פתרון בעיות
 
