@@ -1,6 +1,7 @@
 # תוכנית יישום - מערכת שיחות AI
 
-- [x] 1. הקמת תשתית Backend לשיחות AI
+- [ ] 1. הקמת תשתית Backend לשיחות AI
+
   - יצירת מודלי נתונים חדשים לשיחות ו-sessions
   - הוספת טבלאות מסד נתונים לשמירת היסטוריית שיחות
   - יצירת שירותי ניהול sessions ו-messages
@@ -51,7 +52,9 @@
   - הוספת validation ו-error handling
   - _דרישות: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 2.1 הוספת Chat API endpoints
+- [x] 2.1 הוספת Chat API endpoints
+
+
   - עדכון `backend/api/main.py` להוסיף endpoints: POST /api/chat/send, POST /api/chat/stream
   - מימוש endpoint GET /api/chat/sessions ו-POST /api/chat/sessions
   - הוספת endpoints לניהול sessions: GET/PUT/DELETE /api/chat/sessions/{session_id}
@@ -59,6 +62,8 @@
   - _דרישות: 1.1, 1.2, 1.3_
 
 - [ ] 2.2 מימוש streaming responses
+
+
   - הוספת תמיכה ב-Server-Sent Events (SSE) ל-FastAPI
   - מימוש streaming endpoint עם yield responses
   - הוספת טיפול בביטול requests ו-timeouts
