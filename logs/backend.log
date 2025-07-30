@@ -243,3 +243,25 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Audio-Chat-main\\Audio-Chat-
 2025-07-30 15:29:00,951 - backend.services.ai.llm_service - INFO - 🚀 Gemma AI Assistant Ready: Gemma 2 2B-IT (Local)
 2025-07-30 15:29:00,955 - backend.services.ai.llm_service - INFO - 💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות
 2025-07-30 15:29:00,956 - backend.services.ai.llm_service - INFO - 📝 הערה: להורדת מודל Gemma בפועל, הרץ: huggingface-cli download google/gemma-2-2b-it
+2025-07-30 15:37:37,169 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-30 15:37:37,170 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-30 15:37:37,171 - __main__ - INFO - 🤖 Gemma AI Assistant will be available for local, private conversations
+2025-07-30 15:37:38,448 - __main__ - INFO - ✅ All dependencies are available
+2025-07-30 15:37:38,450 - __main__ - INFO - 📁 Created necessary directories
+2025-07-30 15:37:38,455 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-30 15:37:38,455 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-30 15:38:10,814 - backend.services.ai.llm_service - INFO - 🤖 Gemma models configured for local use
+2025-07-30 15:38:10,815 - backend.services.ai.llm_service - INFO - 💡 To use Gemma models, download them manually using: huggingface-cli download google/gemma-2-2b-it
+2025-07-30 15:38:10,815 - backend.services.ai.llm_service - INFO - 🚀 Gemma AI Assistant Ready: Gemma 2 2B-IT (Local)
+2025-07-30 15:38:10,816 - backend.services.ai.llm_service - INFO - 💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות
+2025-07-30 15:38:10,816 - backend.services.ai.llm_service - INFO - 📝 הערה: להורדת מודל Gemma בפועל, הרץ: huggingface-cli download google/gemma-2-2b-it
+2025-07-30 15:49:08,036 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-30 15:49:08,037 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-30 15:49:08,037 - __main__ - INFO - 🤖 Gemma AI Assistant will be available for local, private conversations
+2025-07-30 15:49:08,832 - __main__ - INFO - ✅ All dependencies are available
+2025-07-30 15:49:08,834 - __main__ - INFO - 📁 Created necessary directories
+2025-07-30 15:49:08,838 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-30 15:49:08,838 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-30 15:49:34,456 - backend.services.ai.llm_service - INFO - 🤖 Local models configured for use
+2025-07-30 15:49:34,458 - backend.services.ai.llm_service - INFO - 🚀 Local AI Assistant Ready: Gemma 2 2B-IT (Local)
+2025-07-30 15:49:34,458 - backend.services.ai.llm_service - INFO - 💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות

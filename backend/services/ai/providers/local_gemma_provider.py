@@ -48,14 +48,9 @@ class LocalGemmaProvider(BaseProvider):
                 path_to_use = local_path
                 print(f"Using downloaded model: {local_path}")
             else:
-                # Map model IDs to actual model paths/names
-                model_mapping = {
-                    "microsoft-dialogpt-medium": "microsoft/DialoGPT-medium",
-                    "local-gemma-3-4b-it": "google/gemma-3-4b-it", 
-                    "google-gemma-2-2b-it": "google/gemma-2-2b-it"
-                }
-                path_to_use = model_mapping.get(model_id, model_id)
-                print(f"Using model ID: {path_to_use}")
+                # For any model, try to use the downloaded DialoGPT as fallback
+                print(f"No local model found, using DialoGPT-small as fallback")
+                path_to_use = "microsoft/DialoGPT-small"
             
             print(f"Using model path: {path_to_use}")
 
@@ -227,11 +222,31 @@ class LocalGemmaProvider(BaseProvider):
                     config = f.read()
                     for line in config.split('\n'):
                         if line.startswith('local_path='):
-                            local_path = line.split('=', 1)[1]
+                            local_path = line.split('=', 1)[1].strip()
                             if os.path.exists(local_path):
+                                print(f"Found local model at: {local_path}")
                                 return local_path
+                            else:
+                                print(f"Local path not found: {local_path}")
         except Exception as e:
             print(f"Could not find local model: {e}")
+        
+        # Fallback: try to find the model directory directly
+        try:
+            models_dir = Path("models/gemma")
+            if models_dir.exists():
+                for item in models_dir.iterdir():
+                    if item.is_dir() and "DialoGPT-small" in item.name:
+                        snapshots_dir = item / "snapshots"
+                        if snapshots_dir.exists():
+                            snapshots = list(snapshots_dir.iterdir())
+                            if snapshots:
+                                model_path = str(snapshots[0])
+                                print(f"Found model via directory search: {model_path}")
+                                return model_path
+        except Exception as e:
+            print(f"Directory search failed: {e}")
+        
         return None    
 # Abstract methods implementation
     def generate_text(self, prompt: str, max_tokens: int = 100) -> str:

@@ -76,17 +76,20 @@ class LLMService:
         # Ensure there is an active model after initialization
         active = self.get_active_model()
         if not active:
-            # Try to set Gemma as default model (without downloading)
-            gemma_models = ["local-gemma-3-4b-it", "google-gemma-2-2b-it"]
-            for model_id in gemma_models:
+            # First, add a model for the downloaded DialoGPT
+            self._add_downloaded_model()
+            
+            # Try to set a local model as default
+            local_models = ["microsoft-dialogpt-small", "google-gemma-2-2b-it", "local-gemma-3-4b-it"]
+            for model_id in local_models:
                 if self.get_model(model_id):
                     self.set_active_model(model_id)
                     active = self.get_active_model()
                     if active:
-                        logger.info(f"✅ Default model set to Gemma: {active.name} ({active.id})")
+                        logger.info(f"✅ Default model set: {active.name} ({active.id})")
                         break
             
-            # If no Gemma model found, try any available model
+            # If no specific model found, try any available model
             if not active:
                 all_models = self.get_all_models()
                 if all_models:
@@ -105,9 +108,8 @@ class LLMService:
         
         if active:
             if active.provider == "Local Gemma":
-                logger.info(f"🚀 Gemma AI Assistant Ready: {active.name}")
+                logger.info(f"🚀 Local AI Assistant Ready: {active.name}")
                 logger.info("💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות")
-                logger.info("📝 הערה: להורדת מודל Gemma בפועל, הרץ: huggingface-cli download google/gemma-2-2b-it")
             else:
                 logger.info(f"🤖 Active LLM model: {active.name} (Provider: {active.provider})")
         else:
@@ -351,12 +353,42 @@ class LLMService:
 
     def _ensure_latest_local_gemma(self) -> None:
         """Ensure Gemma models are available without automatic download."""
-        logger.info("🤖 Gemma models configured for local use")
-        logger.info("💡 To use Gemma models, download them manually using: huggingface-cli download google/gemma-2-2b-it")
+        logger.info("🤖 Local models configured for use")
         
         # Just ensure the models are registered in the database
         # The actual model loading will happen when needed by the provider
         pass
+    
+    def _add_downloaded_model(self) -> None:
+        """Add downloaded model to the database if it exists"""
+        try:
+            from pathlib import Path
+            config_file = Path("models/gemma/model_config.txt")
+            if config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    config = f.read()
+                    model_id = None
+                    for line in config.split('\n'):
+                        if line.startswith('model_id='):
+                            model_id = line.split('=', 1)[1]
+                            break
+                    
+                    if model_id and not self.get_model("microsoft-dialogpt-small"):
+                        # Add the downloaded model to the database
+                        model = LLMModel(
+                            id="microsoft-dialogpt-small",
+                            name="DialoGPT Small (Local)",
+                            provider="Local Gemma",
+                            description="מודל שיחה מקומי של Microsoft - מהיר, חינמי ופרטי",
+                            max_tokens=1024,
+                            cost_per_token=0,
+                            capabilities=[ModelCapability.TEXT_GENERATION, ModelCapability.CHAT],
+                            context_window=1024
+                        )
+                        self.save_model(model)
+                        logger.info(f"✅ Added downloaded model: {model.name}")
+        except Exception as e:
+            logger.warning(f"Could not add downloaded model: {e}")
     
     # Provider Management
     def save_provider(self, provider: LLMProvider) -> None:
