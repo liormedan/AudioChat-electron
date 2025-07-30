@@ -169,9 +169,14 @@ class TestChatService:
         
         # Verify session was retrieved
         mock_session_service.get_session.assert_called_once_with("test-session")
-        
+
         # Verify messages were saved
         assert mock_history_service.save_message.call_count == 2  # User + AI message
+
+        # Verify message count incremented for both messages
+        mock_session_service.increment_message_count.assert_called_once_with(
+            "test-session", 2
+        )
     
     @pytest.mark.asyncio
     async def test_stream_message_fallback(self, chat_service, mock_llm_service, mock_session_service, mock_history_service):
