@@ -13,30 +13,18 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
+codex/add-chat-api-endpoints
+
 from pydantic import BaseModel
 from backend.models.chat import SessionNotFoundError, ModelNotAvailableError
 
 
-class SendMessageRequest(BaseModel):
-    """Request body for sending or streaming a chat message"""
-    session_id: str
-    message: str
-    user_id: Optional[str] = None
-
-
-class SessionCreateRequest(BaseModel):
-    """Request body for creating a chat session"""
-    title: Optional[str] = None
-    model_id: Optional[str] = None
-    user_id: Optional[str] = None
-
-
-class SessionUpdateRequest(BaseModel):
-    """Request body for updating a chat session"""
-    title: Optional[str] = None
-    model_id: Optional[str] = None
-    is_archived: Optional[bool] = None
-    metadata: Optional[Dict[str, Any]] = None
+# Import shared request models from schemas module
+from .schemas import (
+    SendMessageRequest,
+    SessionCreateRequest,
+    SessionUpdateRequest,
+)
 
 def initialize_services():
     """
