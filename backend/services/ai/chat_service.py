@@ -161,7 +161,8 @@ class ChatService:
                 response_time=response_time,
             )
             self.history_service.save_message(session_id, ai_msg)
-            self.session_service.increment_message_count(session_id, 1)  # Only increment for AI message
+            # Increment count for both the user message and the AI response
+            self.session_service.increment_message_count(session_id, 2)
             
         except asyncio.CancelledError:
             logger.info("Streaming cancelled due to client disconnect")
