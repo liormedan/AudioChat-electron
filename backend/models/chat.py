@@ -23,12 +23,6 @@ class MessageType(Enum):
     FILE = "file"
 
 
-class MessageRole(Enum):
-    """Message role types"""
-    USER = "user"
-    ASSISTANT = "assistant"
-    SYSTEM = "system"
-
 
 class SessionStatus(Enum):
     """Session status types"""

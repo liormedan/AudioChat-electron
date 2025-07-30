@@ -164,6 +164,8 @@ frontend/electron-app/src/
 | `GET` | `/api/audio/metadata/{id}` | metadata של קובץ |
 | `POST` | `/api/audio/command/execute` | ביצוע פקודה |
 
+למידע על Endpoints של מערכת הצ'אט ראו `docs/development/chat-api-guide.md`.
+
 ## 🛠️ פתרון בעיות
 
 ### בעיות נפוצות
