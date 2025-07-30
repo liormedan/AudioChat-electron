@@ -1,5 +1,4 @@
 import os
-import json
 import sqlite3
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
@@ -192,22 +191,48 @@ class ChatService:
         """יצירת מסד נתונים אם לא קיים"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         # יצירת טבלת סשנים
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS chat_sessions (
-            session_id TEXT PRIMARY KEY,
+            id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
+            model_id TEXT NOT NULL,
+            user_id TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
-            data TEXT NOT NULL
+            message_count INTEGER DEFAULT 0,
+            is_archived BOOLEAN DEFAULT FALSE,
+            metadata TEXT DEFAULT '{}'
         )
         ''')
-        
+
+        # יצירת טבלת הודעות
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+            content TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            model_id TEXT,
+            tokens_used INTEGER,
+            response_time REAL,
+            metadata TEXT DEFAULT '{}',
+            FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE
+        )
+        ''')
+
+        # אינדקסים לביצועים
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated_at ON chat_sessions(updated_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_messages_timestamp ON chat_messages(timestamp)')
+
         conn.commit()
         conn.close()
     
-    def create_session(self, title: str = "שיחה חדשה") -> ChatSession:
+    def create_session(self, title: str = "שיחה חדשה", model_id: str = "default", user_id: str = None) -> ChatSession:
         """
         יצירת סשן חדש
         
@@ -218,13 +243,21 @@ class ChatService:
             ChatSession: הסשן החדש
         """
         # יצירת מזהה סשן
-        session_id = datetime.now().strftime("%Y%m%d%H%M%S")
-        
+        session_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
+
         # יצירת סשן
         session = ChatSession(session_id=session_id, title=title)
-        
-        # שמירת הסשן
-        self._save_session(session)
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        now = datetime.now().isoformat()
+        cursor.execute(
+            '''INSERT INTO chat_sessions (id, title, model_id, user_id, created_at, updated_at, message_count, metadata)
+               VALUES (?, ?, ?, ?, ?, ?, 0, '{}')''',
+            (session_id, title, model_id, user_id, now, now)
+        )
+        conn.commit()
+        conn.close()
         
         # הגדרת הסשן הנוכחי
         self.current_session = session
@@ -232,30 +265,20 @@ class ChatService:
         return session
     
     def _save_session(self, session: ChatSession) -> None:
-        """
-        שמירת סשן במסד הנתונים
-        
-        Args:
-            session (ChatSession): הסשן לשמירה
-        """
+        """עדכון נתוני הסשן במסד הנתונים"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
-        # המרת הסשן למילון ואז ל-JSON
-        session_data = json.dumps(session.to_dict())
-        
-        # שמירת הסשן
-        cursor.execute('''
-        INSERT OR REPLACE INTO chat_sessions (session_id, title, created_at, updated_at, data)
-        VALUES (?, ?, ?, ?, ?)
-        ''', (
-            session.session_id,
-            session.title,
-            session.created_at.isoformat(),
-            session.updated_at.isoformat(),
-            session_data
-        ))
-        
+
+        cursor.execute(
+            '''UPDATE chat_sessions SET title = ?, updated_at = ?, message_count = ? WHERE id = ?''',
+            (
+                session.title,
+                session.updated_at.isoformat(),
+                len(session.messages),
+                session.session_id,
+            ),
+        )
+
         conn.commit()
         conn.close()
         
@@ -276,50 +299,46 @@ class ChatService:
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
-        # טעינת הסשן
+
         cursor.execute('''
-        SELECT data FROM chat_sessions WHERE session_id = ?
+            SELECT id, title, created_at, updated_at FROM chat_sessions WHERE id = ?
         ''', (session_id,))
-        
-        row = cursor.fetchone()
-        conn.close()
-        
-        if row is None:
+        session_row = cursor.fetchone()
+        if not session_row:
+            conn.close()
             return None
-        
-        # המרת ה-JSON למילון ואז לסשן
-        session_data = json.loads(row[0])
-        
-        # חישוב עימוד אם נדרש
-        if page > 1 or page_size < len(session_data["messages"]):
-            # חישוב אינדקסים
-            start_idx = (page - 1) * page_size
-            end_idx = start_idx + page_size
-            
-            # שמירת כל ההודעות המקוריות
-            all_messages = session_data["messages"]
-            
-            # עדכון רשימת ההודעות לפי העימוד
-            session_data["messages"] = all_messages[start_idx:end_idx]
-            
-            # שמירת מידע על העימוד
-            session_data["pagination"] = {
-                "page": page,
-                "page_size": page_size,
-                "total_messages": len(all_messages),
-                "total_pages": (len(all_messages) + page_size - 1) // page_size
-            }
-        else:
-            # אין צורך בעימוד
-            session_data["pagination"] = {
-                "page": 1,
-                "page_size": page_size,
-                "total_messages": len(session_data["messages"]),
-                "total_pages": 1
-            }
-        
-        session = ChatSession.from_dict(session_data)
+
+        offset = (page - 1) * page_size
+        cursor.execute(
+            '''SELECT id, role, content, timestamp FROM chat_messages
+               WHERE session_id = ? ORDER BY timestamp LIMIT ? OFFSET ?''',
+            (session_id, page_size, offset)
+        )
+        message_rows = cursor.fetchall()
+
+        cursor.execute('SELECT COUNT(*) FROM chat_messages WHERE session_id = ?', (session_id,))
+        total_messages = cursor.fetchone()[0]
+        conn.close()
+
+        messages = [
+            ChatMessage(
+                text=row[2],
+                sender=row[1],
+                timestamp=datetime.fromisoformat(row[3]),
+                message_id=row[0],
+            )
+            for row in message_rows
+        ]
+
+        session = ChatSession(session_id=session_row[0], title=session_row[1], messages=messages)
+        session.created_at = datetime.fromisoformat(session_row[2])
+        session.updated_at = datetime.fromisoformat(session_row[3])
+        session.pagination = {
+            "page": page,
+            "page_size": page_size,
+            "total_messages": total_messages,
+            "total_pages": (total_messages + page_size - 1) // page_size,
+        }
         
         # הגדרת הסשן הנוכחי
         self.current_session = session
@@ -341,7 +360,7 @@ class ChatService:
         
         # טעינת כל הסשנים
         cursor.execute('''
-        SELECT session_id, title, updated_at FROM chat_sessions
+        SELECT id, title, updated_at FROM chat_sessions
         ORDER BY updated_at DESC
         ''')
         
@@ -370,9 +389,7 @@ class ChatService:
         cursor = conn.cursor()
         
         # מחיקת הסשן
-        cursor.execute('''
-        DELETE FROM chat_sessions WHERE session_id = ?
-        ''', (session_id,))
+        cursor.execute('DELETE FROM chat_sessions WHERE id = ?', (session_id,))
         
         success = cursor.rowcount > 0
         conn.commit()
@@ -419,17 +436,42 @@ class ChatService:
             }
             message.add_attachment(attachment)
         
-        # הוספת ההודעה לסשן
+        # הוספת ההודעה למסד הנתונים
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            '''INSERT INTO chat_messages (id, session_id, role, content, timestamp)
+               VALUES (?, ?, ?, ?, ?)''',
+            (
+                message.message_id,
+                self.current_session.session_id,
+                sender,
+                text,
+                message.timestamp.isoformat(),
+            ),
+        )
+        cursor.execute(
+            'UPDATE chat_sessions SET updated_at = ?, message_count = message_count + 1 WHERE id = ?',
+            (message.timestamp.isoformat(), self.current_session.session_id),
+        )
+        conn.commit()
+        conn.close()
+
+        # הוספת ההודעה לאובייקט הסשן בזיכרון
         self.current_session.add_message(message)
-        
-        # שמירת הסשן
-        self._save_session(self.current_session)
         
         return message
     
     def clear_current_session(self) -> None:
         """ניקוי הסשן הנוכחי"""
         if self.current_session:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM chat_messages WHERE session_id = ?', (self.current_session.session_id,))
+            cursor.execute('UPDATE chat_sessions SET message_count = 0 WHERE id = ?', (self.current_session.session_id,))
+            conn.commit()
+            conn.close()
+
             self.current_session.messages = []
             self._save_session(self.current_session)
     
@@ -454,23 +496,16 @@ class ChatService:
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
-        # טעינת הסשן
-        cursor.execute('''
-        SELECT data FROM chat_sessions WHERE session_id = ?
-        ''', (session_id,))
-        
+
+        cursor.execute('SELECT message_count FROM chat_sessions WHERE id = ?', (session_id,))
         row = cursor.fetchone()
+        if row:
+            count = row[0]
+        else:
+            count = 0
+
         conn.close()
-        
-        if row is None:
-            return 0
-        
-        # המרת ה-JSON למילון
-        session_data = json.loads(row[0])
-        
-        # החזרת מספר ההודעות
-        return len(session_data["messages"])
+        return count
 
     def generate_ai_reply(self, text: str) -> Optional[str]:
         """Generate an AI response using the connected LLM service"""

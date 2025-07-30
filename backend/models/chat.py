@@ -3,9 +3,9 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 import json
 
-
 @dataclass
 class ChatSession:
+    """Chat session metadata."""
     id: str
     title: str
     model_id: str
@@ -43,9 +43,23 @@ class ChatSession:
             metadata=json.loads(row[8]) if row[8] else {},
         )
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ChatSession":
+        return cls(
+            id=data["id"],
+            title=data["title"],
+            model_id=data["model_id"],
+            user_id=data.get("user_id"),
+            created_at=datetime.fromisoformat(data["created_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]),
+            message_count=data["message_count"],
+            is_archived=data.get("is_archived", False),
+            metadata=data.get("metadata", {}),
+        )
 
 @dataclass
 class Message:
+    """Single chat message."""
     id: str
     session_id: str
     role: str  # "user", "assistant", "system"
@@ -83,9 +97,23 @@ class Message:
             metadata=json.loads(row[8]) if row[8] else {},
         )
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Message":
+        return cls(
+            id=data["id"],
+            session_id=data["session_id"],
+            role=data["role"],
+            content=data["content"],
+            timestamp=datetime.fromisoformat(data["timestamp"]),
+            model_id=data.get("model_id"),
+            tokens_used=data.get("tokens_used"),
+            response_time=data.get("response_time"),
+            metadata=data.get("metadata", {}),
+        )
 
 @dataclass
 class ChatResponse:
+    """Response from the model for a chat message."""
     content: str
     model_id: str
     tokens_used: int
@@ -105,14 +133,25 @@ class ChatResponse:
             "metadata": self.metadata,
         }
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ChatResponse":
+        return cls(
+            content=data["content"],
+            model_id=data["model_id"],
+            tokens_used=data["tokens_used"],
+            response_time=data["response_time"],
+            success=data["success"],
+            error_message=data.get("error_message"),
+            metadata=data.get("metadata", {}),
+        )
 
+# Exceptions
 class ChatError(Exception):
     """Base exception for chat-related errors."""
-
 
 class SessionNotFoundError(ChatError):
     """Raised when a session cannot be found."""
 
-
 class ModelNotAvailableError(ChatError):
     """Raised when no model is available for chat generation."""
+
