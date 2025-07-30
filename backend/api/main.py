@@ -113,6 +113,21 @@ app = create_app()
 async def read_root():
     return {"status": "ok", "message": "Audio Chat Python Backend is running!"}
 
+@app.get('/health')
+async def health_check():
+    """Health check endpoint for monitoring"""
+    return {
+        "status": "healthy",
+        "message": "Audio Chat Studio Backend is running",
+        "services": {
+            "file_upload": file_upload_service is not None,
+            "audio_metadata": audio_metadata_service is not None,
+            "audio_editing": audio_editing_service is not None,
+            "llm": llm_service is not None,
+            "command_processor": audio_command_processor is not None
+        }
+    }
+
 @app.post('/api/files/list')
 async def list_files_endpoint(request: Request):
     data = await request.json()

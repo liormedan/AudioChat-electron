@@ -2,6 +2,11 @@
 chcp 65001 >nul
 title Audio Chat Studio - Setup & Installation
 
+REM Change to project root directory if running from scripts folder
+if exist "..\requirements.txt" (
+    cd /d "%~dp0.."
+)
+
 echo.
 echo ========================================
 echo    🎵 Audio Chat Studio 🎵

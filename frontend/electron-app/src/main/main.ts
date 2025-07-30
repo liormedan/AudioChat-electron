@@ -1,8 +1,9 @@
 import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron';
-import { join } from 'path';
+import { join, resolve, dirname } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
+// In Electron/Node.js CommonJS context, __filename and __dirname are available
+// We'll use them directly since we're in a CommonJS environment
 
-// Security: Disable node integration and enable context isolation
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const shouldOpenDevTools = ['1', 'true'].includes(
   (process.env.OPEN_DEVTOOLS ?? '').toLowerCase()
@@ -76,7 +77,6 @@ class MainWindow {
   }
 
   private createWindow() {
-    // Create the browser window with security best practices
     this.window = new BrowserWindow({
       width: this.windowState.width,
       height: this.windowState.height,
@@ -84,117 +84,82 @@ class MainWindow {
       y: this.windowState.y,
       minWidth: 800,
       minHeight: 600,
-      show: false, // Don't show until ready
+      show: false,
       titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
       webPreferences: {
-        // Security: Enable context isolation and disable node integration
         contextIsolation: true,
         nodeIntegration: false,
-        nodeIntegrationInWorker: false,
-        nodeIntegrationInSubFrames: false,
-        // enableRemoteModule is deprecated in newer Electron versions
         webSecurity: true,
-        allowRunningInsecureContent: false,
-        experimentalFeatures: false,
-        // Preload script for secure IPC
         preload: join(__dirname, '../preload/preload/preload.js'),
       },
     });
 
-    // Load the application UI
     if (isDev) {
-      // In development, load from the Vite dev server
-      const devServerUrl =
-        process.env.VITE_DEV_SERVER_URL ?? 'http://localhost:5174';
+      const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? 'http://localhost:5174';
       console.log('Loading renderer from dev server:', devServerUrl);
       void this.window.loadURL(devServerUrl);
     } else {
-      // __dirname is dist/main/main, so go up to dist/renderer for production
-      const indexPath = join(__dirname, '../../renderer/index.html');
-      console.log('Loading renderer from:', indexPath);
-      console.log('File exists:', existsSync(indexPath));
+      const indexPath = resolve(__dirname, '..', '..', 'renderer', 'index.html');
+      console.log('📂 Checking renderer index.html');
+      console.log('⛳ Path:', indexPath);
+      console.log('✅ Exists?', existsSync(indexPath));
 
       if (existsSync(indexPath)) {
         void this.window.loadFile(indexPath);
       } else {
-        console.error('No renderer found. Path checked:', indexPath);
-        console.error('Current __dirname:', __dirname);
+        console.error('❌ No renderer found. App will exit.');
         app.quit();
         return;
       }
     }
 
-    // Always open DevTools for debugging
-    this.window.webContents.openDevTools();
-    
-    // Add error handling
+    if (shouldOpenDevTools) {
+      this.window.webContents.openDevTools();
+    }
+
     this.window.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       console.error('Failed to load:', errorCode, errorDescription);
     });
-    
+
     this.window.webContents.on('crashed', () => {
       console.error('Renderer process crashed');
     });
 
-    // Show window when ready
     this.window.once('ready-to-show', () => {
-      console.log('Window ready to show');
       if (this.windowState.isMaximized) {
         this.window?.maximize();
       }
       this.window?.show();
-      
-      // Focus window on creation
       this.window?.webContents.focus();
     });
 
-    // Handle window closed
     this.window.on('closed', () => {
       this.clearSaveTimer();
       this.saveWindowStateNow();
       this.window = null;
     });
 
-    // Save window state on resize/move
     this.window.on('resize', () => this.scheduleSaveWindowState());
     this.window.on('move', () => this.scheduleSaveWindowState());
   }
 
   private setupIPC() {
-    // Window management handlers
-    ipcMain.handle('window:minimize', () => {
-      this.window?.minimize();
-    });
-
+    ipcMain.handle('window:minimize', () => this.window?.minimize());
     ipcMain.handle('window:maximize', () => {
-      if (this.window?.isMaximized()) {
-        this.window.unmaximize();
-      } else {
-        this.window?.maximize();
-      }
+      this.window?.isMaximized() ? this.window.unmaximize() : this.window?.maximize();
     });
-
-    ipcMain.handle('window:close', () => {
-      this.window?.close();
-    });
+    ipcMain.handle('window:close', () => this.window?.close());
 
     ipcMain.handle('window:getState', () => {
       if (!this.window) return null;
       const bounds = this.window.getBounds();
-      return {
-        width: bounds.width,
-        height: bounds.height,
-        x: bounds.x,
-        y: bounds.y,
-        isMaximized: this.window.isMaximized()
-      };
+      return { ...bounds, isMaximized: this.window.isMaximized() };
     });
 
     ipcMain.handle('window:setBounds', (_, bounds) => {
       this.window?.setBounds(bounds);
     });
 
-    // File operations
     ipcMain.handle('file:select', async (_, options) => {
       if (!this.window) return null;
       const result = await dialog.showOpenDialog(this.window, {
@@ -212,53 +177,37 @@ class MainWindow {
       return result.canceled ? null : result.filePaths[0];
     });
 
-    // Settings (placeholder)
-    ipcMain.handle('settings:get', () => {
-      return {};
-    });
-
+    ipcMain.handle('settings:get', () => ({}));
     ipcMain.handle('settings:update', (_, settings) => {
-      // Implement settings storage
       console.log('Settings updated:', settings);
     });
 
-    // Theme (placeholder)
     ipcMain.handle('theme:set', (_, theme) => {
       console.log('Theme set to:', theme);
     });
+    ipcMain.handle('theme:get', () => 'light');
 
-    ipcMain.handle('theme:get', () => {
-      return 'light';
-    });
-
-    // Notifications
     ipcMain.handle('notification:show', (_, title, body) => {
       new Notification({ title, body }).show();
     });
 
-    // Python backend communication (placeholder)
     ipcMain.handle('python:call', async (_, service, method, payload) => {
       console.log(`Python call: ${service}.${method}`, payload);
-      // This would normally communicate with the Python backend
       return { success: true, message: 'Python backend not implemented yet' };
     });
   }
 }
 
 app.whenReady().then(() => {
-  console.log('App is ready, creating main window...');
+  console.log('⚡ App is ready, creating main window...');
   new MainWindow();
 });
 
 app.on('window-all-closed', () => {
-  console.log('All windows closed');
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('activate', () => {
-  console.log('App activated');
   if (BrowserWindow.getAllWindows().length === 0) {
     new MainWindow();
   }
