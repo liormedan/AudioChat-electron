@@ -1,7 +1,9 @@
 import logging
 import time
 import uuid
-from typing import List, AsyncGenerator
+from typing import List, AsyncGenerator, Optional
+import asyncio
+from fastapi import Request
 from datetime import datetime
 
 from backend.models.chat import Message, ChatResponse, ModelNotAvailableError, SessionNotFoundError
@@ -78,7 +80,14 @@ class ChatService:
         self.session_service.increment_message_count(session_id, 2)
         return response
 
-    async def stream_message(self, session_id: str, message: str, user_id: str = None) -> AsyncGenerator[str, None]:
+    async def stream_message(
+        self,
+        session_id: str,
+        message: str,
+        user_id: str = None,
+        request: Optional[Request] = None,
+        timeout: int = 60,
+    ) -> AsyncGenerator[str, None]:
         """
         Send message with streaming response
         
@@ -118,11 +127,12 @@ class ChatService:
         tokens_used = 0
         
         try:
-            # Check if LLM service supports streaming
             if hasattr(self.llm_service, 'stream_chat_response'):
-                async for chunk in self.llm_service.stream_chat_response(context):
+                async for chunk in self.llm_service.stream_chat_response(context, timeout=timeout):
                     full_response += chunk
                     tokens_used += 1  # Approximate token count
+                    if request and await request.is_disconnected():
+                        raise asyncio.CancelledError()
                     yield chunk
             else:
                 # Fallback to regular response
@@ -134,6 +144,8 @@ class ChatService:
                 
                 full_response = provider_resp.content
                 tokens_used = provider_resp.tokens_used
+                if request and await request.is_disconnected():
+                    raise asyncio.CancelledError()
                 yield full_response
 
             # Save AI response
@@ -151,6 +163,9 @@ class ChatService:
             self.history_service.save_message(session_id, ai_msg)
             self.session_service.increment_message_count(session_id, 1)  # Only increment for AI message
             
+        except asyncio.CancelledError:
+            logger.info("Streaming cancelled due to client disconnect")
+            raise
         except Exception as e:
             logger.error(f"Streaming failed: {e}")
             raise ModelNotAvailableError(str(e))

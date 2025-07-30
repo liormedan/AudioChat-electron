@@ -3,6 +3,7 @@ Unit tests for ChatService
 """
 import pytest
 from unittest.mock import Mock, AsyncMock
+import asyncio
 from datetime import datetime
 
 from backend.services.ai.chat_service import ChatService
@@ -192,7 +193,24 @@ class TestChatService:
     async def test_stream_message_session_not_found(self, chat_service, mock_session_service):
         """Test streaming to non-existent session"""
         mock_session_service.get_session.return_value = None
-        
+
         with pytest.raises(SessionNotFoundError):
             async for chunk in chat_service.stream_message("non-existent-session", "Hello"):
                 pass
+
+    @pytest.mark.asyncio
+    async def test_stream_message_cancelled(self, chat_service, mock_llm_service, mock_session_service):
+        """Test cancellation when client disconnects"""
+        async def mock_stream():
+            yield "Hi"
+            yield " there"
+
+        mock_llm_service.stream_chat_response = AsyncMock(return_value=mock_stream())
+
+        fake_request = AsyncMock()
+        fake_request.is_disconnected.side_effect = [False, True]
+
+        with pytest.raises(asyncio.CancelledError):
+            async for _ in chat_service.stream_message("test-session", "Hello", request=fake_request):
+                pass
+
