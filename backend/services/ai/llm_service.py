@@ -2,6 +2,7 @@ import os
 import json
 import sqlite3
 import logging
+import asyncio
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -948,6 +949,42 @@ class LLMService:
         params = self.get_parameters()
         response = provider.chat_completion(messages, model_id, params)
         return response
+
+    async def stream_chat_response(
+        self, messages: List[Dict[str, str]], timeout: int = 60
+    ):
+        """Yield chat completion chunks if the provider supports streaming.
+
+        Args:
+            messages: Chat messages.
+            timeout: Timeout in seconds for provider requests.
+        """
+        active = self.get_active_model()
+        if not active:
+            return
+
+        provider = self._get_provider_instance(active.provider)
+        if not provider:
+            return
+
+        model_id = active.id
+        params = self.get_parameters()
+
+        # Provider-specific streaming method
+        if hasattr(provider, "stream_chat_completion"):
+            stream_fn = provider.stream_chat_completion
+            # Detect if coroutine
+            if asyncio.iscoroutinefunction(stream_fn):
+                async for chunk in stream_fn(messages, model_id, params, timeout=timeout):
+                    yield chunk
+            else:
+                for chunk in stream_fn(messages, model_id, params, timeout=timeout):
+                    yield chunk
+        else:
+            # Fallback to single response
+            resp = provider.chat_completion(messages, model_id, params)
+            if resp and resp.success:
+                yield resp.content
 
     def suggest_models_for_task(self, task: str) -> List[LLMModel]:
         """Return models suitable for the given task"""
