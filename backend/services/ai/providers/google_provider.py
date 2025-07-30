@@ -500,3 +500,53 @@ class GoogleProvider(BaseProvider):
             if model_info:
                 models.append(model_info)
         return models
+
+    def stream_chat_completion(
+        self,
+        messages: List[Dict[str, str]],
+        model_id: str,
+        parameters: LLMParameters,
+        timeout: int = 60,
+    ):
+        """Yield chat completion chunks using Google AI's streaming API."""
+
+        contents = []
+        for message in messages:
+            role = message.get("role", "user")
+            if role == "assistant":
+                role = "model"
+            contents.append({"role": role, "parts": [{"text": message.get("content", "")}]})
+
+        request_data = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": parameters.temperature,
+                "topP": parameters.top_p,
+                "maxOutputTokens": min(
+                    parameters.max_tokens,
+                    self.MODEL_CONFIGS.get(model_id, {}).get("max_tokens", parameters.max_tokens),
+                ),
+            },
+        }
+
+        if parameters.stop_sequences:
+            request_data["generationConfig"]["stopSequences"] = parameters.stop_sequences
+
+        endpoint = f"models/{model_id}:streamGenerateContent"
+        url = f"{self.base_url.rstrip('/')}/{endpoint}"
+
+        with self.session.post(url, json=request_data, stream=True, timeout=timeout) as resp:
+            resp.raise_for_status()
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line.decode("utf-8"))
+                except json.JSONDecodeError:
+                    continue
+
+                for candidate in data.get("candidates", []):
+                    parts = candidate.get("content", {}).get("parts", [])
+                    for part in parts:
+                        if "text" in part:
+                            yield part["text"]
