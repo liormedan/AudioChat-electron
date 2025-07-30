@@ -1,5 +1,6 @@
 import sys
 import os
+import asyncio
 
 # Add the parent directory (backend) to sys.path for module discovery
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -716,20 +717,30 @@ async def send_chat_message(request: SendMessageRequest):
 
 @app.post('/api/chat/stream')
 async def stream_chat_message(request: SendMessageRequest):
-    """Stream chat response for a message"""
+    """Stream chat response using Server-Sent Events"""
     if chat_service is None:
         raise HTTPException(status_code=503, detail="Chat service is not available")
 
-    async def generator():
+    async def event_generator():
         try:
-            async for chunk in chat_service.stream_message(request.session_id, request.message, request.user_id):
-                yield chunk
+            gen = chat_service.stream_message(request.session_id, request.message, request.user_id)
+            while True:
+                try:
+                    chunk = await asyncio.wait_for(gen.__anext__(), timeout=30)
+                except StopAsyncIteration:
+                    break
+                except asyncio.TimeoutError:
+                    yield f"event: error\ndata: timeout\n\n"
+                    break
+                if await request.is_disconnected():
+                    break
+                yield f"data: {chunk}\n\n"
         except SessionNotFoundError as e:
-            raise HTTPException(status_code=404, detail=str(e))
+            yield f"event: error\ndata: {str(e)}\n\n"
         except ModelNotAvailableError as e:
-            raise HTTPException(status_code=503, detail=str(e))
+            yield f"event: error\ndata: {str(e)}\n\n"
 
-    return StreamingResponse(generator(), media_type='text/plain')
+    return StreamingResponse(event_generator(), media_type='text/event-stream')
 
 
 @app.get('/api/chat/sessions')
