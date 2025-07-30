@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import json
 import pytest
 from fastapi.testclient import TestClient
 
@@ -142,3 +143,86 @@ def test_session_crud(client):
 
     resp = client.get(f"/api/chat/sessions/{sid}")
     assert resp.status_code == 404
+
+
+def test_get_session_messages(client):
+    # Create a session and send a message so there is history
+    resp = client.post(
+        "/api/chat/sessions",
+        json={"title": "Messages", "model_id": "dummy-model"},
+    )
+    session_id = resp.json()["id"]
+
+    client.post(
+        "/api/chat/send",
+        json={"session_id": session_id, "message": "Hi"},
+    )
+
+    resp = client.get(f"/api/chat/sessions/{session_id}/messages")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    assert len(data) >= 2
+    assert {"id", "role", "content"}.issubset(data[0])
+
+
+def test_add_message_to_session(client):
+    resp = client.post(
+        "/api/chat/sessions",
+        json={"title": "Add", "model_id": "dummy-model"},
+    )
+    session_id = resp.json()["id"]
+
+    resp = client.post(
+        f"/api/chat/sessions/{session_id}/messages",
+        json={"role": "user", "content": "Imported"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert isinstance(data.get("message_id"), str)
+
+    # Verify message saved
+    resp = client.get(f"/api/chat/sessions/{session_id}/messages")
+    contents = [m["content"] for m in resp.json()]
+    assert "Imported" in contents
+
+
+def test_search_messages(client):
+    # Create a session with a searchable message
+    s = client.post(
+        "/api/chat/sessions",
+        json={"title": "Search", "model_id": "dummy-model"},
+    ).json()
+    client.post(
+        f"/api/chat/sessions/{s['id']}/messages",
+        json={"role": "user", "content": "find me"},
+    )
+
+    resp = client.get("/api/chat/search", params={"query": "find"})
+    assert resp.status_code == 200
+    results = resp.json()
+    assert isinstance(results, list)
+    assert any("find me" in r["content"] for r in results)
+
+
+def test_export_session(client):
+    resp = client.post(
+        "/api/chat/sessions",
+        json={"title": "Export", "model_id": "dummy-model"},
+    )
+    session_id = resp.json()["id"]
+    client.post(
+        f"/api/chat/sessions/{session_id}/messages",
+        json={"role": "user", "content": "hello"},
+    )
+
+    resp = client.post(
+        f"/api/chat/export/{session_id}",
+        json={"format": "json"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/json")
+    data = json.loads(resp.content)
+    assert isinstance(data, list)
+    assert data[0]["content"] == "hello"
