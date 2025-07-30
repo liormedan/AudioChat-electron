@@ -31,3 +31,4 @@ scipy>=1.11.0
 
 # Development and packaging
 pyinstaller>=6.0.0
+pytest>=8.0
