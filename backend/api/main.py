@@ -9,32 +9,34 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 from typing import Optional, List, Dict, Any
+import asyncio
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
+from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
+codex/remove-request-classes-and-update-imports
+codex/remove-request-classes-and-update-imports
+from backend.api.schemas import (
+    SendMessageRequest,
+    SessionCreateRequest,
+    SessionUpdateRequest,
+)
+
+
+
+codex/add-chat-api-endpoints
+
 from pydantic import BaseModel
+from backend.models.chat import SessionNotFoundError, ModelNotAvailableError
 
 
-class SendMessageRequest(BaseModel):
-    """Request body for sending or streaming a chat message"""
-    session_id: str
-    message: str
-    user_id: Optional[str] = None
+# Import shared request models from schemas module
+from .schemas import (
+    SendMessageRequest,
+    SessionCreateRequest,
+    SessionUpdateRequest,
+)
 
-
-class SessionCreateRequest(BaseModel):
-    """Request body for creating a chat session"""
-    title: Optional[str] = None
-    model_id: Optional[str] = None
-    user_id: Optional[str] = None
-
-
-class SessionUpdateRequest(BaseModel):
-    """Request body for updating a chat session"""
-    title: Optional[str] = None
-    model_id: Optional[str] = None
-    is_archived: Optional[bool] = None
-    metadata: Optional[Dict[str, Any]] = None
 
 def initialize_services():
     """
@@ -153,15 +155,9 @@ audio_editing_service = services['audio_editing_service']
 file_upload_service = services['file_upload_service']
 audio_metadata_service = services['audio_metadata_service']
 audio_command_processor = services['audio_command_processor']
-codex/add-session,-chathistory,-and-chat-services
-session_service = services['session_service']
-chat_history_service = services['chat_history_service']
-chat_service = services['chat_service']
-=======
-chat_service = services.get('chat_service')
 session_service = services.get('session_service')
-history_service = services.get('history_service')
-main
+chat_history_service = services['chat_history_service']
+chat_service = services.get('chat_service')
 
 # --- FastAPI App Initialization ---
 app = create_app()
@@ -721,6 +717,7 @@ async def stream_chat_message(request: SendMessageRequest):
     if chat_service is None:
         raise HTTPException(status_code=503, detail="Chat service is not available")
 
+    codex/implement-streaming-responses-with-sse
     async def event_generator():
         try:
             gen = chat_service.stream_message(request.session_id, request.message, request.user_id)
@@ -735,12 +732,16 @@ async def stream_chat_message(request: SendMessageRequest):
                 if await request.is_disconnected():
                     break
                 yield f"data: {chunk}\n\n"
+
         except SessionNotFoundError as e:
             yield f"event: error\ndata: {str(e)}\n\n"
         except ModelNotAvailableError as e:
             yield f"event: error\ndata: {str(e)}\n\n"
 
-    return StreamingResponse(event_generator(), media_type='text/event-stream')
+        codex/implement-streaming-responses-with-sse
+        return StreamingResponse(event_generator(), media_type='text/event-stream')
+
+
 
 
 @app.get('/api/chat/sessions')
