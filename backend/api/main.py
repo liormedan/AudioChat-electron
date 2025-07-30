@@ -7,10 +7,33 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+
+class SendMessageRequest(BaseModel):
+    """Request body for sending or streaming a chat message"""
+    session_id: str
+    message: str
+    user_id: Optional[str] = None
+
+
+class SessionCreateRequest(BaseModel):
+    """Request body for creating a chat session"""
+    title: Optional[str] = None
+    model_id: Optional[str] = None
+    user_id: Optional[str] = None
+
+
+class SessionUpdateRequest(BaseModel):
+    """Request body for updating a chat session"""
+    title: Optional[str] = None
+    model_id: Optional[str] = None
+    is_archived: Optional[bool] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 def initialize_services():
     """
@@ -43,6 +66,29 @@ def initialize_services():
         except Exception as e:
             print(f"⚠️ LLM service failed to initialize: {e}")
             services['llm_service'] = None
+
+        # Chat-related services
+        try:
+            from backend.services.ai.session_service import SessionService
+            from backend.services.ai.chat_history_service import ChatHistoryService
+            from backend.services.ai.chat_service import ChatService
+
+            services['session_service'] = SessionService()
+            services['history_service'] = ChatHistoryService()
+
+            if services['llm_service']:
+                services['chat_service'] = ChatService(
+                    services['llm_service'],
+                    services['session_service'],
+                    services['history_service']
+                )
+                print("✅ Chat service initialized")
+            else:
+                services['chat_service'] = None
+                print("⚠️ Chat service skipped (LLM service unavailable)")
+        except Exception as e:
+            print(f"⚠️ Chat service failed to initialize: {e}")
+            services['chat_service'] = None
         
         # Command processor depends on other services
         try:
@@ -103,6 +149,9 @@ audio_editing_service = services['audio_editing_service']
 file_upload_service = services['file_upload_service']
 audio_metadata_service = services['audio_metadata_service']
 audio_command_processor = services['audio_command_processor']
+chat_service = services.get('chat_service')
+session_service = services.get('session_service')
+history_service = services.get('history_service')
 
 # --- FastAPI App Initialization ---
 app = create_app()
@@ -638,6 +687,87 @@ async def chat_completion_endpoint(messages: List[Dict[str, str]]):
             raise HTTPException(status_code=500, detail="Failed to get response from LLM")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post('/api/chat/send')
+async def send_chat_message(request: SendMessageRequest):
+    """Send a chat message and return the response"""
+    if chat_service is None:
+        raise HTTPException(status_code=503, detail="Chat service is not available")
+    try:
+        result = chat_service.send_message(request.session_id, request.message, request.user_id)
+        return JSONResponse(content=result.to_dict())
+    except SessionNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ModelNotAvailableError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post('/api/chat/stream')
+async def stream_chat_message(request: SendMessageRequest):
+    """Stream chat response for a message"""
+    if chat_service is None:
+        raise HTTPException(status_code=503, detail="Chat service is not available")
+
+    async def generator():
+        try:
+            async for chunk in chat_service.stream_message(request.session_id, request.message, request.user_id):
+                yield chunk
+        except SessionNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except ModelNotAvailableError as e:
+            raise HTTPException(status_code=503, detail=str(e))
+
+    return StreamingResponse(generator(), media_type='text/plain')
+
+
+@app.get('/api/chat/sessions')
+async def list_chat_sessions(user_id: Optional[str] = None):
+    if session_service is None:
+        raise HTTPException(status_code=503, detail="Session service is not available")
+    sessions = session_service.list_user_sessions(user_id=user_id)
+    return [s.to_dict() for s in sessions]
+
+
+@app.post('/api/chat/sessions')
+async def create_chat_session(request: SessionCreateRequest):
+    if session_service is None:
+        raise HTTPException(status_code=503, detail="Session service is not available")
+    session = session_service.create_session(title=request.title, model_id=request.model_id, user_id=request.user_id)
+    return session.to_dict()
+
+
+@app.get('/api/chat/sessions/{session_id}')
+async def get_chat_session(session_id: str):
+    if session_service is None:
+        raise HTTPException(status_code=503, detail="Session service is not available")
+    session = session_service.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session.to_dict()
+
+
+@app.put('/api/chat/sessions/{session_id}')
+async def update_chat_session(session_id: str, request: SessionUpdateRequest):
+    if session_service is None:
+        raise HTTPException(status_code=503, detail="Session service is not available")
+    updates = {k: v for k, v in request.dict(exclude_unset=True).items()}
+    success = session_service.update_session(session_id, **updates)
+    if not success:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"success": True}
+
+
+@app.delete('/api/chat/sessions/{session_id}')
+async def delete_chat_session(session_id: str):
+    if session_service is None:
+        raise HTTPException(status_code=503, detail="Session service is not available")
+    success = session_service.delete_session(session_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"success": True}
 
 @app.post('/api/audio/command/interpret')
 async def interpret_audio_command(request: Request):
