@@ -8,8 +8,10 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 from typing import Optional, List, Dict, Any
+import asyncio
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
+from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -720,16 +722,25 @@ async def stream_chat_message(request: SendMessageRequest):
     if chat_service is None:
         raise HTTPException(status_code=503, detail="Chat service is not available")
 
-    async def generator():
+    async def generator(req: Request):
         try:
-            async for chunk in chat_service.stream_message(request.session_id, request.message, request.user_id):
-                yield chunk
+            async for chunk in chat_service.stream_message(
+                request.session_id,
+                request.message,
+                request.user_id,
+                request=req,
+                timeout=60,
+            ):
+                yield f"data: {chunk}\n\n"
+        except asyncio.CancelledError:
+            print("Client disconnected from SSE")
+            raise
         except SessionNotFoundError as e:
             raise HTTPException(status_code=404, detail=str(e))
         except ModelNotAvailableError as e:
             raise HTTPException(status_code=503, detail=str(e))
 
-    return StreamingResponse(generator(), media_type='text/plain')
+    return EventSourceResponse(generator(request))
 
 
 @app.get('/api/chat/sessions')
