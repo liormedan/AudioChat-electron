@@ -420,6 +420,13 @@ class LLMService:
         if not provider:
             return None
 
+        # Local providers don't need API keys
+        if provider_name == "Local Gemma":
+            from backend.services.ai.providers.local_gemma_provider import LocalGemmaProvider
+            instance = LocalGemmaProvider()
+            self._provider_instances[provider_name] = instance
+            return instance
+
         api_key = self.get_provider_api_key(provider_name)
         if not api_key:
             return None
@@ -868,10 +875,8 @@ class LLMService:
         if not provider:
             return None
 
-        if active.provider == "Local Gemma" and active.metadata.get("local_path"):
-            model_id = active.metadata["local_path"]
-        else:
-            model_id = active.id.split("-", 1)[-1]
+        # Use the model ID directly for local models
+        model_id = active.id
         params = self.get_parameters()
         response = provider.chat_completion(messages, model_id, params)
         return response

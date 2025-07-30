@@ -588,6 +588,44 @@ async def test_provider_connection(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to test connection: {e}")
 
+@app.post('/api/llm/chat')
+async def chat_endpoint(request: Request):
+    """Simple chat endpoint for general conversation"""
+    try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
+        
+        data = await request.json()
+        messages = data.get('messages', [])
+        
+        if not messages:
+            raise HTTPException(status_code=400, detail="No messages provided")
+        
+        # Generate response using the active model
+        response = llm_service.generate_chat_response(messages)
+        
+        if response and response.success:
+            return JSONResponse(content={
+                "success": True,
+                "content": response.content,
+                "model_id": response.model_id,
+                "usage": response.usage
+            })
+        else:
+            error_msg = response.error_message if response else "Unknown error"
+            return JSONResponse(content={
+                "success": False,
+                "content": "מצטער, לא הצלחתי לענות על השאלה. אנא נסה שוב.",
+                "error": error_msg
+            })
+            
+    except Exception as e:
+        return JSONResponse(content={
+            "success": False,
+            "content": "מצטער, אירעה שגיאה טכנית. אנא נסה שוב.",
+            "error": str(e)
+        })
+
 @app.post('/api/llm/chat/completion')
 async def chat_completion_endpoint(messages: List[Dict[str, str]]):
     try:

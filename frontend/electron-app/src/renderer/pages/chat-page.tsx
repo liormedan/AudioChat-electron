@@ -129,14 +129,83 @@ export const ChatPage: React.FC = () => {
   const handleAudioChatSubmit = async () => {
     if (!currentMessage.trim()) return;
 
-    const command = currentMessage.trim().toLowerCase();
+    const command = currentMessage.trim();
+    const commandLower = command.toLowerCase();
     setCurrentMessage('');
 
+    // If no file is selected, send as general chat
+    if (!selectedFile) {
+      await handleGeneralChat(command);
+      return;
+    }
+
     // Handle metadata commands locally
-    if (command.includes('metadata') || command.includes('show me') || command.includes('analyze')) {
+    if (commandLower.includes('metadata') || commandLower.includes('show me') || commandLower.includes('analyze')) {
       await handleMetadataCommand(command);
     } else {
-      await sendAudioCommand(currentMessage);
+      await sendAudioCommand(command);
+    }
+  };
+
+  const handleGeneralChat = async (message: string) => {
+    const { addChatMessage, setProcessing } = useAudioChatStore.getState();
+
+    try {
+      // Add user message to chat
+      const userMessage = {
+        id: Date.now().toString(),
+        type: 'user' as const,
+        content: message,
+        timestamp: new Date()
+      };
+      addChatMessage(userMessage);
+
+      setProcessing(true);
+
+      // Send to LLM for general conversation
+      const response = await fetch('http://127.0.0.1:5000/api/llm/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: 'user',
+              content: message
+            }
+          ]
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Add AI response to chat
+      const aiMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant' as const,
+        content: result.content || 'מצטער, לא הצלחתי לענות על השאלה.',
+        timestamp: new Date()
+      };
+      addChatMessage(aiMessage);
+
+    } catch (error) {
+      console.error('Error in general chat:', error);
+      
+      // Add error message to chat
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant' as const,
+        content: 'מצטער, אירעה שגיאה. אנא נסה שוב.',
+        timestamp: new Date()
+      };
+      addChatMessage(errorMessage);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -513,13 +582,13 @@ export const ChatPage: React.FC = () => {
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={selectedFile ? "Type your audio editing command..." : "Upload an audio file first"}
-                disabled={!selectedFile || isProcessing}
+                placeholder={selectedFile ? "Type your audio editing command..." : "שאל אותי כל שאלה או התחל שיחה..."}
+                disabled={isProcessing}
                 className="flex-1"
               />
               <Button
                 onClick={handleAudioChatSubmit}
-                disabled={!selectedFile || !currentMessage.trim() || isProcessing}
+                disabled={!currentMessage.trim() || isProcessing}
                 size="sm"
               >
                 <Send className="h-4 w-4" />

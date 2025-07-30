@@ -110,8 +110,12 @@ class LocalGemmaProvider(BaseProvider):
         if model_id not in self._loaded_models:
             if not self._load_model(model_id):
                 return ProviderResponse(
+                    content=f"Failed to load local model: {model_id}",
+                    tokens_used=0,
+                    cost=0.0,
+                    response_time=0.0,
+                    model_used=model_id,
                     success=False,
-                    content=f"Failed to load local Gemma model: {model_id}",
                     error_message=f"Could not initialize model: {model_id}"
                 )
         
@@ -167,10 +171,14 @@ class LocalGemmaProvider(BaseProvider):
                 completion_tokens = len(active_pipe.tokenizer.encode(generated_text))
 
             return ProviderResponse(
-                success=True,
                 content=generated_text.strip(),
-                model_id=self.active_model_name,
-                usage={
+                tokens_used=prompt_tokens + completion_tokens,
+                cost=0.0,
+                response_time=0.0,
+                model_used=self.active_model_name,
+                success=True,
+                error_message=None,
+                metadata={
                     "prompt_tokens": prompt_tokens,
                     "completion_tokens": completion_tokens,
                     "total_tokens": prompt_tokens + completion_tokens
@@ -178,8 +186,12 @@ class LocalGemmaProvider(BaseProvider):
             )
         except Exception as e:
             return ProviderResponse(
+                content="Error occurred during generation",
+                tokens_used=0,
+                cost=0.0,
+                response_time=0.0,
+                model_used=self.active_model_name or "unknown",
                 success=False,
-                content=None,
                 error_message=str(e)
             )
 
@@ -205,3 +217,57 @@ class LocalGemmaProvider(BaseProvider):
                 return False, f"Model loaded but test failed: {e}", 0.0
         else:
             return False, "Model failed to initialize.", 0.0
+    def _get_local_model_path(self):
+        """Get the local path for a downloaded model"""
+        try:
+            from pathlib import Path
+            config_file = Path("models/gemma/model_config.txt")
+            if config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    config = f.read()
+                    for line in config.split('\n'):
+                        if line.startswith('local_path='):
+                            local_path = line.split('=', 1)[1]
+                            if os.path.exists(local_path):
+                                return local_path
+        except Exception as e:
+            print(f"Could not find local model: {e}")
+        return None    
+# Abstract methods implementation
+    def generate_text(self, prompt: str, max_tokens: int = 100) -> str:
+        """Generate text using the local model"""
+        try:
+            if not self.active_model_name or self.active_model_name not in self._loaded_models:
+                # Try to load a default model
+                if not self._load_model("google-gemma-2-2b-it"):
+                    return "Sorry, I couldn't load the model."
+            
+            active_pipe = self._loaded_models[self.active_model_name]
+            
+            if hasattr(active_pipe, 'task') and active_pipe.task == 'conversational':
+                from transformers import Conversation
+                conversation = Conversation()
+                conversation.add_user_input(prompt)
+                result = active_pipe(conversation, max_length=max_tokens)
+                return result.generated_responses[-1] if result.generated_responses else "No response generated."
+            else:
+                outputs = active_pipe(prompt, max_new_tokens=max_tokens, do_sample=True, temperature=0.7)
+                return outputs[0]["generated_text"][len(prompt):].strip()
+        except Exception as e:
+            return f"Error generating text: {str(e)}"
+    
+    def get_default_base_url(self) -> str:
+        """Get default base URL for local provider"""
+        return "local"
+    
+    def get_provider_name(self) -> str:
+        """Get provider name"""
+        return "Local Gemma"
+    
+    def get_supported_models(self) -> List[str]:
+        """Get list of supported models"""
+        return ["google-gemma-2-2b-it", "microsoft-dialogpt-small", "distilgpt2", "gpt2"]
+    
+    def validate_api_key_format(self, api_key: str) -> bool:
+        """Validate API key format (not needed for local provider)"""
+        return True  # Local provider doesn't need API key validation
