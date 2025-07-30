@@ -1,7 +1,23 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Dict, Any
+from enum import Enum
 import json
+
+
+class MessageRole(Enum):
+    """Message role types"""
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
+class SessionStatus(Enum):
+    """Session status types"""
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    DELETED = "deleted"
+
 
 @dataclass
 class ChatSession:

@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 
-from backend.models import ChatSession, SessionNotFoundError
+from backend.models.chat import ChatSession, SessionNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -18,30 +18,11 @@ class SessionService:
         if db_path is None:
             app_dir = os.path.join(os.path.expanduser("~"), ".audio_chat_qt")
             os.makedirs(app_dir, exist_ok=True)
-            db_path = os.path.join(app_dir, "chat_history.db")
+            db_path = os.path.join(app_dir, "llm_data.db")  # Use same DB as LLM service
         self.db_path = db_path
-        self._init_db()
+        # No need to init DB here - it's handled by LLM service
 
-    def _init_db(self) -> None:
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS chat_sessions (
-                id TEXT PRIMARY KEY,
-                title TEXT NOT NULL,
-                model_id TEXT NOT NULL,
-                user_id TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                message_count INTEGER DEFAULT 0,
-                is_archived BOOLEAN DEFAULT FALSE,
-                metadata TEXT DEFAULT '{}'
-            )
-            """
-        )
-        conn.commit()
-        conn.close()
+
 
     def create_session(self, title: str = None, model_id: str = None, user_id: str = None) -> ChatSession:
         session_id = str(uuid.uuid4())
@@ -135,6 +116,7 @@ class SessionService:
         return success
 
     def increment_message_count(self, session_id: str, count: int = 1) -> None:
+        """Increment message count for a session"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute(
@@ -143,3 +125,101 @@ class SessionService:
         )
         conn.commit()
         conn.close()
+
+    def archive_session(self, session_id: str) -> bool:
+        """Archive a session"""
+        return self.update_session(session_id, is_archived=True)
+
+    def unarchive_session(self, session_id: str) -> bool:
+        """Unarchive a session"""
+        return self.update_session(session_id, is_archived=False)
+
+    def get_session_stats(self, session_id: str) -> Optional[dict]:
+        """Get session statistics"""
+        session = self.get_session(session_id)
+        if not session:
+            return None
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Get message statistics
+        cursor.execute(
+            "SELECT COUNT(*), MIN(timestamp), MAX(timestamp) FROM chat_messages WHERE session_id = ?",
+            (session_id,)
+        )
+        msg_stats = cursor.fetchone()
+        
+        # Get token usage
+        cursor.execute(
+            "SELECT SUM(tokens_used), AVG(response_time) FROM chat_messages WHERE session_id = ? AND tokens_used IS NOT NULL",
+            (session_id,)
+        )
+        token_stats = cursor.fetchone()
+        
+        conn.close()
+        
+        return {
+            "session_id": session_id,
+            "title": session.title,
+            "model_id": session.model_id,
+            "created_at": session.created_at.isoformat(),
+            "updated_at": session.updated_at.isoformat(),
+            "message_count": msg_stats[0] if msg_stats[0] else 0,
+            "first_message": msg_stats[1],
+            "last_message": msg_stats[2],
+            "total_tokens": token_stats[0] if token_stats[0] else 0,
+            "avg_response_time": token_stats[1] if token_stats[1] else 0,
+            "is_archived": session.is_archived
+        }
+
+    def search_sessions(self, query: str, user_id: str = None, limit: int = 50) -> List[ChatSession]:
+        """Search sessions by title"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        if user_id:
+            cursor.execute(
+                "SELECT * FROM chat_sessions WHERE title LIKE ? AND user_id = ? ORDER BY updated_at DESC LIMIT ?",
+                (f"%{query}%", user_id, limit)
+            )
+        else:
+            cursor.execute(
+                "SELECT * FROM chat_sessions WHERE title LIKE ? ORDER BY updated_at DESC LIMIT ?",
+                (f"%{query}%", limit)
+            )
+        
+        rows = cursor.fetchall()
+        conn.close()
+        return [ChatSession.from_row(r) for r in rows]
+
+    def get_recent_sessions(self, user_id: str = None, limit: int = 10) -> List[ChatSession]:
+        """Get most recently updated sessions"""
+        return self.list_user_sessions(user_id=user_id, limit=limit)
+
+    def cleanup_old_sessions(self, days_old: int = 30, dry_run: bool = True) -> int:
+        """Clean up old archived sessions"""
+        from datetime import timedelta
+        
+        cutoff_date = (datetime.utcnow() - timedelta(days=days_old)).isoformat()
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Find sessions to delete
+        cursor.execute(
+            "SELECT id FROM chat_sessions WHERE is_archived = 1 AND updated_at < ?",
+            (cutoff_date,)
+        )
+        sessions_to_delete = cursor.fetchall()
+        
+        if not dry_run and sessions_to_delete:
+            # Delete the sessions
+            session_ids = [s[0] for s in sessions_to_delete]
+            placeholders = ','.join(['?' for _ in session_ids])
+            cursor.execute(f"DELETE FROM chat_sessions WHERE id IN ({placeholders})", session_ids)
+            conn.commit()
+            logger.info(f"Deleted {len(sessions_to_delete)} old sessions")
+        
+        conn.close()
+        return len(sessions_to_delete)

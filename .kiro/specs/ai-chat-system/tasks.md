@@ -1,26 +1,26 @@
 # תוכנית יישום - מערכת שיחות AI
 
-- [ ] 1. הקמת תשתית Backend לשיחות AI
+- [x] 1. הקמת תשתית Backend לשיחות AI
   - יצירת מודלי נתונים חדשים לשיחות ו-sessions
   - הוספת טבלאות מסד נתונים לשמירת היסטוריית שיחות
   - יצירת שירותי ניהול sessions ו-messages
   - _דרישות: 1.1, 1.2, 3.1, 3.2_
 
-- [ ] 1.1 יצירת מודלי נתונים לשיחות
+- [x] 1.1 יצירת מודלי נתונים לשיחות
   - יצירת קובץ `backend/models/chat.py` עם מודלים ChatSession, Message, ChatResponse
   - הוספת enums לסוגי הודעות ותפקידים
   - יצירת מתודות to_dict ו-from_dict לכל מודל
   - כתיבת בדיקות יחידה למודלי הנתונים
   - _דרישות: 3.1, 3.2_
 
-- [ ] 1.2 הוספת טבלאות מסד נתונים
+- [x] 1.2 הוספת טבלאות מסד נתונים
   - עדכון `backend/services/ai/llm_service.py` להוסיף טבלאות chat_sessions ו-chat_messages
   - יצירת indexes לביצועים טובים
   - הוספת foreign keys ו-constraints
   - יצירת migration script לעדכון מסד נתונים קיים
   - _דרישות: 3.1, 3.2, 3.3_
 
-- [ ] 1.3 יצירת Chat Service
+- [x] 1.3 יצירת Chat Service
   - יצירת קובץ `backend/services/ai/chat_service.py`
   - מימוש פונקציות send_message, stream_message, get_conversation_context
   - אינטגרציה עם LLMService הקיים
@@ -28,7 +28,7 @@
   - כתיבת בדיקות יחידה לשירות
   - _דרישות: 1.1, 1.2, 1.3_
 
-- [ ] 1.4 יצירת Session Service
+- [x] 1.4 יצירת Session Service
   - יצירת קובץ `backend/services/ai/session_service.py`
   - מימוש פונקציות create_session, get_session, list_user_sessions
   - מימוש פונקציות update_session, delete_session
@@ -36,7 +36,8 @@
   - כתיבת בדיקות יחידה לשירות
   - _דרישות: 3.1, 3.2, 3.3_
 
-- [ ] 1.5 יצירת Chat History Service
+- [x] 1.5 יצירת Chat History Service
+
   - יצירת קובץ `backend/services/ai/chat_history_service.py`
   - מימוש פונקציות save_message, get_session_messages, search_messages
   - מימוש פונקציית export_session לפורמטים שונים

@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from backend.models import Message
+from backend.models.chat import Message
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +18,9 @@ class ChatHistoryService:
         if db_path is None:
             app_dir = os.path.join(os.path.expanduser("~"), ".audio_chat_qt")
             os.makedirs(app_dir, exist_ok=True)
-            db_path = os.path.join(app_dir, "chat_history.db")
+            db_path = os.path.join(app_dir, "llm_data.db")  # Use same DB as LLM service
         self.db_path = db_path
-        self._init_db()
+        # No need to init DB here - it's handled by LLM service
 
     def _init_db(self) -> None:
         conn = sqlite3.connect(self.db_path)
@@ -100,8 +100,176 @@ class ChatHistoryService:
         return [Message.from_row(r) for r in rows]
 
     def export_session(self, session_id: str, format: str = "json") -> str:
+        """Export session messages in specified format"""
         messages = self.get_session_messages(session_id)
-        data = [m.to_dict() for m in messages]
+        
         if format == "json":
+            data = [m.to_dict() for m in messages]
             return json.dumps(data, ensure_ascii=False, indent=2)
-        raise ValueError("Unsupported export format")
+        elif format == "markdown":
+            return self._export_as_markdown(messages)
+        elif format == "txt":
+            return self._export_as_text(messages)
+        else:
+            raise ValueError(f"Unsupported export format: {format}")
+
+    def _export_as_markdown(self, messages: List[Message]) -> str:
+        """Export messages as markdown format"""
+        lines = ["# Chat Session Export\n"]
+        
+        for message in messages:
+            timestamp = message.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            role_emoji = "👤" if message.role == "user" else "🤖" if message.role == "assistant" else "⚙️"
+            
+            lines.append(f"## {role_emoji} {message.role.title()} - {timestamp}\n")
+            lines.append(f"{message.content}\n")
+            
+            if message.model_id:
+                lines.append(f"*Model: {message.model_id}*")
+            if message.tokens_used:
+                lines.append(f"*Tokens: {message.tokens_used}*")
+            if message.response_time:
+                lines.append(f"*Response time: {message.response_time:.2f}s*")
+            
+            lines.append("\n---\n")
+        
+        return "\n".join(lines)
+
+    def _export_as_text(self, messages: List[Message]) -> str:
+        """Export messages as plain text format"""
+        lines = ["Chat Session Export", "=" * 50, ""]
+        
+        for message in messages:
+            timestamp = message.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            lines.append(f"[{timestamp}] {message.role.upper()}: {message.content}")
+            lines.append("")
+        
+        return "\n".join(lines)
+
+    def get_message_count(self, session_id: str) -> int:
+        """Get total message count for a session"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM chat_messages WHERE session_id = ?", (session_id,))
+        count = cursor.fetchone()[0]
+        conn.close()
+        return count
+
+    def delete_message(self, message_id: str) -> bool:
+        """Delete a specific message"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM chat_messages WHERE id = ?", (message_id,))
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        logger.info(f"Deleted message {message_id}")
+        return success
+
+    def delete_session_messages(self, session_id: str) -> int:
+        """Delete all messages for a session"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM chat_messages WHERE session_id = ?", (session_id,))
+        count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        logger.info(f"Deleted {count} messages from session {session_id}")
+        return count
+
+    def get_message_by_id(self, message_id: str) -> Optional[Message]:
+        """Get a specific message by ID"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM chat_messages WHERE id = ?", (message_id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            return Message.from_row(row)
+        return None
+
+    def update_message(self, message_id: str, **updates) -> bool:
+        """Update a message"""
+        if not updates:
+            return False
+        
+        fields = []
+        values = []
+        for key, value in updates.items():
+            if key == "metadata":
+                value = json.dumps(value)
+            fields.append(f"{key} = ?")
+            values.append(value)
+        
+        values.append(message_id)
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"UPDATE chat_messages SET {', '.join(fields)} WHERE id = ?",
+            values
+        )
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return success
+
+    def get_session_statistics(self, session_id: str) -> dict:
+        """Get detailed statistics for a session"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Basic counts
+        cursor.execute(
+            "SELECT role, COUNT(*) FROM chat_messages WHERE session_id = ? GROUP BY role",
+            (session_id,)
+        )
+        role_counts = dict(cursor.fetchall())
+        
+        # Token usage
+        cursor.execute(
+            "SELECT SUM(tokens_used), AVG(tokens_used), MAX(tokens_used) FROM chat_messages WHERE session_id = ? AND tokens_used IS NOT NULL",
+            (session_id,)
+        )
+        token_stats = cursor.fetchone()
+        
+        # Response times
+        cursor.execute(
+            "SELECT AVG(response_time), MIN(response_time), MAX(response_time) FROM chat_messages WHERE session_id = ? AND response_time IS NOT NULL",
+            (session_id,)
+        )
+        time_stats = cursor.fetchone()
+        
+        # Date range
+        cursor.execute(
+            "SELECT MIN(timestamp), MAX(timestamp) FROM chat_messages WHERE session_id = ?",
+            (session_id,)
+        )
+        date_range = cursor.fetchone()
+        
+        conn.close()
+        
+        return {
+            "session_id": session_id,
+            "message_counts": {
+                "total": sum(role_counts.values()),
+                "user": role_counts.get("user", 0),
+                "assistant": role_counts.get("assistant", 0),
+                "system": role_counts.get("system", 0)
+            },
+            "token_usage": {
+                "total": token_stats[0] if token_stats[0] else 0,
+                "average": token_stats[1] if token_stats[1] else 0,
+                "maximum": token_stats[2] if token_stats[2] else 0
+            },
+            "response_times": {
+                "average": time_stats[0] if time_stats[0] else 0,
+                "minimum": time_stats[1] if time_stats[1] else 0,
+                "maximum": time_stats[2] if time_stats[2] else 0
+            },
+            "date_range": {
+                "first_message": date_range[0],
+                "last_message": date_range[1]
+            }
+        }

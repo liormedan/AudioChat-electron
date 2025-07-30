@@ -205,6 +205,42 @@ class LLMService:
         )
         ''')
         
+        # טבלאות שיחות AI
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            model_id TEXT NOT NULL,
+            user_id TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            message_count INTEGER DEFAULT 0,
+            is_archived BOOLEAN DEFAULT FALSE,
+            metadata TEXT DEFAULT '{}'
+        )
+        ''')
+        
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+            content TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            model_id TEXT,
+            tokens_used INTEGER,
+            response_time REAL,
+            metadata TEXT DEFAULT '{}',
+            FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE
+        )
+        ''')
+        
+        # אינדקסים לביצועים
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated_at ON chat_sessions(updated_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_messages_timestamp ON chat_messages(timestamp)')
+        
         conn.commit()
         conn.close()
     
