@@ -2,6 +2,12 @@
 
 # Core services that should always be available
 try:
+    from .utils.chat_service import ChatService, ChatMessage, ChatSession
+except ImportError:
+    ChatService = None
+    ChatMessage = None
+    ChatSession = None
+try:
     from .llm_service import LLMService
 except ImportError:
     LLMService = None
