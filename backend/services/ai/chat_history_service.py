@@ -56,7 +56,7 @@ class ChatHistoryService:
             (
                 message.id,
                 session_id,
-                message.role,
+                message.role.value if hasattr(message.role, "value") else message.role,
                 message.content,
                 message.timestamp.isoformat(),
                 message.model_id,
