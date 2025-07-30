@@ -12,7 +12,6 @@ from typing import Optional, List, Dict, Any
 import asyncio
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse, Response
-from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.api.schemas import (
     SendMessageRequest,
@@ -22,16 +21,7 @@ from backend.api.schemas import (
     ExportSessionRequest,
 )
 
-from pydantic import BaseModel
 from backend.models.chat import SessionNotFoundError, ModelNotAvailableError
-
-
-# Import shared request models from schemas module
-from .schemas import (
-    SendMessageRequest,
-    SessionCreateRequest,
-    SessionUpdateRequest,
-)
 
 
 def initialize_services():
