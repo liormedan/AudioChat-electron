@@ -1,8 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Settings, Palette, Volume2, Database, Info } from 'lucide-react';
+import { Settings, Palette, Volume2, Database, Info, Key } from 'lucide-react';
 import { useUIStore } from '../stores/ui-store';
+import { APIKeyManagement } from '../components/settings/api-key-management';
 
 export const SettingsPage: React.FC = () => {
   const { theme, setTheme } = useUIStore();
@@ -47,6 +48,22 @@ export const SettingsPage: React.FC = () => {
               {theme === 'light' ? 'Switch to Dark' : 'Switch to Light'}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* API Key Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Key className="h-5 w-5" />
+            <span>API Key Management</span>
+          </CardTitle>
+          <CardDescription>
+            Manage API keys for AI providers and monitor usage
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <APIKeyManagement />
         </CardContent>
       </Card>
 

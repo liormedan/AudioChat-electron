@@ -175,7 +175,7 @@
   - מימוש presets ו-custom configurations
   - _דרישות: 2.1, 2.2, 2.3, 4.1, 4.2_
 
-- [ ] 5.1 שיפור Model Selector Component
+- [x] 5.1 שיפור Model Selector Component
   - עדכון `frontend/electron-app/src/renderer/components/llm/model-selector.tsx`
   - הוספת real-time status indicators למודלים
   - מימוש quick-switch בין מודלים במהלך שיחה
@@ -183,7 +183,7 @@
   - מימוש model recommendations בהתבסס על שימוש
   - _דרישות: 2.1, 2.2, 2.3_
 
-- [ ] 5.2 יצירת Advanced Settings Panel
+- [x] 5.2 יצירת Advanced Settings Panel
   - יצירת קובץ `frontend/electron-app/src/renderer/components/chat/settings-panel.tsx`
   - מימוש sliders לפרמטרים: temperature, max_tokens, top_p
   - הוספת presets: Creative, Balanced, Precise, Code
@@ -191,7 +191,7 @@
   - הוספת real-time preview לשינויי פרמטרים
   - _דרישות: 4.1, 4.2, 4.3_
 
-- [ ] 5.3 מימוש API Key Management UI
+- [x] 5.3 מימוש API Key Management UI
   - עדכון settings page להוסיף API key management
   - מימוש secure input fields עם show/hide functionality
   - הוספת connection testing עם visual feedback
