@@ -265,3 +265,21 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Audio-Chat-main\\Audio-Chat-
 2025-07-30 15:49:34,456 - backend.services.ai.llm_service - INFO - 🤖 Local models configured for use
 2025-07-30 15:49:34,458 - backend.services.ai.llm_service - INFO - 🚀 Local AI Assistant Ready: Gemma 2 2B-IT (Local)
 2025-07-30 15:49:34,458 - backend.services.ai.llm_service - INFO - 💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות
+2025-07-31 01:21:19,555 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-07-31 01:21:19,583 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-07-31 01:21:19,602 - __main__ - INFO - 🤖 Gemma AI Assistant will be available for local, private conversations
+2025-07-31 01:21:21,604 - __main__ - INFO - ✅ All dependencies are available
+2025-07-31 01:21:21,610 - __main__ - INFO - 📁 Created necessary directories
+2025-07-31 01:21:21,617 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-07-31 01:21:21,617 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-07-31 01:22:24,374 - backend.services.ai.llm_service - INFO - 🤖 Local models configured for use
+2025-07-31 01:22:24,379 - backend.services.ai.llm_service - INFO - 🚀 Local AI Assistant Ready: DialoGPT Medium (Local)
+2025-07-31 01:22:24,381 - backend.services.ai.llm_service - INFO - 💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות
+2025-07-31 01:25:07,734 - backend.services.audio.advanced_editing - ERROR - Error getting audio info: _path_exists: path should be string, bytes, os.PathLike or integer, not NoneType
+2025-07-31 01:25:07,746 - backend.services.ai.command_processor - WARNING - Could not get metadata: 'AudioMetadataService' object has no attribute 'get_basic_metadata'
+2025-07-31 01:25:07,747 - backend.services.ai.command_interpreter - INFO - Interpreting command: Cut the first 30 seconds
+2025-07-31 01:25:07,768 - backend.services.ai.command_interpreter - INFO - Command parsed with patterns: CommandType.TRIM
+2025-07-31 01:25:14,350 - backend.services.audio.advanced_editing - ERROR - Error getting audio info: _path_exists: path should be string, bytes, os.PathLike or integer, not NoneType
+2025-07-31 01:25:14,350 - backend.services.ai.command_processor - WARNING - Could not get metadata: 'AudioMetadataService' object has no attribute 'get_basic_metadata'
+2025-07-31 01:25:14,350 - backend.services.ai.command_interpreter - INFO - Interpreting command: Extract from 1:30 to 2:45
+2025-07-31 01:25:14,751 - backend.services.ai.command_interpreter - INFO - Command parsed with patterns: CommandType.TRIM

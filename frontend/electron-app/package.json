@@ -29,7 +29,8 @@
     "test:backend": "cd ../.. && python -c \"from backend.api.main import create_app; print('✅ Backend connection test passed')\"",
     "test:backend:health": "cd ../.. && python -c \"import requests; r=requests.get('http://127.0.0.1:5000/', timeout=5); print('✅ Backend is running') if r.status_code==200 else print('❌ Backend not responding')\"",
     "setup:backend": "cd ../.. && python -m venv .venv && .venv\\Scripts\\activate && pip install -r requirements.txt",
-    "setup:full": "npm install && npm run setup:backend"
+    "setup:full": "npm install && npm run setup:backend",
+    "test": "vitest"
   },
   "keywords": [
     "electron",
@@ -42,12 +43,15 @@
   "license": "MIT",
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
     "electron": "^28.0.0",
@@ -55,11 +59,13 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "jsdom": "^26.1.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
+    "vitest": "^3.2.4",
     "wait-on": "^7.2.0"
   },
   "dependencies": {
@@ -83,7 +89,12 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.3.8",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.7.1",
+    "react-syntax-highlighter": "^15.6.1",
+    "react-window": "^1.8.11",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.3.1",
     "wavesurfer.js": "^7.10.1",
     "zustand": "^5.0.6"

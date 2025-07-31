@@ -13,6 +13,9 @@ import asyncio
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from backend.services.ai.chat_security_service import security_service
 from backend.api.schemas import (
     SendMessageRequest,
     SessionCreateRequest,
@@ -148,6 +151,10 @@ chat_service = services['chat_service']
 
 # --- FastAPI App Initialization ---
 app = create_app()
+limiter = security_service.limiter
+security_service.set_session_service(session_service)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # --- API Endpoints ---
 
@@ -683,12 +690,21 @@ async def chat_completion_endpoint(messages: List[Dict[str, str]]):
 
 
 @app.post('/api/chat/send')
-async def send_chat_message(request: SendMessageRequest):
+@limiter.limit("5/minute")
+async def send_chat_message(payload: SendMessageRequest, request: Request):
     """Send a chat message and return the response"""
     if chat_service is None:
         raise HTTPException(status_code=503, detail="Chat service is not available")
     try:
-        result = chat_service.send_message(request.session_id, request.message, request.user_id)
+        # Sanitize user input
+        sanitized_message = security_service.sanitize_input(payload.message)
+        
+        # Validate session access
+        if payload.user_id:
+            if not security_service.validate_session_access(payload.session_id, payload.user_id):
+                raise HTTPException(status_code=403, detail="Access to this session is forbidden")
+
+        result = chat_service.send_message(payload.session_id, sanitized_message, payload.user_id)
         return JSONResponse(content=result.to_dict())
     except SessionNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -699,14 +715,23 @@ async def send_chat_message(request: SendMessageRequest):
 
 
 @app.post('/api/chat/stream')
+@limiter.limit("5/minute")
 async def stream_chat_message(payload: SendMessageRequest, request: Request):
     """Stream chat response using Server-Sent Events"""
     if chat_service is None:
         raise HTTPException(status_code=503, detail="Chat service is not available")
 
+    # Sanitize user input
+    sanitized_message = security_service.sanitize_input(payload.message)
+
+    # Validate session access
+    if payload.user_id:
+        if not security_service.validate_session_access(payload.session_id, payload.user_id):
+            raise HTTPException(status_code=403, detail="Access to this session is forbidden")
+
     async def event_generator():
         try:
-            async for chunk in chat_service.stream_message(payload.session_id, payload.message, payload.user_id, request=request):
+            async for chunk in chat_service.stream_message(payload.session_id, sanitized_message, payload.user_id, request=request):
                 yield f"data: {chunk}\n\n"
             yield "data: [DONE]\n\n"
         except SessionNotFoundError as e:

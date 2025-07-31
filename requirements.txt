@@ -4,6 +4,7 @@ uvicorn[standard]>=0.24.0
 pydantic>=2.5.0
 python-multipart>=0.0.6
 sse-starlette>=1.6.1
+slowapi>=0.0.14
 
 # Audio processing
 librosa>=0.10.0

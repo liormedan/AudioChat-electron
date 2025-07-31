@@ -61,7 +61,7 @@
   - מימוש validation לכל endpoint עם Pydantic models
   - _דרישות: 1.1, 1.2, 1.3_
 
-- [ ] 2.2 מימוש streaming responses
+- [x] 2.2 מימוש streaming responses
 
 
   - הוספת תמיכה ב-Server-Sent Events (SSE) ל-FastAPI
@@ -70,7 +70,7 @@
   - בדיקת streaming עם מודלים מקומיים ו-cloud
   - _דרישות: 1.2, 1.4, 7.1_
 
-- [ ] 2.3 הוספת Message Management endpoints
+- [x] 2.3 הוספת Message Management endpoints
   - מימוש GET /api/chat/sessions/{session_id}/messages
   - מימוש POST /api/chat/sessions/{session_id}/messages
   - הוספת endpoint לחיפוש: GET /api/chat/search
@@ -131,13 +131,13 @@
   - הוספת character counter ו-send button states
   - _דרישות: 1.1, 5.1, 5.2_
 
-- [ ] 4. מימוש ניהול Sessions והיסטוריה
+- [x] 4. מימוש ניהול Sessions והיסטוריה
   - יצירת רכיבים לניהול sessions
   - מימוש חיפוש והיסטוריה
   - הוספת ייצוא ויבוא של שיחות
   - _דרישות: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 4.1 יצירת Session Manager Component
+- [x] 4.1 יצירת Session Manager Component
   - יצירת קובץ `frontend/electron-app/src/renderer/components/chat/session-manager.tsx`
   - מימוש רשימת sessions עם search ו-filter
   - הוספת יצירת session חדש ו-עריכת כותרות
@@ -145,7 +145,7 @@
   - הוספת session metadata display
   - _דרישות: 3.1, 3.2, 3.3_
 
-- [ ] 4.2 יצירת History Panel Component
+- [x] 4.2 יצירת History Panel Component
   - יצירת קובץ `frontend/electron-app/src/renderer/components/chat/history-panel.tsx`
   - מימוש sidebar עם recent sessions
   - הוספת quick access לשיחות פופולריות
@@ -153,7 +153,7 @@
   - הוספת session statistics ו-info
   - _דרישות: 3.1, 3.2, 3.3_
 
-- [ ] 4.3 מימוש Search Functionality
+- [x] 4.3 מימוש Search Functionality
   - יצירת קובץ `frontend/electron-app/src/renderer/components/chat/search-panel.tsx`
   - מימוש חיפוש בתוכן הודעות עם highlighting
   - הוספת filters לפי תאריך, מודל, ו-session
@@ -161,7 +161,7 @@
   - הוספת search history ו-saved searches
   - _דרישות: 3.3, 3.4_
 
-- [ ] 4.4 מימוש Export/Import Functionality
+- [x] 4.4 מימוש Export/Import Functionality
   - יצירת קובץ `frontend/electron-app/src/renderer/services/chat-export-service.ts`
   - מימוש ייצוא sessions לפורמטים: JSON, Markdown, PDF
   - הוספת יבוא sessions מקבצים חיצוניים
