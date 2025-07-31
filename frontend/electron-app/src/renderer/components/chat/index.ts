@@ -7,6 +7,7 @@ export { SessionSidebar } from './session-sidebar';
 export { HistoryPanel } from './history-panel';
 export { SearchPanel } from './search-panel';
 export { AdvancedSettingsPanel } from './settings-panel';
+export { PerformanceMonitor } from './performance-monitor';
 
 // Audio Chat Components
 export { AudioChatMessage } from './AudioChatMessage';

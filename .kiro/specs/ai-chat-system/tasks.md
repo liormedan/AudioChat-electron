@@ -199,7 +199,7 @@
   - הוספת usage statistics per provider
   - _דרישות: 2.2, 2.4, 6.1_
 
-- [ ] 5.4 יצירת Model Performance Monitor
+- [x] 5.4 יצירת Model Performance Monitor
   - יצירת קובץ `frontend/electron-app/src/renderer/components/chat/performance-monitor.tsx`
   - מימוש real-time performance metrics display
   - הוספת response time tracking ו-token usage
