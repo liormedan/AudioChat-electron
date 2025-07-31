@@ -60,7 +60,7 @@ const mockMetrics = {
     },
     lastUpdated: '2024-01-01T12:00:00Z'
   }
-};const m
+}; const m
 ockAlerts = [
   {
     id: 'alert-1',
@@ -130,7 +130,7 @@ describe('PerformanceMonitor', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockFetch.mockImplementation((url) => {
       if (url.includes('/api/performance/metrics')) {
         return Promise.resolve({
@@ -138,324 +138,324 @@ describe('PerformanceMonitor', () => {
           json: () => Promise.resolve(mockMetrics)
         } as Response);
       }
-      
+
       if (url === '/api/performance/alerts') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockAlerts)
         } as Response);
       }
-      
+
       if (url === '/api/performance/comparison') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockComparisonData)
         } as Response);
       }
-      
+
       return Promise.reject(new Error('Unknown URL'));
     });
-  });  it('
+  }); it('
 renders performance monitor interface', async () => {
     render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('מוניטור ביצועי מודלים')).toBeInTheDocument();
-    });
-    
-    expect(screen.getByText('סקירה כללית')).toBeInTheDocument();
-    expect(screen.getByText('פירוט מלא')).toBeInTheDocument();
-    expect(screen.getByText('השוואה')).toBeInTheDocument();
+
+  await waitFor(() => {
+    expect(screen.getByText('מוניטור ביצועי מודלים')).toBeInTheDocument();
   });
 
-  it('displays model metrics correctly', async () => {
-    render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('GPT-4')).toBeInTheDocument();
-    });
-    
-    // Should show key metrics
-    expect(screen.getByText('1.2s')).toBeInTheDocument(); // Response time
-    expect(screen.getByText('45')).toBeInTheDocument(); // Tokens per second
-    expect(screen.getByText('$0.0240')).toBeInTheDocument(); // Cost per request
-    expect(screen.getByText('125')).toBeInTheDocument(); // Requests per hour
-  });
+  expect(screen.getByText('סקירה כללית')).toBeInTheDocument();
+  expect(screen.getByText('פירוט מלא')).toBeInTheDocument();
+  expect(screen.getByText('השוואה')).toBeInTheDocument();
+});
 
-  it('shows performance alerts', async () => {
-    render(<PerformanceMonitor showAlerts onAlertAcknowledge={mockOnAlertAcknowledge} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('התראות ביצועים')).toBeInTheDocument();
-    });
-    
-    // Should show active alerts
-    expect(screen.getByText('זמן תגובה גבוה')).toBeInTheDocument();
-    expect(screen.getByText('שיעור שגיאות גבוה')).toBeInTheDocument();
-    
-    // Should show alert count badge
-    expect(screen.getByText('2')).toBeInTheDocument();
-  });
+it('displays model metrics correctly', async () => {
+  render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
 
-  it('acknowledges alerts when clicked', async () => {
-    const user = userEvent.setup();
-    
-    // Mock successful alert acknowledgment
-    mockFetch.mockImplementationOnce(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({})
-      } as Response)
-    );
-    
-    render(<PerformanceMonitor showAlerts onAlertAcknowledge={mockOnAlertAcknowledge} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('זמן תגובה גבוה')).toBeInTheDocument();
-    });
-    
-    // Find and click acknowledge button
-    const acknowledgeButtons = screen.getAllByRole('button');
-    const acknowledgeButton = acknowledgeButtons.find(button => 
-      button.querySelector('svg') && button.closest('div')?.textContent?.includes('זמן תגובה גבוה')
-    );
-    
-    if (acknowledgeButton) {
-      await user.click(acknowledgeButton);
-      
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/performance/alerts/alert-1/acknowledge', {
-          method: 'POST'
-        });
-        expect(mockOnAlertAcknowledge).toHaveBeenCalledWith('alert-1');
-      });
-    }
-  });
-
-  it('expands and collapses metric cards', async () => {
-    const user = userEvent.setup();
-    render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('GPT-4')).toBeInTheDocument();
-    });
-    
-    // Initially detailed metrics should not be visible
-    expect(screen.queryByText('מינימום:')).not.toBeInTheDocument();
-    
-    // Find and click expand button
-    const expandButtons = screen.getAllByRole('button');
-    const expandButton = expandButtons.find(button => 
-      button.querySelector('svg') && button.closest('div')?.textContent?.includes('GPT-4')
-    );
-    
-    if (expandButton) {
-      await user.click(expandButton);
-      
-      // Should show detailed metrics
-      await waitFor(() => {
-        expect(screen.getByText('מינימום:')).toBeInTheDocument();
-        expect(screen.getByText('800ms')).toBeInTheDocument();
-      });
-    }
-  });
-
-  it('switches between time ranges', async () => {
-    const user = userEvent.setup();
-    render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('24h')).toBeInTheDocument();
-    });
-    
-    // Click time range dropdown
-    const timeRangeButton = screen.getByText('24h');
-    await user.click(timeRangeButton);
-    
-    // Select different time range
-    const sevenDaysOption = screen.getByText('7d');
-    await user.click(sevenDaysOption);
-    
-    // Should call API with new time range
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/performance/metrics?timeRange=7d');
-    });
-  });
-
-  it('renders compact mode correctly', async () => {
-    render(<PerformanceMonitor compactMode onModelSelect={mockOnModelSelect} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('ביצועי מודלים')).toBeInTheDocument();
-    });
-    
-    // Should show simplified view
+  await waitFor(() => {
     expect(screen.getByText('GPT-4')).toBeInTheDocument();
-    expect(screen.queryByText('מוניטור ביצועי מודלים')).not.toBeInTheDocument();
   });
 
-  it('displays comparison view', async () => {
-    const user = userEvent.setup();
-    render(
-      <PerformanceMonitor 
-        enableComparison 
-        selectedModels={['gpt-4', 'gpt-3.5-turbo']}
-        onModelSelect={mockOnModelSelect} 
-      />
-    );
-    
-    // Switch to comparison tab
-    const comparisonTab = screen.getByText('השוואה');
-    await user.click(comparisonTab);
-    
-    await waitFor(() => {
-      expect(screen.getByText('המלצות')).toBeInTheDocument();
-    });
-    
-    // Should show recommendations
-    expect(screen.getByText('הכי מהיר')).toBeInTheDocument();
-    expect(screen.getByText('הכי חסכוני')).toBeInTheDocument();
+  // Should show key metrics
+  expect(screen.getByText('1.2s')).toBeInTheDocument(); // Response time
+  expect(screen.getByText('45')).toBeInTheDocument(); // Tokens per second
+  expect(screen.getByText('$0.0240')).toBeInTheDocument(); // Cost per request
+  expect(screen.getByText('125')).toBeInTheDocument(); // Requests per hour
+});
+
+it('shows performance alerts', async () => {
+  render(<PerformanceMonitor showAlerts onAlertAcknowledge={mockOnAlertAcknowledge} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('התראות ביצועים')).toBeInTheDocument();
   });
 
-  it('refreshes data when refresh button clicked', async () => {
-    const user = userEvent.setup();
-    render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('GPT-4')).toBeInTheDocument();
-    });
-    
-    // Clear previous API calls
-    mockFetch.mockClear();
-    
-    // Click refresh button
-    const refreshButton = screen.getByRole('button', { name: /refresh/i });
-    await user.click(refreshButton);
-    
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/performance/metrics?timeRange=24h');
-    });
+  // Should show active alerts
+  expect(screen.getByText('זמן תגובה גבוה')).toBeInTheDocument();
+  expect(screen.getByText('שיעור שגיאות גבוה')).toBeInTheDocument();
+
+  // Should show alert count badge
+  expect(screen.getByText('2')).toBeInTheDocument();
+});
+
+it('acknowledges alerts when clicked', async () => {
+  const user = userEvent.setup();
+
+  // Mock successful alert acknowledgment
+  mockFetch.mockImplementationOnce(() =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({})
+    } as Response)
+  );
+
+  render(<PerformanceMonitor showAlerts onAlertAcknowledge={mockOnAlertAcknowledge} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('זמן תגובה גבוה')).toBeInTheDocument();
   });
 
-  it('handles model selection', async () => {
-    const user = userEvent.setup();
-    render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
-    
+  // Find and click acknowledge button
+  const acknowledgeButtons = screen.getAllByRole('button');
+  const acknowledgeButton = acknowledgeButtons.find(button =>
+    button.querySelector('svg') && button.closest('div')?.textContent?.includes('זמן תגובה גבוה')
+  );
+
+  if (acknowledgeButton) {
+    await user.click(acknowledgeButton);
+
     await waitFor(() => {
-      expect(screen.getByText('GPT-4')).toBeInTheDocument();
+      expect(mockFetch).toHaveBeenCalledWith('/api/performance/alerts/alert-1/acknowledge', {
+        method: 'POST'
+      });
+      expect(mockOnAlertAcknowledge).toHaveBeenCalledWith('alert-1');
     });
-    
-    // Find and click model select button
-    const selectButtons = screen.getAllByRole('button');
-    const selectButton = selectButtons.find(button => 
-      button.querySelector('svg') && button.closest('div')?.textContent?.includes('GPT-4')
-    );
-    
-    if (selectButton) {
-      await user.click(selectButton);
-      expect(mockOnModelSelect).toHaveBeenCalledWith('gpt-4');
-    }
+  }
+});
+
+it('expands and collapses metric cards', async () => {
+  const user = userEvent.setup();
+  render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('GPT-4')).toBeInTheDocument();
   });
 
-  it('toggles alerts on/off', async () => {
-    const user = userEvent.setup();
-    render(<PerformanceMonitor showAlerts onAlertAcknowledge={mockOnAlertAcknowledge} />);
-    
+  // Initially detailed metrics should not be visible
+  expect(screen.queryByText('מינימום:')).not.toBeInTheDocument();
+
+  // Find and click expand button
+  const expandButtons = screen.getAllByRole('button');
+  const expandButton = expandButtons.find(button =>
+    button.querySelector('svg') && button.closest('div')?.textContent?.includes('GPT-4')
+  );
+
+  if (expandButton) {
+    await user.click(expandButton);
+
+    // Should show detailed metrics
     await waitFor(() => {
-      expect(screen.getByText('התראות פעילות')).toBeInTheDocument();
+      expect(screen.getByText('מינימום:')).toBeInTheDocument();
+      expect(screen.getByText('800ms')).toBeInTheDocument();
     });
-    
-    // Find alerts toggle switch
-    const alertsToggle = screen.getByRole('switch');
-    
-    // Toggle off
-    await user.click(alertsToggle);
-    expect(alertsToggle).not.toBeChecked();
-    
-    // Toggle back on
-    await user.click(alertsToggle);
-    expect(alertsToggle).toBeChecked();
+  }
+});
+
+it('switches between time ranges', async () => {
+  const user = userEvent.setup();
+  render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('24h')).toBeInTheDocument();
   });
 
-  it('handles API errors gracefully', async () => {
-    // Mock API error
-    mockFetch.mockImplementationOnce(() =>
-      Promise.resolve({
-        ok: false,
-        status: 500
-      } as Response)
-    );
-    
-    render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
-    
-    // Should show loading state initially
-    expect(screen.getByText('טוען נתוני ביצועים...')).toBeInTheDocument();
-    
-    await waitFor(() => {
-      // Should handle error gracefully
-      expect(mockFetch).toHaveBeenCalled();
-    });
+  // Click time range dropdown
+  const timeRangeButton = screen.getByText('24h');
+  await user.click(timeRangeButton);
+
+  // Select different time range
+  const sevenDaysOption = screen.getByText('7d');
+  await user.click(sevenDaysOption);
+
+  // Should call API with new time range
+  await waitFor(() => {
+    expect(mockFetch).toHaveBeenCalledWith('/api/performance/metrics?timeRange=7d');
+  });
+});
+
+it('renders compact mode correctly', async () => {
+  render(<PerformanceMonitor compactMode onModelSelect={mockOnModelSelect} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('ביצועי מודלים')).toBeInTheDocument();
   });
 
-  it('shows empty comparison state', async () => {
-    const user = userEvent.setup();
-    render(<PerformanceMonitor enableComparison selectedModels={[]} onModelSelect={mockOnModelSelect} />);
-    
-    // Switch to comparison tab
-    const comparisonTab = screen.getByText('השוואה');
-    await user.click(comparisonTab);
-    
-    await waitFor(() => {
-      expect(screen.getByText('בחר לפחות 2 מודלים להשוואה')).toBeInTheDocument();
-    });
+  // Should show simplified view
+  expect(screen.getByText('GPT-4')).toBeInTheDocument();
+  expect(screen.queryByText('מוניטור ביצועי מודלים')).not.toBeInTheDocument();
+});
+
+it('displays comparison view', async () => {
+  const user = userEvent.setup();
+  render(
+    <PerformanceMonitor
+      enableComparison
+      selectedModels={['gpt-4', 'gpt-3.5-turbo']}
+      onModelSelect={mockOnModelSelect}
+    />
+  );
+
+  // Switch to comparison tab
+  const comparisonTab = screen.getByText('השוואה');
+  await user.click(comparisonTab);
+
+  await waitFor(() => {
+    expect(screen.getByText('המלצות')).toBeInTheDocument();
   });
 
-  it('formats numbers and currencies correctly', async () => {
-    render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
-    
-    await waitFor(() => {
-      // Should format currency with proper locale
-      expect(screen.getByText('$0.0240')).toBeInTheDocument();
-      
-      // Should format numbers with proper locale
-      expect(screen.getByText('1,500')).toBeInTheDocument();
-    });
+  // Should show recommendations
+  expect(screen.getByText('הכי מהיר')).toBeInTheDocument();
+  expect(screen.getByText('הכי חסכוני')).toBeInTheDocument();
+});
+
+it('refreshes data when refresh button clicked', async () => {
+  const user = userEvent.setup();
+  render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('GPT-4')).toBeInTheDocument();
   });
 
-  it('shows performance color coding', async () => {
-    render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('GPT-4')).toBeInTheDocument();
-    });
-    
-    // Response time should be color-coded based on performance
-    const responseTimeElement = screen.getByText('1.2s');
-    expect(responseTimeElement).toHaveClass('text-yellow-600'); // Warning color for 1200ms
+  // Clear previous API calls
+  mockFetch.mockClear();
+
+  // Click refresh button
+  const refreshButton = screen.getByRole('button', { name: /refresh/i });
+  await user.click(refreshButton);
+
+  await waitFor(() => {
+    expect(mockFetch).toHaveBeenCalledWith('/api/performance/metrics?timeRange=24h');
+  });
+});
+
+it('handles model selection', async () => {
+  const user = userEvent.setup();
+  render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('GPT-4')).toBeInTheDocument();
   });
 
-  it('auto-refreshes when enabled', async () => {
-    jest.useFakeTimers();
-    
-    render(<PerformanceMonitor autoRefresh refreshInterval={5000} onModelSelect={mockOnModelSelect} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('GPT-4')).toBeInTheDocument();
-    });
-    
-    // Clear initial calls
-    mockFetch.mockClear();
-    
-    // Fast-forward time
-    act(() => {
-      jest.advanceTimersByTime(5000);
-    });
-    
-    // Should have called metrics update
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/performance/metrics?timeRange=24h');
-    });
-    
-    jest.useRealTimers();
+  // Find and click model select button
+  const selectButtons = screen.getAllByRole('button');
+  const selectButton = selectButtons.find(button =>
+    button.querySelector('svg') && button.closest('div')?.textContent?.includes('GPT-4')
+  );
+
+  if (selectButton) {
+    await user.click(selectButton);
+    expect(mockOnModelSelect).toHaveBeenCalledWith('gpt-4');
+  }
+});
+
+it('toggles alerts on/off', async () => {
+  const user = userEvent.setup();
+  render(<PerformanceMonitor showAlerts onAlertAcknowledge={mockOnAlertAcknowledge} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('התראות פעילות')).toBeInTheDocument();
   });
+
+  // Find alerts toggle switch
+  const alertsToggle = screen.getByRole('switch');
+
+  // Toggle off
+  await user.click(alertsToggle);
+  expect(alertsToggle).not.toBeChecked();
+
+  // Toggle back on
+  await user.click(alertsToggle);
+  expect(alertsToggle).toBeChecked();
+});
+
+it('handles API errors gracefully', async () => {
+  // Mock API error
+  mockFetch.mockImplementationOnce(() =>
+    Promise.resolve({
+      ok: false,
+      status: 500
+    } as Response)
+  );
+
+  render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
+
+  // Should show loading state initially
+  expect(screen.getByText('טוען נתוני ביצועים...')).toBeInTheDocument();
+
+  await waitFor(() => {
+    // Should handle error gracefully
+    expect(mockFetch).toHaveBeenCalled();
+  });
+});
+
+it('shows empty comparison state', async () => {
+  const user = userEvent.setup();
+  render(<PerformanceMonitor enableComparison selectedModels={[]} onModelSelect={mockOnModelSelect} />);
+
+  // Switch to comparison tab
+  const comparisonTab = screen.getByText('השוואה');
+  await user.click(comparisonTab);
+
+  await waitFor(() => {
+    expect(screen.getByText('בחר לפחות 2 מודלים להשוואה')).toBeInTheDocument();
+  });
+});
+
+it('formats numbers and currencies correctly', async () => {
+  render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
+
+  await waitFor(() => {
+    // Should format currency with proper locale
+    expect(screen.getByText('$0.0240')).toBeInTheDocument();
+
+    // Should format numbers with proper locale
+    expect(screen.getByText('1,500')).toBeInTheDocument();
+  });
+});
+
+it('shows performance color coding', async () => {
+  render(<PerformanceMonitor onModelSelect={mockOnModelSelect} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('GPT-4')).toBeInTheDocument();
+  });
+
+  // Response time should be color-coded based on performance
+  const responseTimeElement = screen.getByText('1.2s');
+  expect(responseTimeElement).toHaveClass('text-yellow-600'); // Warning color for 1200ms
+});
+
+it('auto-refreshes when enabled', async () => {
+  jest.useFakeTimers();
+
+  render(<PerformanceMonitor autoRefresh refreshInterval={5000} onModelSelect={mockOnModelSelect} />);
+
+  await waitFor(() => {
+    expect(screen.getByText('GPT-4')).toBeInTheDocument();
+  });
+
+  // Clear initial calls
+  mockFetch.mockClear();
+
+  // Fast-forward time
+  act(() => {
+    jest.advanceTimersByTime(5000);
+  });
+
+  // Should have called metrics update
+  await waitFor(() => {
+    expect(mockFetch).toHaveBeenCalledWith('/api/performance/metrics?timeRange=24h');
+  });
+
+  jest.useRealTimers();
+});
 });

@@ -224,7 +224,10 @@
   - כתיבת בדיקות אבטחה
   - _דרישות: 6.1, 6.3_
 
-- [ ] 6.2 הוספת Privacy Controls
+- [x] 6.2 הוספת Privacy Controls
+
+
+
   - יצירת קובץ `frontend/electron-app/src/renderer/components/settings/privacy-settings.tsx`
   - מימוש toggles ל-local-only mode
   - הוספת data retention settings

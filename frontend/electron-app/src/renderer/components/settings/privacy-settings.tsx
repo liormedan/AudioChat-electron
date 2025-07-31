@@ -5,7 +5,6 @@ import {
   EyeOff,
   Trash2,
   Download,
-  Upload,
   Lock,
   Unlock,
   Server,
@@ -13,16 +12,13 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
-  Settings,
   Database,
-  Key,
-  FileText,
-  Calendar,
   BarChart3,
   RefreshCw,
   Info,
-  Bell,
-  BellOff
+  Wifi,
+  WifiOff,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +27,6 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -41,14 +36,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu';
-import { Textarea } from '@/components/ui/textarea';
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
 
 // Privacy settings interfaces
 export interface PrivacySettings {
@@ -149,11 +140,15 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
     oldestData: '',
     encryptedMessages: 0
   });
+  const [encryptionStatus, setEncryptionStatus] = useState<any>(null);
+  const [isEncrypting, setIsEncrypting] = useState(false);
+  const [showMigrateDialog, setShowMigrateDialog] = useState(false);
 
   // Load settings on mount
   useEffect(() => {
     loadPrivacySettings();
     loadDataStatistics();
+    loadEncryptionStatus();
     updatePrivacyIndicators();
   }, []);
 
@@ -202,6 +197,18 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       }
     } catch (error) {
       console.error('Error loading data statistics:', error);
+    }
+  }, []);
+
+  const loadEncryptionStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/security/encryption/status');
+      if (response.ok) {
+        const status = await response.json();
+        setEncryptionStatus(status);
+      }
+    } catch (error) {
+      console.error('Error loading encryption status:', error);
     }
   }, []);
 
@@ -309,6 +316,43 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       enabled: p.id === policyId
     })));
   }, [settings, retentionPolicies, savePrivacySettings]);
+
+  const migrateToEncryption = useCallback(async () => {
+    try {
+      setIsEncrypting(true);
+      const response = await fetch('/api/security/encryption/migrate', {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Migration completed:', result);
+        await loadEncryptionStatus();
+        await loadDataStatistics();
+        setShowMigrateDialog(false);
+      }
+    } catch (error) {
+      console.error('Error migrating to encryption:', error);
+    } finally {
+      setIsEncrypting(false);
+    }
+  }, [loadEncryptionStatus, loadDataStatistics]);
+
+  const rotateEncryptionKeys = useCallback(async () => {
+    try {
+      const response = await fetch('/api/security/encryption/rotate-keys', {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Key rotation completed:', result);
+        await loadEncryptionStatus();
+      }
+    } catch (error) {
+      console.error('Error rotating keys:', error);
+    }
+  }, [loadEncryptionStatus]);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -468,6 +512,70 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
               </div>
             </CardContent>
           </Card>
+
+          {/* Encryption Management Card */}
+          {encryptionStatus && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  ניהול הצפנה
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Encryption Status */}
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">סטטוס הצפנה</span>
+                    <Badge variant={encryptionStatus.encryption_enabled ? 'default' : 'destructive'}>
+                      {encryptionStatus.encryption_enabled ? 'פעיל' : 'לא פעיל'}
+                    </Badge>
+                  </div>
+                  
+                  {encryptionStatus.current_key && (
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <div>מפתח נוכחי: {encryptionStatus.current_key.key_id}</div>
+                      <div>אלגוריתם: {encryptionStatus.current_key.algorithm}</div>
+                      <div>ימים עד תפוגה: {encryptionStatus.current_key.days_until_expiry}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Encryption Actions */}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowMigrateDialog(true)}
+                    disabled={isEncrypting}
+                    className="justify-start"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    העבר הודעות קיימות להצפנה
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={rotateEncryptionKeys}
+                    className="justify-start"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    רוטציה של מפתחות הצפנה
+                  </Button>
+                </div>
+
+                {/* Local-only mode warning */}
+                {settings.localOnlyMode && (
+                  <Alert>
+                    <HardDrive className="h-4 w-4" />
+                    <AlertTitle>מצב מקומי בלבד פעיל</AlertTitle>
+                    <AlertDescription>
+                      כל הנתונים נשמרים מקומית בלבד. לא יישלחו נתונים לשרתים חיצוניים.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Data Management */}
@@ -743,6 +851,57 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
             </Button>
             <Button onClick={exportData}>
               ייצא נתונים
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Migrate to Encryption Dialog */}
+      <Dialog open={showMigrateDialog} onOpenChange={setShowMigrateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              העברה להצפנה
+            </DialogTitle>
+            <DialogDescription>
+              פעולה זו תעביר את כל ההודעות הקיימות להצפנה. 
+              זה עשוי לקחת זמן בהתאם לכמות הנתונים.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                מה יקרה:
+              </p>
+              <ul className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-1">
+                <li>• כל ההודעות הקיימות יוצפנו</li>
+                <li>• הודעות שכבר מוצפנות יושארו כפי שהן</li>
+                <li>• התהליך בטוח ולא ימחק נתונים</li>
+                <li>• ניתן לבטל בכל שלב</li>
+              </ul>
+            </div>
+            
+            {isEncrypting && (
+              <div className="mt-4 flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span className="text-sm">מעביר הודעות להצפנה...</span>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowMigrateDialog(false)}
+              disabled={isEncrypting}
+            >
+              ביטול
+            </Button>
+            <Button 
+              onClick={migrateToEncryption}
+              disabled={isEncrypting}
+            >
+              {isEncrypting ? 'מעביר...' : 'התחל העברה'}
             </Button>
           </DialogFooter>
         </DialogContent>
