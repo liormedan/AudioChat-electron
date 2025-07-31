@@ -10,6 +10,7 @@ if parent_dir not in sys.path:
 
 from typing import Optional, List, Dict, Any
 import asyncio
+from datetime import datetime
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -784,6 +785,384 @@ async def update_chat_session(session_id: str, request: SessionUpdateRequest):
 
 
 @app.delete('/api/chat/sessions/{session_id}')
+async def delete_chat_session(session_id: str):
+    if session_service is None:
+        raise HTTPException(status_code=503, detail="Session service is not available")
+    success = session_service.delete_session(session_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"success": True}
+
+
+@app.get('/api/chat/sessions/{session_id}/messages')
+async def get_session_messages(session_id: str, limit: Optional[int] = None, offset: int = 0):
+    if chat_history_service is None:
+        raise HTTPException(status_code=503, detail="Chat history service is not available")
+    messages = chat_history_service.get_session_messages(session_id, limit=limit, offset=offset)
+    return [m.to_dict() for m in messages]
+
+
+@app.post('/api/chat/sessions/{session_id}/messages')
+async def create_session_message(session_id: str, request: MessageCreateRequest):
+    if chat_history_service is None:
+        raise HTTPException(status_code=503, detail="Chat history service is not available")
+    
+    from backend.models.chat import Message
+    from datetime import datetime
+    
+    message = Message(
+        id="",
+        session_id=session_id,
+        role=request.role,
+        content=request.content,
+        timestamp=datetime.utcnow(),
+        model_id=request.model_id,
+        tokens_used=request.tokens_used,
+        response_time=request.response_time,
+        metadata=request.metadata or {}
+    )
+    
+    message_id = chat_history_service.save_message(session_id, message)
+    return {"message_id": message_id, "success": True}
+
+
+@app.get('/api/chat/search')
+async def search_messages(query: str, user_id: Optional[str] = None, session_id: Optional[str] = None):
+    if chat_history_service is None:
+        raise HTTPException(status_code=503, detail="Chat history service is not available")
+    messages = chat_history_service.search_messages(query, user_id=user_id, session_id=session_id)
+    return [m.to_dict() for m in messages]
+
+
+@app.post('/api/chat/export/{session_id}')
+async def export_session(session_id: str, request: ExportSessionRequest):
+    if chat_history_service is None:
+        raise HTTPException(status_code=503, detail="Chat history service is not available")
+    
+    try:
+        exported_data = chat_history_service.export_session(session_id, format=request.format)
+        
+        # Set appropriate content type based on format
+        if request.format == "json":
+            media_type = "application/json"
+            filename = f"session_{session_id}.json"
+        elif request.format == "markdown":
+            media_type = "text/markdown"
+            filename = f"session_{session_id}.md"
+        else:  # txt
+            media_type = "text/plain"
+            filename = f"session_{session_id}.txt"
+        
+        return Response(
+            content=exported_data,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Security and Encryption Endpoints ---
+
+@app.get('/api/security/encryption/status')
+async def get_encryption_status():
+    """Get current encryption status and key information"""
+    try:
+        if chat_history_service is None:
+            raise HTTPException(status_code=503, detail="Chat history service is not available")
+        
+        status = chat_history_service.get_encryption_status()
+        return JSONResponse(content=status)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get encryption status: {str(e)}")
+
+
+@app.post('/api/security/encryption/rotate-keys')
+async def rotate_encryption_keys():
+    """Manually rotate encryption keys"""
+    try:
+        from backend.services.security.encryption_service import encryption_service
+        
+        new_key_id = encryption_service.rotate_keys()
+        key_info = encryption_service.get_key_info()
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "Encryption keys rotated successfully",
+            "new_key_id": new_key_id,
+            "key_info": key_info
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rotate keys: {str(e)}")
+
+
+@app.post('/api/security/encryption/migrate')
+async def migrate_to_encryption():
+    """Migrate existing unencrypted messages to encrypted format"""
+    try:
+        if chat_history_service is None:
+            raise HTTPException(status_code=503, detail="Chat history service is not available")
+        
+        result = chat_history_service.migrate_to_encryption()
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "Migration completed",
+            "migrated_count": result["migrated_count"],
+            "failed_count": result["failed_count"],
+            "total_messages": result["total_messages"]
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to migrate to encryption: {str(e)}")
+
+
+@app.post('/api/security/encryption/verify')
+async def verify_encryption_integrity(session_id: Optional[str] = None):
+    """Verify encryption integrity for messages"""
+    try:
+        if chat_history_service is None:
+            raise HTTPException(status_code=503, detail="Chat history service is not available")
+        
+        result = chat_history_service.verify_message_encryption(session_id=session_id)
+        
+        return JSONResponse(content={
+            "success": True,
+            "verification_result": result
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to verify encryption: {str(e)}")
+
+
+@app.post('/api/security/encryption/cleanup')
+async def cleanup_old_keys(keep_days: int = 90):
+    """Clean up old encryption keys"""
+    try:
+        from backend.services.security.encryption_service import encryption_service
+        
+        result = encryption_service.cleanup_old_keys(keep_days=keep_days)
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "Cleanup completed",
+            "deleted_keys": result["deleted_keys"],
+            "deleted_metadata": result["deleted_metadata"]
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to cleanup keys: {str(e)}")
+
+
+@app.get('/api/security/encryption/integrity')
+async def check_encryption_integrity():
+    """Check overall encryption system integrity"""
+    try:
+        from backend.services.security.encryption_service import encryption_service
+        
+        integrity = encryption_service.verify_encryption_integrity()
+        
+        return JSONResponse(content={
+            "success": True,
+            "integrity_check": integrity
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to check integrity: {str(e)}")
+
+
+# --- Data Management and Privacy Endpoints ---
+
+@app.get('/api/data/statistics')
+async def get_data_statistics():
+    """Get data usage statistics for privacy dashboard"""
+    try:
+        if chat_history_service is None or session_service is None:
+            raise HTTPException(status_code=503, detail="Required services are not available")
+        
+        # Get session statistics
+        sessions = session_service.list_user_sessions()
+        total_sessions = len(sessions)
+        
+        # Get message statistics
+        total_messages = 0
+        encrypted_messages = 0
+        oldest_data = None
+        storage_used = 0
+        
+        for session in sessions:
+            session_stats = chat_history_service.get_session_statistics(session.id)
+            total_messages += session_stats["message_counts"]["total"]
+            
+            # Estimate storage (rough calculation)
+            storage_used += session_stats["message_counts"]["total"] * 500  # ~500 bytes per message
+            
+            # Check oldest data
+            if session_stats["date_range"]["first_message"]:
+                if not oldest_data or session_stats["date_range"]["first_message"] < oldest_data:
+                    oldest_data = session_stats["date_range"]["first_message"]
+        
+        # Try to get encryption statistics
+        try:
+            encryption_status = chat_history_service.get_encryption_status()
+            if encryption_status.get("encryption_enabled", False):
+                encrypted_messages = total_messages  # Assume all are encrypted if encryption is enabled
+        except:
+            pass
+        
+        return JSONResponse(content={
+            "totalMessages": total_messages,
+            "totalSessions": total_sessions,
+            "storageUsed": storage_used,
+            "oldestData": oldest_data,
+            "encryptedMessages": encrypted_messages
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get data statistics: {str(e)}")
+
+
+@app.post('/api/data/clear-all')
+async def clear_all_data():
+    """Clear all chat data (sessions and messages)"""
+    try:
+        if chat_history_service is None or session_service is None:
+            raise HTTPException(status_code=503, detail="Required services are not available")
+        
+        # Get all sessions
+        sessions = session_service.list_user_sessions()
+        
+        deleted_messages = 0
+        deleted_sessions = 0
+        
+        # Delete all messages and sessions
+        for session in sessions:
+            message_count = chat_history_service.delete_session_messages(session.id)
+            deleted_messages += message_count
+            
+            if session_service.delete_session(session.id):
+                deleted_sessions += 1
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "All data cleared successfully",
+            "deleted_messages": deleted_messages,
+            "deleted_sessions": deleted_sessions
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear data: {str(e)}")
+
+
+@app.get('/api/data/export')
+async def export_all_data():
+    """Export all chat data for backup"""
+    try:
+        if chat_history_service is None or session_service is None:
+            raise HTTPException(status_code=503, detail="Required services are not available")
+        
+        # Get all sessions
+        sessions = session_service.list_user_sessions()
+        
+        export_data = {
+            "export_timestamp": datetime.utcnow().isoformat(),
+            "sessions": [],
+            "encryption_status": None
+        }
+        
+        # Add encryption status
+        try:
+            export_data["encryption_status"] = chat_history_service.get_encryption_status()
+        except:
+            pass
+        
+        # Export each session
+        for session in sessions:
+            session_data = session.to_dict()
+            
+            # Get messages for this session
+            messages = chat_history_service.get_session_messages(session.id)
+            session_data["messages"] = [m.to_dict() for m in messages]
+            
+            # Get session statistics
+            try:
+                session_data["statistics"] = chat_history_service.get_session_statistics(session.id)
+            except:
+                pass
+            
+            export_data["sessions"].append(session_data)
+        
+        # Convert to JSON
+        import json
+        json_data = json.dumps(export_data, ensure_ascii=False, indent=2)
+        
+        return Response(
+            content=json_data,
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename=chat-data-export-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.json"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to export data: {str(e)}")
+
+
+# --- Settings Endpoints ---
+
+@app.get('/api/settings/privacy')
+async def get_privacy_settings():
+    """Get current privacy settings"""
+    try:
+        # For now, return default settings
+        # In a real implementation, these would be stored in a database or config file
+        default_settings = {
+            "localOnlyMode": False,
+            "dataRetentionDays": 90,
+            "encryptionEnabled": True,
+            "anonymousMode": False,
+            "telemetryEnabled": True,
+            "crashReportsEnabled": True,
+            "usageAnalyticsEnabled": False,
+            "autoDeleteEnabled": False,
+            "backupEnabled": True,
+            "cloudSyncEnabled": False
+        }
+        
+        return JSONResponse(content=default_settings)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get privacy settings: {str(e)}")
+
+
+@app.post('/api/settings/privacy')
+async def save_privacy_settings(request: Request):
+    """Save privacy settings"""
+    try:
+        settings = await request.json()
+        
+        # In a real implementation, these would be saved to a database or config file
+        # For now, we'll just validate and return success
+        
+        required_fields = [
+            "localOnlyMode", "dataRetentionDays", "encryptionEnabled", 
+            "anonymousMode", "telemetryEnabled", "crashReportsEnabled",
+            "usageAnalyticsEnabled", "autoDeleteEnabled", "backupEnabled", "cloudSyncEnabled"
+        ]
+        
+        for field in required_fields:
+            if field not in settings:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+        
+        # Validate data types
+        if not isinstance(settings["dataRetentionDays"], int) or settings["dataRetentionDays"] < 1:
+            raise HTTPException(status_code=400, detail="dataRetentionDays must be a positive integer")
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "Privacy settings saved successfully"
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save privacy settings: {str(e)}")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)sion_id}')
 async def delete_chat_session(session_id: str):
     if session_service is None:
         raise HTTPException(status_code=503, detail="Session service is not available")

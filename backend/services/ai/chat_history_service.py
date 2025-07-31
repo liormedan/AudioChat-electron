@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from backend.models.chat import Message
+from backend.services.security.encryption_service import encryption_service
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,15 @@ class ChatHistoryService:
     def save_message(self, session_id: str, message: Message) -> str:
         if not message.id:
             message.id = str(uuid.uuid4())
+        
+        # Encrypt message content before saving
+        try:
+            encrypted_content = encryption_service.encrypt_message(message.content, message.id)
+            logger.debug(f"Encrypted message {message.id}")
+        except Exception as e:
+            logger.warning(f"Failed to encrypt message {message.id}: {e}. Saving unencrypted.")
+            encrypted_content = message.content
+        
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute(
@@ -57,7 +67,7 @@ class ChatHistoryService:
                 message.id,
                 session_id,
                 message.role.value if hasattr(message.role, "value") else message.role,
-                message.content,
+                encrypted_content,  # Store encrypted content
                 message.timestamp.isoformat(),
                 message.model_id,
                 message.tokens_used,
@@ -81,7 +91,22 @@ class ChatHistoryService:
             cursor.execute(query, (session_id,))
         rows = cursor.fetchall()
         conn.close()
-        messages = [Message.from_row(r) for r in rows]
+        
+        messages = []
+        for row in rows:
+            message = Message.from_row(row)
+            
+            # Decrypt message content
+            try:
+                decrypted_content = encryption_service.decrypt_message(message.content, message.id)
+                message.content = decrypted_content
+                logger.debug(f"Decrypted message {message.id}")
+            except Exception as e:
+                logger.warning(f"Failed to decrypt message {message.id}: {e}. Using content as-is.")
+                # Content remains as stored (might be unencrypted)
+            
+            messages.append(message)
+        
         if as_str:
             for m in messages:
                 if hasattr(m.role, "value"):
@@ -91,20 +116,55 @@ class ChatHistoryService:
         return messages
 
     def search_messages(self, query: str, user_id: str = None, session_id: str = None) -> List[Message]:
+        """
+        Search messages by content. Note: This searches encrypted content,
+        so results may be limited when encryption is enabled.
+        For better search functionality, consider implementing a search index.
+        """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        sql = "SELECT m.* FROM chat_messages m JOIN chat_sessions s ON m.session_id = s.id WHERE m.content LIKE ?"
-        params = [f"%{query}%"]
+        
+        # Get all messages first, then decrypt and search
+        # This is less efficient but necessary for encrypted content
+        sql = "SELECT m.* FROM chat_messages m JOIN chat_sessions s ON m.session_id = s.id"
+        params = []
+        
+        conditions = []
         if user_id:
-            sql += " AND s.user_id = ?"
+            conditions.append("s.user_id = ?")
             params.append(user_id)
         if session_id:
-            sql += " AND m.session_id = ?"
+            conditions.append("m.session_id = ?")
             params.append(session_id)
+        
+        if conditions:
+            sql += " WHERE " + " AND ".join(conditions)
+        
         cursor.execute(sql, params)
         rows = cursor.fetchall()
         conn.close()
-        return [Message.from_row(r) for r in rows]
+        
+        # Decrypt and search
+        matching_messages = []
+        for row in rows:
+            message = Message.from_row(row)
+            
+            # Decrypt message content for search
+            try:
+                decrypted_content = encryption_service.decrypt_message(message.content, message.id)
+                message.content = decrypted_content
+                
+                # Check if query matches decrypted content
+                if query.lower() in decrypted_content.lower():
+                    matching_messages.append(message)
+                    
+            except Exception as e:
+                logger.warning(f"Failed to decrypt message {message.id} for search: {e}")
+                # Try searching in original content (might be unencrypted)
+                if query.lower() in message.content.lower():
+                    matching_messages.append(message)
+        
+        return matching_messages
 
     def export_session(self, session_id: str, format: str = "json") -> str:
         """Export session messages in specified format"""
@@ -196,6 +256,16 @@ class ChatHistoryService:
         
         if row:
             msg = Message.from_row(row)
+            
+            # Decrypt message content
+            try:
+                decrypted_content = encryption_service.decrypt_message(msg.content, msg.id)
+                msg.content = decrypted_content
+                logger.debug(f"Decrypted message {msg.id}")
+            except Exception as e:
+                logger.warning(f"Failed to decrypt message {msg.id}: {e}. Using content as-is.")
+                # Content remains as stored (might be unencrypted)
+            
             if as_str:
                 if hasattr(msg.role, "value"):
                     msg.role = msg.role.value
@@ -287,4 +357,107 @@ class ChatHistoryService:
                 "first_message": date_range[0],
                 "last_message": date_range[1]
             }
+        }
+
+    def get_encryption_status(self) -> dict:
+        """Get encryption status and statistics"""
+        try:
+            from backend.services.security.encryption_service import get_encryption_status
+            return get_encryption_status()
+        except Exception as e:
+            logger.error(f"Failed to get encryption status: {e}")
+            return {
+                "encryption_enabled": False,
+                "error": str(e)
+            }
+
+    def migrate_to_encryption(self) -> dict:
+        """
+        Migrate existing unencrypted messages to encrypted format.
+        This should be run once when enabling encryption on existing data.
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Get all messages
+        cursor.execute("SELECT id, content FROM chat_messages")
+        messages = cursor.fetchall()
+        
+        migrated_count = 0
+        failed_count = 0
+        
+        for message_id, content in messages:
+            try:
+                # Try to decrypt first - if it works, it's already encrypted
+                try:
+                    encryption_service.decrypt_message(content, message_id)
+                    continue  # Already encrypted, skip
+                except:
+                    pass  # Not encrypted, proceed with encryption
+                
+                # Encrypt the content
+                encrypted_content = encryption_service.encrypt_message(content, message_id)
+                
+                # Update the message
+                cursor.execute(
+                    "UPDATE chat_messages SET content = ? WHERE id = ?",
+                    (encrypted_content, message_id)
+                )
+                migrated_count += 1
+                
+            except Exception as e:
+                logger.error(f"Failed to migrate message {message_id}: {e}")
+                failed_count += 1
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Migration completed: {migrated_count} messages encrypted, {failed_count} failed")
+        
+        return {
+            "migrated_count": migrated_count,
+            "failed_count": failed_count,
+            "total_messages": len(messages)
+        }
+
+    def verify_message_encryption(self, session_id: str = None) -> dict:
+        """
+        Verify that messages can be properly decrypted.
+        Useful for checking encryption integrity.
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        if session_id:
+            cursor.execute("SELECT id, content FROM chat_messages WHERE session_id = ?", (session_id,))
+        else:
+            cursor.execute("SELECT id, content FROM chat_messages")
+        
+        messages = cursor.fetchall()
+        conn.close()
+        
+        verified_count = 0
+        failed_count = 0
+        failed_messages = []
+        
+        for message_id, content in messages:
+            try:
+                # Try to decrypt
+                decrypted = encryption_service.decrypt_message(content, message_id)
+                if decrypted:  # Successfully decrypted
+                    verified_count += 1
+                else:
+                    failed_count += 1
+                    failed_messages.append(message_id)
+            except Exception as e:
+                failed_count += 1
+                failed_messages.append(message_id)
+                logger.warning(f"Failed to verify message {message_id}: {e}")
+        
+        return {
+            "total_messages": len(messages),
+            "verified_count": verified_count,
+            "failed_count": failed_count,
+            "failed_messages": failed_messages[:10],  # Limit to first 10 for brevity
+            "integrity_ok": failed_count == 0
         }

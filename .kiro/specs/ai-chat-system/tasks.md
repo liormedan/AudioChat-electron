@@ -213,7 +213,10 @@
   - הוספת data retention policies
   - _דרישות: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 6.1 מימוש Message Encryption
+- [x] 6.1 מימוש Message Encryption
+
+
+
   - יצירת קובץ `backend/services/security/encryption_service.py`
   - מימוש הצפנת תוכן הודעות במסד הנתונים
   - הוספת key management ו-rotation
