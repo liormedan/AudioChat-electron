@@ -17,24 +17,25 @@ import {
   TestingPage,
   TerminalPage
 } from './pages';
+import { IntegratedTerminalPage } from './pages/integrated-terminal-page';
 
 const AppContent: React.FC = () => {
-  // const { isInitialized, initializationError } = useStoreInitialization();
+  const { isInitialized, initializationError } = useStoreInitialization();
 
-  // // Show loading screen while stores are initializing
-  // if (!isInitialized) {
-  //   return (
-  //     <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-  //       <div className="text-center space-y-4">
-  //         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-  //         <p className="text-muted-foreground">Initializing application...</p>
-  //         {initializationError && (
-  //           <p className="text-destructive text-sm">Error: {initializationError}</p>
-  //         )}
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  // Show loading screen while stores are initializing
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Initializing application...</p>
+          {initializationError && (
+            <p className="text-destructive text-sm">Error: {initializationError}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -49,6 +50,7 @@ const AppContent: React.FC = () => {
             <Route path="chat" element={<ChatPage />} />
             <Route path="testing" element={<TestingPage />} />
             <Route path="terminal" element={<TerminalPage />} />
+            <Route path="integrated-terminal" element={<IntegratedTerminalPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

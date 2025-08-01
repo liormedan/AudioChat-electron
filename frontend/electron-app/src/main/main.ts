@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron';
 import { join, resolve, dirname } from 'path';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { ServiceManager } from './service-manager';
 // In Electron/Node.js CommonJS context, __filename and __dirname are available
 // We'll use them directly since we're in a CommonJS environment
 
@@ -19,6 +20,7 @@ interface WindowState {
 
 class MainWindow {
   private window: BrowserWindow | null = null;
+  private serviceManager: ServiceManager | null = null;
   private windowState: WindowState = {
     width: 1200,
     height: 800,
@@ -26,11 +28,20 @@ class MainWindow {
   private windowStateFile = join(app.getPath('userData'), 'window-state.json');
   private saveStateTimer: NodeJS.Timeout | null = null;
   private readonly debounceDelay = 500;
+  private isIntegratedMode = false;
 
   constructor() {
+    // Check if running in integrated mode
+    this.isIntegratedMode = process.argv.includes('--integrated');
+    
     this.loadWindowState();
     this.createWindow();
     this.setupIPC();
+    
+    // Initialize ServiceManager if in integrated mode
+    if (this.isIntegratedMode && this.window) {
+      this.serviceManager = new ServiceManager(this.window);
+    }
   }
 
   private loadWindowState() {
@@ -194,6 +205,53 @@ class MainWindow {
     ipcMain.handle('python:call', async (_, service, method, payload) => {
       console.log(`Python call: ${service}.${method}`, payload);
       return { success: true, message: 'Python backend not implemented yet' };
+    });
+
+    // Service Management IPC handlers
+    ipcMain.handle('services:start', async () => {
+      if (this.serviceManager) {
+        await this.serviceManager.startAllServices();
+        return { success: true };
+      }
+      return { success: false, error: 'Service manager not available' };
+    });
+
+    ipcMain.handle('services:stop', async () => {
+      if (this.serviceManager) {
+        await this.serviceManager.stopAllServices();
+        return { success: true };
+      }
+      return { success: false, error: 'Service manager not available' };
+    });
+
+    ipcMain.handle('services:restart', async (_, serviceName: string) => {
+      if (this.serviceManager) {
+        await this.serviceManager.restartService(serviceName);
+        return { success: true };
+      }
+      return { success: false, error: 'Service manager not available' };
+    });
+
+    ipcMain.handle('services:status', async (_, serviceName?: string) => {
+      if (this.serviceManager) {
+        if (serviceName) {
+          return this.serviceManager.getServiceStatus(serviceName);
+        } else {
+          return this.serviceManager.getAllServiceStatus();
+        }
+      }
+      return null;
+    });
+
+    ipcMain.handle('services:health', async () => {
+      if (this.serviceManager) {
+        return await this.serviceManager.checkHealth();
+      }
+      return {};
+    });
+
+    ipcMain.handle('app:isIntegrated', () => {
+      return this.isIntegratedMode;
     });
   }
 }

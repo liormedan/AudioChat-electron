@@ -55,8 +55,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';// Perfo
-rmance metrics interfaces
+} from '@/components/ui/dialog';
+
+// Performance metrics interfaces
 export interface ModelMetrics {
   modelId: string;
   modelName: string;
@@ -105,8 +106,9 @@ export interface ModelMetrics {
     popularityScore: number;
   };
   lastUpdated: string;
-}expor
-t interface PerformanceAlert {
+}
+
+export interface PerformanceAlert {
   id: string;
   type: 'warning' | 'error' | 'info' | 'success';
   title: string;
@@ -155,8 +157,9 @@ interface PerformanceMonitorProps {
   selectedModels?: string[];
   onModelSelect?: (modelId: string) => void;
   onAlertAcknowledge?: (alertId: string) => void;
-}ex
-port const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
+}
+
+export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
   className = '',
   autoRefresh = true,
   refreshInterval = 30000,
@@ -279,8 +282,9 @@ port const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
     } catch (error) {
       console.error('Error acknowledging alert:', error);
     }
-  }, [onAlertAcknowledge]);  con
-st toggleCardExpansion = useCallback((cardId: string) => {
+  }, [onAlertAcknowledge]);
+
+  const toggleCardExpansion = useCallback((cardId: string) => {
     setExpandedCards(prev => {
       const newSet = new Set(prev);
       if (newSet.has(cardId)) {
@@ -332,8 +336,9 @@ st toggleCardExpansion = useCallback((cardId: string) => {
       case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
       default: return <Activity className="h-4 w-4 text-blue-500" />;
     }
-  };  // Ac
-tive alerts (unacknowledged)
+  };
+
+  // Active alerts (unacknowledged)
   const activeAlerts = useMemo(() => 
     alerts.filter(alert => alert.isActive && !alert.acknowledged),
     [alerts]

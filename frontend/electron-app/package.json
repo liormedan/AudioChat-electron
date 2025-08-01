@@ -14,6 +14,8 @@
     "dev:with-backend": "concurrently \"npm run start:api:dev\" \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
     "dev:electron": "wait-on http://localhost:5176 && electron .",
+    "dev:integrated": "concurrently \"npm run dev:vite\" \"npm run dev:electron:integrated\"",
+    "dev:electron:integrated": "wait-on http://localhost:5176 && electron . --integrated",
     "build": "npm run build:renderer && npm run build:main",
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json",

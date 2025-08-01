@@ -14,6 +14,22 @@ export interface IPCResponse {
   timestamp: number;
 }
 
+export interface TerminalLog {
+  service: string;
+  type: 'info' | 'error' | 'success' | 'warning';
+  message: string;
+  timestamp: Date;
+}
+
+export interface ServiceStatus {
+  name: string;
+  status: 'starting' | 'running' | 'stopped' | 'error';
+  port?: number;
+  pid?: number;
+  uptime?: number;
+  lastError?: string;
+}
+
 export interface ElectronAPI {
   // Window management
   minimize: () => Promise<void>;
@@ -39,6 +55,18 @@ export interface ElectronAPI {
   
   // Python backend communication
   callPythonService: (service: string, method: string, payload: unknown) => Promise<unknown>;
+  
+  // Service Management
+  startServices: () => Promise<{ success: boolean; error?: string }>;
+  stopServices: () => Promise<{ success: boolean; error?: string }>;
+  restartService: (serviceName: string) => Promise<{ success: boolean; error?: string }>;
+  getServiceStatus: (serviceName?: string) => Promise<ServiceStatus | ServiceStatus[] | null>;
+  checkServicesHealth: () => Promise<{ [key: string]: boolean }>;
+  isIntegratedMode: () => Promise<boolean>;
+  
+  // Event listeners
+  onTerminalLog: (callback: (log: TerminalLog) => void) => () => void;
+  onServiceStatus: (callback: (serviceName: string, status: ServiceStatus) => void) => () => void;
 }
 
 declare global {

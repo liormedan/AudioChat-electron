@@ -360,3 +360,25 @@ PermissionError: [Errno 13] Permission denied: 'C:\\Audio-Chat-main\\Audio-Chat-
 2025-08-01 17:33:45,046 - backend.services.ai.llm_service - INFO - 🤖 Local models configured for use
 2025-08-01 17:33:45,048 - backend.services.ai.llm_service - INFO - 🚀 Local AI Assistant Ready: DialoGPT Medium (Local)
 2025-08-01 17:33:45,048 - backend.services.ai.llm_service - INFO - 💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות
+2025-08-01 18:52:03,139 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-08-01 18:52:03,140 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-08-01 18:52:03,141 - __main__ - INFO - 🤖 Gemma AI Assistant will be available for local, private conversations
+2025-08-01 18:52:04,348 - __main__ - INFO - ✅ All dependencies are available
+2025-08-01 18:52:04,352 - __main__ - INFO - 📁 Created necessary directories
+2025-08-01 18:52:04,356 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-08-01 18:52:04,356 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-08-01 18:52:04,621 - backend.services.cache.chat_cache_service - INFO - ChatCacheService initialized with backend: memory
+2025-08-01 18:52:52,252 - backend.services.ai.llm_service - INFO - 🤖 Local models configured for use
+2025-08-01 18:52:52,256 - backend.services.ai.llm_service - INFO - 🚀 Local AI Assistant Ready: DialoGPT Medium (Local)
+2025-08-01 18:52:52,257 - backend.services.ai.llm_service - INFO - 💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות
+2025-08-01 18:53:44,571 - __main__ - INFO - 🚀 Audio Chat Studio Backend Starting...
+2025-08-01 18:53:44,572 - __main__ - INFO - מתחיל שרת הבקאנד של Audio Chat Studio
+2025-08-01 18:53:44,572 - __main__ - INFO - 🤖 Gemma AI Assistant will be available for local, private conversations
+2025-08-01 18:53:45,413 - __main__ - INFO - ✅ All dependencies are available
+2025-08-01 18:53:45,415 - __main__ - INFO - 📁 Created necessary directories
+2025-08-01 18:53:45,420 - __main__ - INFO - 🌐 Starting server on http://127.0.0.1:5000
+2025-08-01 18:53:45,420 - __main__ - INFO - מפעיל שרת על http://127.0.0.1:5000
+2025-08-01 18:53:45,640 - backend.services.cache.chat_cache_service - INFO - ChatCacheService initialized with backend: memory
+2025-08-01 18:54:10,359 - backend.services.ai.llm_service - INFO - 🤖 Local models configured for use
+2025-08-01 18:54:10,361 - backend.services.ai.llm_service - INFO - 🚀 Local AI Assistant Ready: DialoGPT Medium (Local)
+2025-08-01 18:54:10,362 - backend.services.ai.llm_service - INFO - 💡 מודל מקומי מוכן - שיחות חינמיות ופרטיות

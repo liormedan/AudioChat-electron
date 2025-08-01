@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Music, Download, BarChart3, Bot, FileAudio, Clock } from 'lucide-react';
+import { Music, Download, BarChart3, Bot, FileAudio, Clock, Terminal as TerminalIcon } from 'lucide-react';
 import { useUIStore } from '../stores/ui-store';
 import { useAppState } from '../hooks/use-app-state';
 import { FileDropZone } from '../components/file-drop-zone';
@@ -15,13 +15,26 @@ export const HomePage: React.FC = () => {
   const appState = useAppState();
   const { toast } = useToast();
   const { data: quickStats } = useQuickStats();
+  const [isIntegratedMode, setIsIntegratedMode] = useState(false);
 
   useEffect(() => {
     toast({ title: 'Welcome back!' });
+    
+    // Check if running in integrated mode
+    const checkIntegratedMode = async () => {
+      try {
+        const integrated = await window.electronAPI.isIntegratedMode();
+        setIsIntegratedMode(integrated);
+      } catch (error) {
+        console.error('Failed to check integrated mode:', error);
+      }
+    };
+    
+    checkIntegratedMode();
   }, [toast]);
 
   const handleFiles = (files: FileList) => {
-    Array.from(files).forEach((file) => appState.user.addRecentFile(file.path));
+    Array.from(files).forEach((file) => appState.user.addRecentFile(file.name));
     toast({ title: 'Files uploaded', description: `${files.length} file(s) added` });
   };
 
@@ -76,6 +89,37 @@ export const HomePage: React.FC = () => {
           Your modern audio processing and AI-powered chat application
         </p>
       </div>
+
+      {/* Integrated Terminal Highlight (only in integrated mode) */}
+      {isIntegratedMode && (
+        <Card className="border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TerminalIcon className="h-5 w-5 text-blue-600" />
+              🖥️ Integrated Terminal Active
+            </CardTitle>
+            <CardDescription>
+              All services are managed through the integrated terminal - no external windows needed
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => handleQuickAction('/integrated-terminal', 'integrated-terminal')}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Open Terminal
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => handleQuickAction('/integrated-terminal?tab=services', 'integrated-terminal')}
+              >
+                View Services
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Assistant Highlight */}
       <Card className="border-2 border-orange-200 dark:border-orange-800 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20">

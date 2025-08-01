@@ -17,7 +17,13 @@ const validateIPCCall = (channel: string, ...args: unknown[]): boolean => {
     'theme:set',
     'theme:get',
     'notification:show',
-    'python:call'
+    'python:call',
+    'services:start',
+    'services:stop',
+    'services:restart',
+    'services:status',
+    'services:health',
+    'app:isIntegrated'
   ];
 
   if (!allowedChannels.includes(channel)) {
@@ -118,6 +124,60 @@ const electronAPI: ElectronAPI = {
       return ipcRenderer.invoke('python:call', service, method, payload);
     }
     return null;
+  },
+
+  // Service Management
+  startServices: async (): Promise<{ success: boolean; error?: string }> => {
+    if (validateIPCCall('services:start')) {
+      return ipcRenderer.invoke('services:start');
+    }
+    return { success: false, error: 'IPC validation failed' };
+  },
+
+  stopServices: async (): Promise<{ success: boolean; error?: string }> => {
+    if (validateIPCCall('services:stop')) {
+      return ipcRenderer.invoke('services:stop');
+    }
+    return { success: false, error: 'IPC validation failed' };
+  },
+
+  restartService: async (serviceName: string): Promise<{ success: boolean; error?: string }> => {
+    if (validateIPCCall('services:restart', serviceName)) {
+      return ipcRenderer.invoke('services:restart', serviceName);
+    }
+    return { success: false, error: 'IPC validation failed' };
+  },
+
+  getServiceStatus: async (serviceName?: string): Promise<any> => {
+    if (validateIPCCall('services:status', serviceName)) {
+      return ipcRenderer.invoke('services:status', serviceName);
+    }
+    return null;
+  },
+
+  checkServicesHealth: async (): Promise<{ [key: string]: boolean }> => {
+    if (validateIPCCall('services:health')) {
+      return ipcRenderer.invoke('services:health');
+    }
+    return {};
+  },
+
+  isIntegratedMode: async (): Promise<boolean> => {
+    if (validateIPCCall('app:isIntegrated')) {
+      return ipcRenderer.invoke('app:isIntegrated');
+    }
+    return false;
+  },
+
+  // Event listeners for real-time updates
+  onTerminalLog: (callback: (log: any) => void) => {
+    ipcRenderer.on('terminal:log', (_, log) => callback(log));
+    return () => ipcRenderer.removeAllListeners('terminal:log');
+  },
+
+  onServiceStatus: (callback: (serviceName: string, status: any) => void) => {
+    ipcRenderer.on('service:status', (_, serviceName, status) => callback(serviceName, status));
+    return () => ipcRenderer.removeAllListeners('service:status');
   },
 };
 
