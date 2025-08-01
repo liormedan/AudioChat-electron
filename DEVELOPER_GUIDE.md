@@ -56,6 +56,320 @@ frontend/electron-app/src/
     └── preload.ts
 ```
 
+## 🤖 AI Chat System
+
+### Overview
+
+The AI Chat System is a comprehensive conversational AI interface that allows users to interact with various AI models including local Gemma models and cloud providers. The system features session management, message history, streaming responses, and advanced security features.
+
+### Architecture
+
+The chat system follows a layered architecture:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (React)                         │
+├─────────────────────────────────────────────────────────────┤
+│ Chat Interface │ Session Manager │ Settings Panel │ History │
+├─────────────────────────────────────────────────────────────┤
+│              Chat Store (Zustand State Management)          │
+├─────────────────────────────────────────────────────────────┤
+│                   Chat API Service                          │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Backend (FastAPI)                         │
+├─────────────────────────────────────────────────────────────┤
+│    Chat API    │  Session API  │  Message API  │  Export    │
+├─────────────────────────────────────────────────────────────┤
+│ Chat Service │ Session Service │ History Service │ Security  │
+├─────────────────────────────────────────────────────────────┤
+│              LLM Service │ Cache Service │ Audit Service     │
+├─────────────────────────────────────────────────────────────┤
+│                      SQLite Database                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Core Components
+
+#### Backend Services
+
+**Chat Service** (`backend/services/ai/chat_service.py`)
+- Handles message processing and AI model communication
+- Manages conversation context and streaming responses
+- Integrates with LLM service for model interactions
+
+**Session Service** (`backend/services/ai/session_service.py`)
+- Manages chat session lifecycle (create, read, update, delete)
+- Handles session metadata and user associations
+- Provides session listing and filtering capabilities
+
+**Chat History Service** (`backend/services/ai/chat_history_service.py`)
+- Stores and retrieves message history
+- Provides search functionality across messages
+- Handles message export in various formats
+
+**Security Service** (`backend/services/ai/chat_security_service.py`)
+- Implements rate limiting and input sanitization
+- Validates session access permissions
+- Provides audit logging for security events
+
+#### Frontend Components
+
+**Chat Interface** (`frontend/electron-app/src/renderer/components/chat/chat-interface.tsx`)
+- Main chat UI with message display and input
+- Handles real-time message updates and streaming
+- Integrates with session management and settings
+
+**Session Manager** (`frontend/electron-app/src/renderer/components/chat/session-manager.tsx`)
+- Session creation, editing, and deletion
+- Session search and filtering
+- Session archiving and organization
+
+**Message List** (`frontend/electron-app/src/renderer/components/chat/message-list.tsx`)
+- Virtual scrolling for performance with large conversations
+- Message rendering with markdown support
+- Copy-to-clipboard and message actions
+
+**Settings Panel** (`frontend/electron-app/src/renderer/components/chat/settings-panel.tsx`)
+- Model parameter configuration (temperature, max_tokens, etc.)
+- Preset management for different use cases
+- Real-time parameter preview
+
+### API Endpoints
+
+#### Chat Endpoints
+
+```http
+POST /api/chat/send
+Content-Type: application/json
+
+{
+  "session_id": "string",
+  "message": "string",
+  "user_id": "string (optional)"
+}
+```
+
+```http
+POST /api/chat/stream
+Content-Type: application/json
+
+{
+  "session_id": "string", 
+  "message": "string",
+  "user_id": "string (optional)"
+}
+```
+
+#### Session Management
+
+```http
+GET /api/chat/sessions?user_id=string
+POST /api/chat/sessions
+GET /api/chat/sessions/{session_id}
+PUT /api/chat/sessions/{session_id}
+DELETE /api/chat/sessions/{session_id}
+```
+
+#### Message Management
+
+```http
+GET /api/chat/sessions/{session_id}/messages?limit=50&offset=0
+POST /api/chat/sessions/{session_id}/messages
+GET /api/chat/search?query=string&user_id=string&session_id=string
+POST /api/chat/export/{session_id}
+```
+
+### Data Models
+
+#### ChatSession
+```python
+@dataclass
+class ChatSession:
+    id: str
+    title: str
+    model_id: str
+    user_id: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    message_count: int
+    is_archived: bool = False
+    metadata: Dict[str, Any] = field(default_factory=dict)
+```
+
+#### Message
+```python
+@dataclass
+class Message:
+    id: str
+    session_id: str
+    content: str
+    timestamp: datetime
+    role: MessageRole  # USER, ASSISTANT, SYSTEM
+    type: MessageType  # TEXT, AUDIO, IMAGE, FILE
+    model_id: Optional[str] = None
+    tokens_used: Optional[int] = None
+    response_time: Optional[float] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+```
+
+#### ChatResponse
+```python
+@dataclass
+class ChatResponse:
+    content: str
+    model_id: str
+    tokens_used: int
+    response_time: float
+    success: bool
+    error_message: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+```
+
+### Database Schema
+
+```sql
+-- Chat Sessions
+CREATE TABLE chat_sessions (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    model_id TEXT NOT NULL,
+    user_id TEXT,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    message_count INTEGER DEFAULT 0,
+    is_archived BOOLEAN DEFAULT FALSE,
+    metadata TEXT DEFAULT '{}'
+);
+
+-- Chat Messages
+CREATE TABLE chat_messages (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+    content TEXT NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+    model_id TEXT,
+    tokens_used INTEGER,
+    response_time REAL,
+    metadata TEXT DEFAULT '{}',
+    FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE
+);
+
+-- Performance Indexes
+CREATE INDEX idx_chat_sessions_user_id ON chat_sessions(user_id);
+CREATE INDEX idx_chat_sessions_updated_at ON chat_sessions(updated_at);
+CREATE INDEX idx_chat_messages_session_id ON chat_messages(session_id);
+CREATE INDEX idx_chat_messages_timestamp ON chat_messages(timestamp);
+```
+
+### Security Features
+
+#### Rate Limiting
+- 5 requests per minute per user for chat endpoints
+- Configurable limits per endpoint
+- IP-based and user-based limiting
+
+#### Input Sanitization
+```python
+def sanitize_input(input_text: str) -> str:
+    """Remove potentially harmful content from user input"""
+    # Remove script tags, javascript: URLs, etc.
+    return sanitized_text
+```
+
+#### Session Access Control
+```python
+def validate_session_access(session_id: str, user_id: str) -> bool:
+    """Validate that user has access to the session"""
+    # Check session ownership and permissions
+    return has_access
+```
+
+#### Audit Logging
+All chat operations are logged with:
+- User ID and IP address
+- Action performed
+- Timestamp and duration
+- Success/failure status
+- Error messages (if any)
+
+### Performance Optimizations
+
+#### Backend Caching
+- In-memory caching for active sessions
+- Database connection pooling
+- Batch operations for message storage
+
+#### Frontend Optimizations
+- Virtual scrolling for large message lists
+- React.memo for expensive components
+- Debounced search and input handling
+- Lazy loading for session history
+
+### Development Workflow
+
+#### Adding New Chat Features
+
+1. **Backend Development**
+```python
+# 1. Add service method
+class ChatService:
+    def new_feature(self, param: str) -> Result:
+        # Implementation
+        pass
+
+# 2. Add API endpoint
+@app.post('/api/chat/new-feature')
+async def new_feature_endpoint(request: Request):
+    # Implementation
+    pass
+
+# 3. Add tests
+def test_new_feature():
+    # Test implementation
+    pass
+```
+
+2. **Frontend Development**
+```typescript
+// 1. Add API service method
+class ChatApiService {
+  async newFeature(param: string): Promise<Result> {
+    // Implementation
+  }
+}
+
+// 2. Add store action
+const useChatStore = create((set) => ({
+  newFeature: async (param: string) => {
+    // Implementation
+  }
+}));
+
+// 3. Add component
+export const NewFeatureComponent: React.FC = () => {
+  // Implementation
+};
+```
+
+#### Testing Chat Features
+
+```bash
+# Backend tests
+python -m pytest tests/integration/test_chat_integration.py
+python -m pytest tests/unit/test_chat_service.py
+
+# Frontend tests
+cd frontend/electron-app
+npm run test:chat
+
+# E2E tests
+npm run test:e2e -- --grep "chat"
+```
+
 ## 🔧 Development Setup
 
 ### Prerequisites
@@ -536,3 +850,250 @@ export const API_CONFIG = {
 ---
 
 **Happy Coding!** 🚀👨‍💻👩‍💻
+### Ch
+at System Troubleshooting Guide
+
+#### Common Chat Issues
+
+**Chat messages not sending**
+```bash
+# Check backend logs
+type logs\backend.log | findstr "chat"
+
+# Verify chat service status
+curl http://127.0.0.1:5000/api/chat/health
+
+# Test database connection
+python -c "from backend.services.database.connection import get_db_connection; print('DB OK' if get_db_connection() else 'DB Failed')"
+```
+
+**Session not loading**
+```bash
+# Check session service
+curl http://127.0.0.1:5000/api/chat/sessions
+
+# Verify database tables
+python -c "from backend.services.ai.session_service import SessionService; print(SessionService().list_sessions())"
+```
+
+**Streaming responses not working**
+```bash
+# Test SSE endpoint
+curl -N http://127.0.0.1:5000/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"session_id":"test","message":"Hello"}'
+
+# Check WebSocket connection in browser DevTools
+```
+
+**Performance issues**
+```bash
+# Run performance tests
+python tests/performance/run_performance_tests.py
+
+# Check database performance
+python backend/services/database/database_optimization_example.py
+
+# Monitor memory usage
+python -c "import psutil; print(f'Memory: {psutil.virtual_memory().percent}%')"
+```
+
+#### Chat System Architecture Diagrams
+
+**Message Flow Diagram**
+```
+User Input → Chat Interface → Chat Store → API Service → Backend
+    ↓              ↓             ↓           ↓           ↓
+Message UI ← State Update ← Response ← JSON/SSE ← Chat Service
+    ↓              ↓             ↓           ↓           ↓
+Database ← History Service ← Session Service ← LLM Service ← AI Model
+```
+
+**Session Management Flow**
+```
+Session Creation:
+Frontend → POST /api/chat/sessions → SessionService → Database
+    ↓                                      ↓              ↓
+Session UI ← Session Object ← JSON Response ← Session Data
+
+Message Processing:
+Frontend → POST /api/chat/send → ChatService → LLM Service
+    ↓                              ↓             ↓
+Message UI ← Streaming Response ← SSE Stream ← AI Response
+    ↓                              ↓             ↓
+History ← Database Storage ← Message Object ← Processed Response
+```
+
+**Security Flow**
+```
+Request → Rate Limiter → Input Sanitizer → Session Validator
+   ↓           ↓              ↓                ↓
+Response ← Audit Logger ← Security Service ← Access Control
+```
+
+### Chat Component Documentation
+
+#### Core Components Props and Usage
+
+**ChatInterface Component**
+```typescript
+interface ChatInterfaceProps {
+  sessionId?: string;
+  initialMessage?: string;
+  onSessionChange?: (sessionId: string) => void;
+  className?: string;
+}
+
+// Usage
+<ChatInterface 
+  sessionId="session-123"
+  onSessionChange={(id) => console.log('Session changed:', id)}
+  className="h-full"
+/>
+```
+
+**MessageList Component**
+```typescript
+interface MessageListProps {
+  messages: Message[];
+  loading?: boolean;
+  onMessageAction?: (messageId: string, action: string) => void;
+  virtualScrolling?: boolean;
+}
+
+// Usage
+<MessageList 
+  messages={messages}
+  loading={isLoading}
+  onMessageAction={handleMessageAction}
+  virtualScrolling={true}
+/>
+```
+
+**SessionManager Component**
+```typescript
+interface SessionManagerProps {
+  currentSessionId?: string;
+  onSessionSelect: (sessionId: string) => void;
+  onSessionCreate: () => void;
+  onSessionDelete: (sessionId: string) => void;
+}
+
+// Usage
+<SessionManager 
+  currentSessionId={currentSession}
+  onSessionSelect={setCurrentSession}
+  onSessionCreate={createNewSession}
+  onSessionDelete={deleteSession}
+/>
+```
+
+**SettingsPanel Component**
+```typescript
+interface SettingsPanelProps {
+  modelSettings: ModelSettings;
+  onSettingsChange: (settings: ModelSettings) => void;
+  presets?: SettingsPreset[];
+  onPresetSave?: (preset: SettingsPreset) => void;
+}
+
+// Usage
+<SettingsPanel 
+  modelSettings={settings}
+  onSettingsChange={updateSettings}
+  presets={availablePresets}
+  onPresetSave={savePreset}
+/>
+```
+
+### Performance Optimization Guidelines
+
+#### Backend Performance
+
+**Database Optimization**
+```python
+# Use connection pooling
+from backend.services.database.connection import get_db_pool
+
+# Batch operations
+def batch_insert_messages(messages: List[Message]):
+    with get_db_pool() as conn:
+        conn.executemany(INSERT_MESSAGE_SQL, messages)
+
+# Use indexes for common queries
+CREATE INDEX idx_messages_session_timestamp ON chat_messages(session_id, timestamp);
+```
+
+**Caching Strategy**
+```python
+from functools import lru_cache
+import redis
+
+# In-memory caching for active sessions
+@lru_cache(maxsize=100)
+def get_session_cache(session_id: str):
+    return session_data
+
+# Redis for distributed caching
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+```
+
+#### Frontend Performance
+
+**Virtual Scrolling for Large Message Lists**
+```typescript
+import { FixedSizeList as List } from 'react-window';
+
+const MessageVirtualList: React.FC = ({ messages }) => {
+  const Row = ({ index, style }) => (
+    <div style={style}>
+      <MessageComponent message={messages[index]} />
+    </div>
+  );
+
+  return (
+    <List
+      height={600}
+      itemCount={messages.length}
+      itemSize={80}
+    >
+      {Row}
+    </List>
+  );
+};
+```
+
+**Debounced Search and Input**
+```typescript
+import { useDebouncedCallback } from 'use-debounce';
+
+const SearchInput: React.FC = () => {
+  const debouncedSearch = useDebouncedCallback(
+    (value: string) => {
+      performSearch(value);
+    },
+    300
+  );
+
+  return (
+    <input 
+      onChange={(e) => debouncedSearch(e.target.value)}
+      placeholder="Search messages..."
+    />
+  );
+};
+```
+
+**React.memo for Expensive Components**
+```typescript
+const MessageComponent = React.memo<MessageProps>(({ message }) => {
+  return (
+    <div className="message">
+      {/* Expensive rendering logic */}
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.message.id === nextProps.message.id &&
+         prevProps.message.content === nextProps.message.content;
+});
+```

@@ -52,10 +52,15 @@ Audio-Chat-Studio/
 - ניתוח ספקטרלי וטמפורלי
 - עיבוד אודיו בזמן אמת
 
-### 🤖 בינה מלאכותית
+### 🤖 בינה מלאכותית וצ'אט
+- מערכת צ'אט מתקדמת עם AI מקומי (Gemma)
+- ניהול סשנים והיסטוריית שיחות
+- תמיכה בהזרמת תגובות (streaming)
 - שירותי LLM מתקדמים
 - עיבוד פקודות בשפה טבעית
 - תמיכה במודלים מקומיים וענן
+- חיפוש והעברת שיחות
+- הגדרות מודל מתקדמות
 
 ### 🖥️ ממשק משתמש
 - אפליקציית Electron מודרנית
@@ -164,8 +169,20 @@ frontend/electron-app/src/
 | `GET` | `/api/audio/metadata/{id}` | metadata של קובץ |
 | `POST` | `/api/audio/command/execute` | ביצוע פקודה |
 
-למידע על Endpoints של מערכת הצ'אט ראו `docs/development/chat-api-guide.md`.
-המסמך כולל כעת גם סעיף **"Streaming with SSE"** המתאר כיצד לקרוא את `/api/chat/stream` כ־`text/event-stream`.
+### Chat API Endpoints
+
+| Method | Endpoint | תיאור |
+|--------|----------|-------|
+| `POST` | `/api/chat/send` | שליחת הודעה לצ'אט |
+| `POST` | `/api/chat/stream` | הזרמת תגובות בזמן אמת |
+| `GET` | `/api/chat/sessions` | רשימת סשני צ'אט |
+| `POST` | `/api/chat/sessions` | יצירת סשן חדש |
+| `GET` | `/api/chat/sessions/{id}/messages` | הודעות סשן |
+| `GET` | `/api/chat/search` | חיפוש בהודעות |
+| `POST` | `/api/chat/export/{id}` | ייצוא שיחה |
+
+למידע מפורט על Chat API ראו `docs/api/chat-api.md`.
+המסמך כולל דוגמאות קוד, SDK examples ו-streaming עם Server-Sent Events.
 
 ## 🛠️ פתרון בעיות
 
@@ -218,6 +235,7 @@ type logs\backend.log
 
 ## 🧪 בדיקות
 
+### בדיקות בסיסיות
 ```bash
 # בדיקת בריאות כללית
 scripts\utils\health-check.bat
@@ -229,6 +247,34 @@ python -c "from backend.api.main import create_app; print('OK')"
 cd frontend\electron-app
 npm run test:backend
 npm run type-check
+```
+
+### בדיקות מתקדמות
+```bash
+# בדיקת אינטגרציה מלאה
+scripts\final-integration-test.bat
+
+# בדיקות ביצועים
+python tests\performance\run_performance_tests.py
+
+# בדיקות E2E
+cd frontend\electron-app
+npm run test:e2e
+
+# בדיקות נגישות
+npm run test:accessibility
+```
+
+### בדיקות צ'אט ספציפיות
+```bash
+# בדיקת Chat API
+curl -X POST http://127.0.0.1:5000/api/chat/sessions -H "Content-Type: application/json" -d "{\"title\":\"Test\"}"
+
+# בדיקת Streaming
+curl -N http://127.0.0.1:5000/api/chat/stream -H "Content-Type: application/json" -d "{\"session_id\":\"test\",\"message\":\"Hello\"}"
+
+# בדיקת בסיס נתונים
+python -c "from backend.services.database.connection import get_db_connection; print('DB OK' if get_db_connection() else 'DB Failed')"
 ```
 
 ## 📦 פריסה
