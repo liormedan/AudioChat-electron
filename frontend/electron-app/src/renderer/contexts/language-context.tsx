@@ -1,3 +1,4 @@
+add-language-support-to-electron-app
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useUserStore } from '../stores';
 
@@ -31,6 +32,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage }}>
+
+
+
       {children}
     </LanguageContext.Provider>
   );
