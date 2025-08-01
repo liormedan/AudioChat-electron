@@ -250,6 +250,9 @@
   - מימוש caching ו-performance optimizations
   - הוספת lazy loading ו-virtual scrolling
   - אופטימיזציה של database queries
+
+
+
   - _דרישות: 7.1, 7.2, 7.3, 7.4_
 
 - [ ] 7.1 מימוש Frontend Performance Optimizations

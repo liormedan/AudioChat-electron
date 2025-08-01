@@ -179,7 +179,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSettings)
       });
-      
+
       if (response.ok) {
         setSettings(newSettings);
       }
@@ -220,8 +220,8 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       type: 'encryption',
       status: settings.encryptionEnabled ? 'active' : 'warning',
       message: settings.encryptionEnabled ? 'הצפנה פעילה' : 'הצפנה לא פעילה',
-      details: settings.encryptionEnabled ? 
-        'כל ההודעות מוצפנות במסד הנתונים' : 
+      details: settings.encryptionEnabled ?
+        'כל ההודעות מוצפנות במסד הנתונים' :
         'הודעות נשמרות ללא הצפנה'
     });
 
@@ -230,8 +230,8 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       type: 'local-only',
       status: settings.localOnlyMode ? 'active' : 'inactive',
       message: settings.localOnlyMode ? 'מצב מקומי בלבד' : 'מצב רגיל',
-      details: settings.localOnlyMode ? 
-        'כל הנתונים נשמרים מקומית בלבד' : 
+      details: settings.localOnlyMode ?
+        'כל הנתונים נשמרים מקומית בלבד' :
         'נתונים עשויים להישלח לשרתים חיצוניים'
     });
 
@@ -240,8 +240,8 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       type: 'retention',
       status: settings.autoDeleteEnabled ? 'active' : 'inactive',
       message: `שמירת נתונים: ${settings.dataRetentionDays} ימים`,
-      details: settings.autoDeleteEnabled ? 
-        'נתונים ישנים נמחקים אוטומטית' : 
+      details: settings.autoDeleteEnabled ?
+        'נתונים ישנים נמחקים אוטומטית' :
         'נתונים נשמרים ללא הגבלת זמן'
     });
 
@@ -250,8 +250,8 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       type: 'anonymous',
       status: settings.anonymousMode ? 'active' : 'inactive',
       message: settings.anonymousMode ? 'מצב אנונימי' : 'מצב רגיל',
-      details: settings.anonymousMode ? 
-        'לא נאספים נתוני זיהוי אישיים' : 
+      details: settings.anonymousMode ?
+        'לא נאספים נתוני זיהוי אישיים' :
         'נתוני שימוש עשויים להיאסף'
     });
 
@@ -268,7 +268,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       const response = await fetch('/api/data/clear-all', {
         method: 'POST'
       });
-      
+
       if (response.ok) {
         await loadDataStatistics();
         setShowClearDataDialog(false);
@@ -323,7 +323,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       const response = await fetch('/api/security/encryption/migrate', {
         method: 'POST'
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('Migration completed:', result);
@@ -343,7 +343,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       const response = await fetch('/api/security/encryption/rotate-keys', {
         method: 'POST'
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('Key rotation completed:', result);
@@ -365,18 +365,18 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
   const getIndicatorIcon = (indicator: PrivacyIndicator) => {
     switch (indicator.type) {
       case 'encryption':
-        return indicator.status === 'active' ? 
-          <Lock className="h-4 w-4 text-green-500" /> : 
+        return indicator.status === 'active' ?
+          <Lock className="h-4 w-4 text-green-500" /> :
           <Unlock className="h-4 w-4 text-red-500" />;
       case 'local-only':
-        return indicator.status === 'active' ? 
-          <HardDrive className="h-4 w-4 text-blue-500" /> : 
+        return indicator.status === 'active' ?
+          <HardDrive className="h-4 w-4 text-blue-500" /> :
           <Server className="h-4 w-4 text-gray-500" />;
       case 'retention':
         return <Clock className="h-4 w-4 text-purple-500" />;
       case 'anonymous':
-        return indicator.status === 'active' ? 
-          <EyeOff className="h-4 w-4 text-orange-500" /> : 
+        return indicator.status === 'active' ?
+          <EyeOff className="h-4 w-4 text-orange-500" /> :
           <Eye className="h-4 w-4 text-gray-500" />;
       default:
         return <Info className="h-4 w-4" />;
@@ -531,7 +531,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                       {encryptionStatus.encryption_enabled ? 'פעיל' : 'לא פעיל'}
                     </Badge>
                   </div>
-                  
+
                   {encryptionStatus.current_key && (
                     <div className="text-sm text-muted-foreground space-y-1">
                       <div>מפתח נוכחי: {encryptionStatus.current_key.key_id}</div>
@@ -552,7 +552,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                     <RotateCcw className="h-4 w-4 mr-2" />
                     העבר הודעות קיימות להצפנה
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     onClick={rotateEncryptionKeys}
@@ -712,9 +712,8 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                   {retentionPolicies.map((policy) => (
                     <Card
                       key={policy.id}
-                      className={`cursor-pointer transition-colors ${
-                        policy.enabled ? 'ring-2 ring-primary' : 'hover:bg-accent/50'
-                      }`}
+                      className={`cursor-pointer transition-colors ${policy.enabled ? 'ring-2 ring-primary' : 'hover:bg-accent/50'
+                        }`}
                       onClick={() => applyRetentionPolicy(policy.id)}
                     >
                       <CardContent className="p-4">
@@ -760,12 +759,12 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                           <Badge
                             variant={
                               indicator.status === 'active' ? 'default' :
-                              indicator.status === 'warning' ? 'destructive' : 'secondary'
+                                indicator.status === 'warning' ? 'destructive' : 'secondary'
                             }
                             className="text-xs"
                           >
                             {indicator.status === 'active' ? 'פעיל' :
-                             indicator.status === 'warning' ? 'אזהרה' : 'לא פעיל'}
+                              indicator.status === 'warning' ? 'אזהרה' : 'לא פעיל'}
                           </Badge>
                         </div>
                         {indicator.details && (
@@ -865,7 +864,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
               העברה להצפנה
             </DialogTitle>
             <DialogDescription>
-              פעולה זו תעביר את כל ההודעות הקיימות להצפנה. 
+              פעולה זו תעביר את כל ההודעות הקיימות להצפנה.
               זה עשוי לקחת זמן בהתאם לכמות הנתונים.
             </DialogDescription>
           </DialogHeader>
@@ -881,7 +880,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                 <li>• ניתן לבטל בכל שלב</li>
               </ul>
             </div>
-            
+
             {isEncrypting && (
               <div className="mt-4 flex items-center gap-2">
                 <RefreshCw className="h-4 w-4 animate-spin" />
@@ -890,14 +889,14 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
             )}
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowMigrateDialog(false)}
               disabled={isEncrypting}
             >
               ביטול
             </Button>
-            <Button 
+            <Button
               onClick={migrateToEncryption}
               disabled={isEncrypting}
             >

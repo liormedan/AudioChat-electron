@@ -1483,6 +1483,151 @@ async def save_privacy_settings(request: Request):
         raise HTTPException(status_code=500, detail=f"Failed to save privacy settings: {str(e)}")
 
 
+# --- Cache Management Endpoints ---
+
+@app.get('/api/cache/info')
+async def get_cache_info():
+    """Get cache information and statistics"""
+    try:
+        from backend.services.cache.chat_cache_service import get_cache_info
+        
+        info = get_cache_info()
+        return JSONResponse(content={
+            "success": True,
+            "cache_info": info
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get cache info: {str(e)}")
+
+
+@app.post('/api/cache/clear')
+async def clear_cache(cache_type: Optional[str] = None):
+    """Clear cache (all or specific type)"""
+    try:
+        from backend.services.cache.chat_cache_service import clear_all_cache, cache_service
+        
+        if cache_type == "all" or cache_type is None:
+            result = clear_all_cache()
+            message = "All cache cleared successfully"
+        elif cache_type == "sessions":
+            # Clear session-related cache
+            invalidated = cache_service.invalidate_pattern("session:*")
+            invalidated += cache_service.invalidate_pattern("user_sessions:*")
+            result = invalidated > 0
+            message = f"Session cache cleared: {invalidated} entries"
+        elif cache_type == "messages":
+            # Clear message-related cache
+            invalidated = cache_service.invalidate_pattern("messages:*")
+            result = invalidated > 0
+            message = f"Message cache cleared: {invalidated} entries"
+        elif cache_type == "search":
+            # Clear search cache
+            invalidated = cache_service.invalidate_pattern("search:*")
+            result = invalidated > 0
+            message = f"Search cache cleared: {invalidated} entries"
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid cache type: {cache_type}")
+        
+        return JSONResponse(content={
+            "success": result,
+            "message": message
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
+
+
+@app.get('/api/cache/stats')
+async def get_cache_stats():
+    """Get detailed cache statistics"""
+    try:
+        from backend.services.cache.chat_cache_service import cache_service
+        
+        stats = cache_service.get_stats()
+        
+        # Convert CacheStats objects to dictionaries
+        formatted_stats = {}
+        for backend_name, cache_stats in stats.items():
+            formatted_stats[backend_name] = {
+                "hits": cache_stats.hits,
+                "misses": cache_stats.misses,
+                "evictions": cache_stats.evictions,
+                "total_size_bytes": cache_stats.total_size_bytes,
+                "entry_count": cache_stats.entry_count,
+                "hit_rate": cache_stats.hit_rate
+            }
+        
+        return JSONResponse(content={
+            "success": True,
+            "stats": formatted_stats
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get cache stats: {str(e)}")
+
+
+@app.post('/api/cache/invalidate')
+async def invalidate_cache_pattern(pattern: str):
+    """Invalidate cache entries matching a pattern"""
+    try:
+        from backend.services.cache.chat_cache_service import cache_service
+        
+        if not pattern or len(pattern.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Pattern must be at least 2 characters")
+        
+        invalidated = cache_service.invalidate_pattern(pattern.strip())
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": f"Cache invalidated for pattern: {pattern}",
+            "invalidated_count": invalidated
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to invalidate cache: {str(e)}")
+
+
+@app.post('/api/cache/warmup')
+async def warmup_cache():
+    """Warm up cache with frequently accessed data"""
+    try:
+        from backend.services.cache.chat_cache_service import chat_cache
+        
+        warmed_up = 0
+        
+        # Warm up recent sessions
+        if session_service:
+            try:
+                recent_sessions = session_service.list_user_sessions(limit=20)
+                for session in recent_sessions:
+                    chat_cache.set_session(session.id, session.to_dict())
+                    warmed_up += 1
+            except Exception as e:
+                logger.warning(f"Failed to warm up sessions: {e}")
+        
+        # Warm up recent messages for active sessions
+        if chat_history_service and session_service:
+            try:
+                recent_sessions = session_service.list_user_sessions(limit=10)
+                for session in recent_sessions:
+                    messages = chat_history_service.get_session_messages(session.id, limit=50)
+                    if messages:
+                        cached_data = [msg.to_dict() for msg in messages]
+                        chat_cache.set_session_messages(session.id, cached_data, 50)
+                        warmed_up += 1
+            except Exception as e:
+                logger.warning(f"Failed to warm up messages: {e}")
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "Cache warmed up successfully",
+            "warmed_entries": warmed_up
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to warm up cache: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)sion_id}')

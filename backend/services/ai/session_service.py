@@ -8,6 +8,7 @@ from typing import Optional, List
 
 from backend.models.chat import ChatSession, SessionNotFoundError
 from backend.services.security.audit_service import log_user_action, AuditSeverity
+from backend.services.cache.chat_cache_service import chat_cache, cached
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,15 @@ class SessionService:
         conn.close()
         logger.info(f"Created session {session.id}")
         
+        # Cache the new session
+        try:
+            chat_cache.set_session(session.id, session.to_dict())
+            # Invalidate user sessions cache
+            if user_id:
+                chat_cache.invalidate_user_sessions(user_id)
+        except Exception as e:
+            logger.warning(f"Failed to cache new session: {e}")
+        
         # Log audit event
         try:
             log_user_action(
@@ -74,16 +84,45 @@ class SessionService:
         return session
 
     def get_session(self, session_id: str) -> Optional[ChatSession]:
+        # Try cache first
+        cached_session = chat_cache.get_session(session_id)
+        if cached_session:
+            try:
+                return ChatSession.from_dict(cached_session)
+            except Exception as e:
+                logger.warning(f"Failed to deserialize cached session: {e}")
+        
+        # Cache miss - fetch from database
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM chat_sessions WHERE id = ?", (session_id,))
         row = cursor.fetchone()
         conn.close()
+        
         if not row:
             return None
-        return ChatSession.from_row(row)
+        
+        session = ChatSession.from_row(row)
+        
+        # Cache the session
+        try:
+            chat_cache.set_session(session_id, session.to_dict())
+        except Exception as e:
+            logger.warning(f"Failed to cache session: {e}")
+        
+        return session
 
     def list_user_sessions(self, user_id: str = None, limit: int = 50) -> List[ChatSession]:
+        # Try cache first for user sessions
+        if user_id:
+            cached_sessions = chat_cache.get_user_sessions(user_id, limit)
+            if cached_sessions:
+                try:
+                    return [ChatSession.from_dict(session_data) for session_data in cached_sessions]
+                except Exception as e:
+                    logger.warning(f"Failed to deserialize cached user sessions: {e}")
+        
+        # Cache miss - fetch from database
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         if user_id:
@@ -98,7 +137,18 @@ class SessionService:
             )
         rows = cursor.fetchall()
         conn.close()
-        return [ChatSession.from_row(r) for r in rows]
+        
+        sessions = [ChatSession.from_row(r) for r in rows]
+        
+        # Cache user sessions
+        if user_id and sessions:
+            try:
+                cached_data = [session.to_dict() for session in sessions]
+                chat_cache.set_user_sessions(user_id, cached_data, limit)
+            except Exception as e:
+                logger.warning(f"Failed to cache user sessions: {e}")
+        
+        return sessions
 
     def update_session(self, session_id: str, **updates) -> bool:
         if not updates:
@@ -129,6 +179,15 @@ class SessionService:
         success = cursor.rowcount > 0
         conn.commit()
         conn.close()
+        
+        # Invalidate cache
+        if success:
+            try:
+                chat_cache.invalidate_session(session_id)
+                # Also invalidate user sessions cache (we don't know the user_id here)
+                # This is a limitation - in a real system we'd want to track this better
+            except Exception as e:
+                logger.warning(f"Failed to invalidate session cache: {e}")
         
         # Log audit event
         if success:

@@ -25,6 +25,9 @@ requests>=2.28.0
 python-magic>=0.4.27
 Pillow>=10.0.0
 
+# Caching (optional)
+redis>=5.0.0
+
 # AI/ML dependencies (optional)
 transformers>=4.35.0
 torch>=2.1.0

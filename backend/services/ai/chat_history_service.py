@@ -9,6 +9,7 @@ from typing import List, Optional
 from backend.models.chat import Message
 from backend.services.security.encryption_service import encryption_service
 from backend.services.security.audit_service import log_user_action, log_security_event, AuditSeverity
+from backend.services.cache.chat_cache_service import chat_cache, cached
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,12 @@ class ChatHistoryService:
         conn.close()
         logger.info(f"Saved message {message.id} to session {session_id}")
         
+        # Invalidate cache for this session
+        try:
+            chat_cache.invalidate_session_messages(session_id)
+        except Exception as e:
+            logger.warning(f"Failed to invalidate message cache: {e}")
+        
         # Log audit event
         try:
             log_user_action(
@@ -98,6 +105,31 @@ class ChatHistoryService:
         return message.id
 
     def get_session_messages(self, session_id: str, limit: int = None, offset: int = 0, as_str: bool = True) -> List[Message]:
+        # Try to get from cache first
+        cache_key = f"session_messages:{session_id}:{limit}:{offset}"
+        cached_messages = chat_cache.get_session_messages(session_id, limit or 50)
+        
+        if cached_messages is not None and offset == 0:
+            # Convert cached data back to Message objects
+            messages = []
+            for msg_data in cached_messages:
+                try:
+                    message = Message.from_dict(msg_data)
+                    messages.append(message)
+                except Exception as e:
+                    logger.warning(f"Failed to deserialize cached message: {e}")
+                    break
+            else:
+                # All messages deserialized successfully
+                if as_str:
+                    for m in messages:
+                        if hasattr(m.role, "value"):
+                            m.role = m.role.value
+                        if hasattr(m.type, "value"):
+                            m.type = m.type.value
+                return messages[:limit] if limit else messages
+        
+        # Cache miss - fetch from database
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         query = "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY timestamp ASC"
@@ -123,6 +155,14 @@ class ChatHistoryService:
                 # Content remains as stored (might be unencrypted)
             
             messages.append(message)
+        
+        # Cache the results (only for recent messages without offset)
+        if offset == 0 and messages:
+            try:
+                cached_data = [msg.to_dict() for msg in messages]
+                chat_cache.set_session_messages(session_id, cached_data, limit or 50)
+            except Exception as e:
+                logger.warning(f"Failed to cache session messages: {e}")
         
         if as_str:
             for m in messages:
