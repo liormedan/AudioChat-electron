@@ -279,13 +279,18 @@
   - מימוש database cleanup ו-maintenance
   - _דרישות: 7.2, 7.4_
 
-- [ ] 8. בדיקות אינטגרציה ו-E2E
+- [x] 8. בדיקות אינטגרציה ו-E2E
+
+
+
   - כתיבת בדיקות אינטגרציה לכל הזרימה
   - מימוש בדיקות E2E עם Playwright
   - הוספת performance testing
   - _דרישות: כל הדרישות_
 
-- [ ] 8.1 כתיבת Integration Tests
+- [x] 8.1 כתיבת Integration Tests
+
+
   - יצירת קובץ `tests/integration/test_chat_integration.py`
   - מימוש בדיקות לכל הזרימה: יצירת session, שליחת הודעות, קבלת תשובות
   - בדיקת אינטגרציה בין Frontend ו-Backend
@@ -293,7 +298,9 @@
   - בדיקת error handling ו-recovery scenarios
   - _דרישות: כל הדרישות_
 
-- [ ] 8.2 מימוש E2E Tests
+- [x] 8.2 מימוש E2E Tests
+
+
   - יצירת קובץ `tests/e2e/chat-flow.spec.ts`
   - מימוש בדיקות Playwright לממשק המשתמש
   - בדיקת user workflows: יצירת שיחה, שליחת הודעות, ניהול sessions
@@ -301,7 +308,9 @@
   - בדיקת keyboard shortcuts ו-user interactions
   - _דרישות: כל הדרישות_
 
-- [ ] 8.3 Performance Testing
+- [x] 8.3 Performance Testing
+
+
   - יצירת קובץ `tests/performance/chat_performance_test.py`
   - מימוש load testing לAPI endpoints
   - בדיקת memory usage ו-performance metrics
