@@ -1,0 +1,15 @@
+{
+  "sidebar": {
+    "title": "Audio-Chat",
+    "home": "Home",
+    "terminal": "Terminal",
+    "chat": "Chat",
+    "audio": "Audio",
+    "export": "Export",
+    "stats": "Stats",
+    "llm": "LLM Manager",
+    "testing": "Testing",
+    "profile": "Profile",
+    "settings": "Settings"
+  }
+}
