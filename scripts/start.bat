@@ -77,7 +77,7 @@ echo 🚀 מפעיל שירותי המערכת...
 echo.
 
 REM Start Backend API Server
-echo 🔵 מפעיל שרת API ראשי (פורט 5000)...
+echo 🔵 מפעיל שרת API ראשי ^(פורט 5000^)...
 start "Audio Chat Studio - API Server" cmd /k "title Audio Chat Studio - API Server && call .venv\Scripts\activate.bat && python backend\main.py --host 127.0.0.1 --port 5000"
 
 REM Wait for backend to start
@@ -94,7 +94,7 @@ if errorlevel 1 (
 
 REM Start Admin Interface (if exists)
 if exist "backend\admin\main.py" (
-    echo 🟢 מפעיל ממשק ניהול (פורט 5001)...
+    echo 🟢 מפעיל ממשק ניהול ^(פורט 5001^)...
     start "Audio Chat Studio - Admin Interface" cmd /k "title Audio Chat Studio - Admin Interface && call .venv\Scripts\activate.bat && cd backend\admin && python main.py"
     timeout /t 3 /nobreak >nul
 ) else (

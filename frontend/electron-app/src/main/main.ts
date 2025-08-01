@@ -95,7 +95,7 @@ class MainWindow {
     });
 
     if (isDev) {
-      const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? 'http://localhost:5174';
+      const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? 'http://localhost:5176';
       console.log('Loading renderer from dev server:', devServerUrl);
       void this.window.loadURL(devServerUrl);
     } else {

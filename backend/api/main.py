@@ -1628,9 +1628,7 @@ async def warmup_cache():
         raise HTTPException(status_code=500, detail=f"Failed to warm up cache: {str(e)}")
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)sion_id}')
+@app.delete('/api/chat/sessions/{session_id}')
 async def delete_chat_session(session_id: str):
     if session_service is None:
         raise HTTPException(status_code=503, detail="Session service is not available")
@@ -1638,6 +1636,10 @@ async def delete_chat_session(session_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"success": True}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
 # Message Management Endpoints

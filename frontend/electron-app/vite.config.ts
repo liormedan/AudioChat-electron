@@ -20,16 +20,18 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': resolve(__dirname, 'src/renderer'),
       '@/components': resolve(__dirname, 'src/renderer/components'),
       '@/pages': resolve(__dirname, 'src/renderer/pages'),
       '@/hooks': resolve(__dirname, 'src/renderer/hooks'),
+      '@/lib': resolve(__dirname, 'src/renderer/lib'),
       '@/utils': resolve(__dirname, 'src/renderer/utils'),
       '@/types': resolve(__dirname, 'src/shared/types'),
+      '@/renderer': resolve(__dirname, 'src/renderer'),
     },
   },
   server: {
-    port: 5174,
+    port: 5176,
     strictPort: true,
     proxy: {
       '/api': {

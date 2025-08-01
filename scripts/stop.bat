@@ -35,9 +35,9 @@ for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING"') do
     if %ERRORLEVEL%==0 echo ✅ Stopped process %%a
 )
 
-REM Stop any remaining Node processes on port 5174
-echo 📦 Stopping Node processes on port 5174...
-for /f "tokens=5" %%a in ('netstat -aon ^| find ":5174" ^| find "LISTENING"') do (
+REM Stop any remaining Node processes on port 5176
+echo 📦 Stopping Node processes on port 5176...
+for /f "tokens=5" %%a in ('netstat -aon ^| find ":5176" ^| find "LISTENING"') do (
     taskkill /f /pid %%a 2>nul
     if %ERRORLEVEL%==0 echo ✅ Stopped process %%a
 )

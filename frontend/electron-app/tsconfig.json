@@ -20,12 +20,14 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["src/renderer/*"],
       "@/components/*": ["src/renderer/components/*"],
       "@/pages/*": ["src/renderer/pages/*"],
       "@/hooks/*": ["src/renderer/hooks/*"],
+      "@/lib/*": ["src/renderer/lib/*"],
       "@/utils/*": ["src/renderer/utils/*"],
-      "@/types/*": ["src/shared/types/*"]
+      "@/types/*": ["src/shared/types/*"],
+      "@/renderer/*": ["src/renderer/*"]
     }
   },
   "include": ["src/renderer/**/*", "src/shared/**/*"],

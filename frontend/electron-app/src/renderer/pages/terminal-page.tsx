@@ -57,7 +57,7 @@ export const TerminalPage: React.FC = () => {
         const backendRunning = backendResponse.ok;
 
         // Check Frontend (Vite dev server)
-        const frontendResponse = await fetch('http://127.0.0.1:5174/', { 
+        const frontendResponse = await fetch('http://127.0.0.1:5176/', { 
           method: 'GET',
           timeout: 2000 
         });
@@ -110,7 +110,7 @@ export const TerminalPage: React.FC = () => {
       
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      addLog('success', 'frontend', 'Frontend started successfully on port 5174');
+      addLog('success', 'frontend', 'Frontend started successfully on port 5176');
       addLog('success', 'system', 'System startup completed!');
       
       setSystemStatus({
@@ -265,7 +265,7 @@ export const TerminalPage: React.FC = () => {
               Swagger UI
             </Button>
             <Button 
-              onClick={() => window.open('http://127.0.0.1:5174', '_blank')}
+              onClick={() => window.open('http://127.0.0.1:5176', '_blank')}
               variant="outline"
               className="flex items-center"
             >
