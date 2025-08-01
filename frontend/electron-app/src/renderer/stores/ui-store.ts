@@ -48,7 +48,7 @@ export const useUIStore = create<UIState>()(
       // Initial state
       currentPage: 'home',
       sidebarCollapsed: false,
-      theme: 'light',
+      theme: 'dark',
       isLoading: false,
       loadingMessage: undefined,
       notifications: [],

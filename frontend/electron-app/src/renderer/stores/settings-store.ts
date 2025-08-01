@@ -82,6 +82,7 @@ export interface SettingsState {
   updateAdvancedSettings: (advancedSettings: Partial<AppSettings['advanced']>) => void;
   resetSettings: () => void;
   resetSection: (section: keyof AppSettings) => void;
+  resetAllSettings: () => void;
   saveSettings: () => Promise<void>;
   loadSettings: () => Promise<void>;
   exportSettings: () => string;
@@ -106,7 +107,7 @@ const defaultSettings: AppSettings = {
     previewVolume: 0.8,
   },
   ui: {
-    theme: 'system',
+    theme: 'dark',
     fontSize: 'medium',
     compactMode: false,
     showTooltips: true,
@@ -298,6 +299,17 @@ export const useSettingsStore = create<SettingsState>()(
             }),
             false,
             'settings/resetSection'
+          );
+        },
+
+        resetAllSettings: () => {
+          set(
+            {
+              settings: defaultSettings,
+              hasUnsavedChanges: true,
+            },
+            false,
+            'settings/resetAllSettings'
           );
         },
 

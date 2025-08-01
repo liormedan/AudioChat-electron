@@ -5,12 +5,23 @@ import { Settings, Palette, Volume2, Database, Info, Key } from 'lucide-react';
 import { useUIStore } from '../stores/ui-store';
 import { APIKeyManagement } from '../components/settings/api-key-management';
 
+import { useSettingsStore } from '../stores/settings-store';
+
 export const SettingsPage: React.FC = () => {
   const { theme, setTheme } = useUIStore();
+  const resetAllSettings = useSettingsStore((state) => state.resetAllSettings);
 
   const handleThemeToggle = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
+  };
+
+  const handleResetSettings = () => {
+    if (window.confirm('Are you sure you want to reset all settings to their defaults?')) {
+      resetAllSettings();
+      alert('Settings have been reset. The application will now reload.');
+      window.location.reload();
+    }
   };
 
   return (
@@ -115,9 +126,20 @@ export const SettingsPage: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
-            General settings will be implemented here.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium">Reset All Settings</h4>
+              <p className="text-sm text-muted-foreground">
+                Reset all application settings to their default values.
+              </p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={handleResetSettings}
+            >
+              Reset Settings
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
