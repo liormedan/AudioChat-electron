@@ -255,7 +255,7 @@
 
   - _דרישות: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 7.1 מימוש Frontend Performance Optimizations
+- [x] 7.1 מימוש Frontend Performance Optimizations
   - הוספת React.memo ו-useMemo לרכיבים כבדים
   - מימוש virtual scrolling ב-MessageList component
   - הוספת lazy loading לhistory ו-sessions
@@ -263,7 +263,7 @@
   - מימוש debounced search ו-input handling
   - _דרישות: 7.1, 7.2_
 
-- [ ] 7.2 מימוש Backend Caching
+- [x] 7.2 מימוש Backend Caching
   - יצירת קובץ `backend/services/cache/chat_cache_service.py`
   - מימוש in-memory caching לsessions פעילים
   - הוספת Redis support לcaching מתקדם (אופציונלי)
@@ -271,7 +271,7 @@
   - כתיבת בדיקות לcaching functionality
   - _דרישות: 7.1, 7.2_
 
-- [ ] 7.3 אופטימיזציה של Database Queries
+- [x] 7.3 אופטימיזציה של Database Queries
   - הוספת connection pooling למסד הנתונים
   - מימוש batch operations לmessages
   - אופטימיזציה של indexes ו-query plans
