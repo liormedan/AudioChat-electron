@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional, List
 
 from backend.models.chat import ChatSession, SessionNotFoundError
+from backend.services.security.audit_service import log_user_action, AuditSeverity
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,21 @@ class SessionService:
         conn.commit()
         conn.close()
         logger.info(f"Created session {session.id}")
+        
+        # Log audit event
+        try:
+            log_user_action(
+                action="session_created",
+                user_id=user_id,
+                session_id=session.id,
+                details={
+                    "title": session.title,
+                    "model_id": session.model_id
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to log audit event for session creation: {e}")
+        
         return session
 
     def get_session(self, session_id: str) -> Optional[ChatSession]:
@@ -113,6 +129,18 @@ class SessionService:
         success = cursor.rowcount > 0
         conn.commit()
         conn.close()
+        
+        # Log audit event
+        if success:
+            try:
+                log_user_action(
+                    action="session_deleted",
+                    session_id=session_id,
+                    details={"permanent_deletion": True}
+                )
+            except Exception as e:
+                logger.warning(f"Failed to log audit event for session deletion: {e}")
+        
         return success
 
     def increment_message_count(self, session_id: str, count: int = 1) -> None:

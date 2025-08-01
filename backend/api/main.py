@@ -10,6 +10,7 @@ if parent_dir not in sys.path:
 
 from typing import Optional, List, Dict, Any
 import asyncio
+import time
 from datetime import datetime
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse, Response
@@ -696,6 +697,11 @@ async def send_chat_message(payload: SendMessageRequest, request: Request):
     """Send a chat message and return the response"""
     if chat_service is None:
         raise HTTPException(status_code=503, detail="Chat service is not available")
+    
+    start_time = time.time()
+    success = False
+    error_message = None
+    
     try:
         # Sanitize user input
         sanitized_message = security_service.sanitize_input(payload.message)
@@ -706,13 +712,48 @@ async def send_chat_message(payload: SendMessageRequest, request: Request):
                 raise HTTPException(status_code=403, detail="Access to this session is forbidden")
 
         result = chat_service.send_message(payload.session_id, sanitized_message, payload.user_id)
+        success = True
+        
+        # Log audit event
+        try:
+            from backend.services.security.audit_service import log_api_request
+            log_api_request(
+                action="POST /api/chat/send",
+                user_id=payload.user_id,
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get("user-agent"),
+                duration_ms=int((time.time() - start_time) * 1000),
+                success=True
+            )
+        except Exception as audit_error:
+            logger.warning(f"Failed to log audit event: {audit_error}")
+        
         return JSONResponse(content=result.to_dict())
     except SessionNotFoundError as e:
+        error_message = str(e)
         raise HTTPException(status_code=404, detail=str(e))
     except ModelNotAvailableError as e:
+        error_message = str(e)
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
+        error_message = str(e)
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Log audit event for errors
+        if not success and error_message:
+            try:
+                from backend.services.security.audit_service import log_api_request
+                log_api_request(
+                    action="POST /api/chat/send",
+                    user_id=payload.user_id,
+                    ip_address=request.client.host if request.client else None,
+                    user_agent=request.headers.get("user-agent"),
+                    duration_ms=int((time.time() - start_time) * 1000),
+                    success=False,
+                    error_message=error_message
+                )
+            except Exception as audit_error:
+                logger.warning(f"Failed to log audit event: {audit_error}")
 
 
 @app.post('/api/chat/stream')
@@ -969,6 +1010,257 @@ async def check_encryption_integrity():
         raise HTTPException(status_code=500, detail=f"Failed to check integrity: {str(e)}")
 
 
+# --- Audit Logging Endpoints ---
+
+@app.get('/api/security/audit/events')
+async def get_audit_events(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    event_types: Optional[str] = None,
+    user_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    severity: Optional[str] = None,
+    success_only: Optional[bool] = None,
+    limit: int = 100,
+    offset: int = 0
+):
+    """Get audit events with filtering options"""
+    try:
+        from backend.services.security.audit_service import audit_service, AuditEventType, AuditSeverity
+        
+        # Parse parameters
+        start_dt = datetime.fromisoformat(start_date) if start_date else None
+        end_dt = datetime.fromisoformat(end_date) if end_date else None
+        
+        event_type_list = None
+        if event_types:
+            try:
+                event_type_list = [AuditEventType(et.strip()) for et in event_types.split(',')]
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=f"Invalid event type: {str(e)}")
+        
+        severity_enum = None
+        if severity:
+            try:
+                severity_enum = AuditSeverity(severity)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid severity: {severity}")
+        
+        # Get events
+        events = audit_service.get_events(
+            start_date=start_dt,
+            end_date=end_dt,
+            event_types=event_type_list,
+            user_id=user_id,
+            session_id=session_id,
+            severity=severity_enum,
+            success_only=success_only,
+            limit=limit,
+            offset=offset
+        )
+        
+        return JSONResponse(content={
+            "success": True,
+            "events": [event.to_dict() for event in events],
+            "count": len(events)
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get audit events: {str(e)}")
+
+
+@app.get('/api/security/audit/statistics')
+async def get_audit_statistics(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Get audit statistics"""
+    try:
+        from backend.services.security.audit_service import audit_service
+        
+        # Parse parameters
+        start_dt = datetime.fromisoformat(start_date) if start_date else None
+        end_dt = datetime.fromisoformat(end_date) if end_date else None
+        
+        statistics = audit_service.get_statistics(
+            start_date=start_dt,
+            end_date=end_dt
+        )
+        
+        return JSONResponse(content={
+            "success": True,
+            "statistics": statistics
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get audit statistics: {str(e)}")
+
+
+@app.get('/api/security/audit/search')
+async def search_audit_events(
+    q: str,
+    fields: Optional[str] = None
+):
+    """Search audit events"""
+    try:
+        from backend.services.security.audit_service import audit_service
+        
+        if not q or len(q.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Search query must be at least 2 characters")
+        
+        search_fields = None
+        if fields:
+            search_fields = [field.strip() for field in fields.split(',')]
+        
+        events = audit_service.search_events(
+            search_term=q.strip(),
+            search_fields=search_fields
+        )
+        
+        return JSONResponse(content={
+            "success": True,
+            "events": [event.to_dict() for event in events],
+            "count": len(events),
+            "query": q
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to search audit events: {str(e)}")
+
+
+@app.post('/api/security/audit/verify')
+async def verify_audit_integrity():
+    """Verify audit log integrity"""
+    try:
+        from backend.services.security.audit_service import audit_service
+        
+        integrity = audit_service.verify_integrity()
+        
+        return JSONResponse(content={
+            "success": True,
+            "integrity_check": integrity
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to verify audit integrity: {str(e)}")
+
+
+@app.post('/api/security/audit/cleanup')
+async def cleanup_audit_logs(retention_days: int = 365):
+    """Clean up old audit logs"""
+    try:
+        from backend.services.security.audit_service import audit_service
+        
+        if retention_days < 1 or retention_days > 3650:  # 1 day to 10 years
+            raise HTTPException(status_code=400, detail="Retention days must be between 1 and 3650")
+        
+        result = audit_service.cleanup_old_logs(retention_days=retention_days)
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "Audit logs cleaned up successfully",
+            "deleted_events": result["deleted_events"],
+            "deleted_statistics": result["deleted_statistics"]
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to cleanup audit logs: {str(e)}")
+
+
+@app.get('/api/security/audit/export')
+async def export_audit_logs(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    format: str = "json"
+):
+    """Export audit logs"""
+    try:
+        from backend.services.security.audit_service import audit_service
+        
+        if format not in ["json", "csv"]:
+            raise HTTPException(status_code=400, detail="Format must be 'json' or 'csv'")
+        
+        # Parse parameters
+        start_dt = datetime.fromisoformat(start_date) if start_date else None
+        end_dt = datetime.fromisoformat(end_date) if end_date else None
+        
+        exported_data = audit_service.export_logs(
+            start_date=start_dt,
+            end_date=end_dt,
+            format=format
+        )
+        
+        # Set appropriate content type and filename
+        if format == "json":
+            media_type = "application/json"
+            filename = f"audit-logs-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.json"
+        else:  # csv
+            media_type = "text/csv"
+            filename = f"audit-logs-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.csv"
+        
+        return Response(
+            content=exported_data,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to export audit logs: {str(e)}")
+
+
+@app.post('/api/security/audit/log')
+async def log_audit_event(request: Request):
+    """Manually log an audit event (for testing or special cases)"""
+    try:
+        from backend.services.security.audit_service import audit_service, AuditEventType, AuditSeverity
+        
+        data = await request.json()
+        
+        # Validate required fields
+        if not data.get('event_type') or not data.get('action'):
+            raise HTTPException(status_code=400, detail="event_type and action are required")
+        
+        try:
+            event_type = AuditEventType(data['event_type'])
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid event_type: {data['event_type']}")
+        
+        severity = AuditSeverity.LOW
+        if data.get('severity'):
+            try:
+                severity = AuditSeverity(data['severity'])
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid severity: {data['severity']}")
+        
+        # Log the event
+        event_id = audit_service.log_event(
+            event_type=event_type,
+            action=data['action'],
+            user_id=data.get('user_id'),
+            session_id=data.get('session_id'),
+            resource=data.get('resource'),
+            details=data.get('details', {}),
+            severity=severity,
+            success=data.get('success', True),
+            error_message=data.get('error_message'),
+            duration_ms=data.get('duration_ms'),
+            ip_address=data.get('ip_address'),
+            user_agent=data.get('user_agent')
+        )
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "Audit event logged successfully",
+            "event_id": event_id
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to log audit event: {str(e)}")
+
+
 # --- Data Management and Privacy Endpoints ---
 
 @app.get('/api/data/statistics')
@@ -1040,6 +1332,21 @@ async def clear_all_data():
             if session_service.delete_session(session.id):
                 deleted_sessions += 1
         
+        # Log security event
+        try:
+            from backend.services.security.audit_service import log_security_event, AuditSeverity
+            log_security_event(
+                action="all_data_cleared",
+                severity=AuditSeverity.CRITICAL,
+                details={
+                    "deleted_messages": deleted_messages,
+                    "deleted_sessions": deleted_sessions,
+                    "total_sessions": len(sessions)
+                }
+            )
+        except Exception as audit_error:
+            logger.warning(f"Failed to log audit event: {audit_error}")
+        
         return JSONResponse(content={
             "success": True,
             "message": "All data cleared successfully",
@@ -1091,6 +1398,22 @@ async def export_all_data():
         # Convert to JSON
         import json
         json_data = json.dumps(export_data, ensure_ascii=False, indent=2)
+        
+        # Log security event
+        try:
+            from backend.services.security.audit_service import log_security_event, AuditSeverity
+            log_security_event(
+                action="data_exported",
+                severity=AuditSeverity.HIGH,
+                details={
+                    "exported_sessions": len(export_data["sessions"]),
+                    "export_format": "json",
+                    "data_size_bytes": len(json_data),
+                    "includes_encryption_status": export_data["encryption_status"] is not None
+                }
+            )
+        except Exception as audit_error:
+            logger.warning(f"Failed to log audit event: {audit_error}")
         
         return Response(
             content=json_data,

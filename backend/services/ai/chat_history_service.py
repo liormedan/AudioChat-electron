@@ -8,6 +8,7 @@ from typing import List, Optional
 
 from backend.models.chat import Message
 from backend.services.security.encryption_service import encryption_service
+from backend.services.security.audit_service import log_user_action, log_security_event, AuditSeverity
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,22 @@ class ChatHistoryService:
         conn.commit()
         conn.close()
         logger.info(f"Saved message {message.id} to session {session_id}")
+        
+        # Log audit event
+        try:
+            log_user_action(
+                action="message_saved",
+                session_id=session_id,
+                details={
+                    "message_id": message.id,
+                    "role": message.role.value if hasattr(message.role, "value") else message.role,
+                    "encrypted": True,  # Messages are encrypted by default
+                    "content_length": len(message.content)
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to log audit event for message save: {e}")
+        
         return message.id
 
     def get_session_messages(self, session_id: str, limit: int = None, offset: int = 0, as_str: bool = True) -> List[Message]:
@@ -413,6 +430,21 @@ class ChatHistoryService:
         conn.close()
         
         logger.info(f"Migration completed: {migrated_count} messages encrypted, {failed_count} failed")
+        
+        # Log security event
+        try:
+            log_security_event(
+                action="encryption_migration_completed",
+                severity=AuditSeverity.HIGH,
+                details={
+                    "migrated_count": migrated_count,
+                    "failed_count": failed_count,
+                    "total_messages": len(messages),
+                    "success_rate": (migrated_count / len(messages) * 100) if len(messages) > 0 else 100
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to log audit event for encryption migration: {e}")
         
         return {
             "migrated_count": migrated_count,

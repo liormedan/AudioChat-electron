@@ -235,10 +235,7 @@
   - הוספת privacy indicators בממשק
   - _דרישות: 6.2, 6.3, 6.4_
 
-- [x] 6.3 מימוש Audit Logging
-
-
-
+- [ ] 6.3 מימוש Audit Logging
   - יצירת קובץ `backend/services/security/audit_service.py`
   - מימוש logging לכל פעולות משתמש
   - הוספת security event tracking
