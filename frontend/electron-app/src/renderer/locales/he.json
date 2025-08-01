@@ -1,0 +1,15 @@
+{
+  "sidebar": {
+    "title": "אודיו-צ'אט",
+    "home": "בית",
+    "terminal": "טרמינל",
+    "chat": "צ'אט",
+    "audio": "אודיו",
+    "export": "ייצוא",
+    "stats": "סטטיסטיקה",
+    "llm": "מנהל LLM",
+    "testing": "בדיקות",
+    "profile": "פרופיל",
+    "settings": "הגדרות"
+  }
+}
