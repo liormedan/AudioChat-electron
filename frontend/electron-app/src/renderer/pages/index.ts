@@ -11,3 +11,4 @@ export { TestingPage } from './testing-page';
 export { TerminalPage } from './terminal-page';
 export { LayoutDemoPage } from './layout-demo-page';
 export { LayoutConfigurationDemoPage } from './layout-configuration-demo-page';
+export { ResponsiveLayoutDemoPage } from './responsive-layout-demo-page';

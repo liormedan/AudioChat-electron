@@ -10,4 +10,5 @@ export {
 export { LayoutDemo } from './layout-demo';
 export { LayoutSettings } from './layout-settings';
 export { LayoutConfigurationDemo } from './layout-configuration-demo';
+export { ResponsiveLayoutDemo } from './responsive-layout-demo';
 export * from './types';

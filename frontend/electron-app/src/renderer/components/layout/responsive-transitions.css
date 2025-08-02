@@ -1,0 +1,305 @@
+/* Responsive Layout Transitions */
+
+/* Base transition styles */
+.layout-transitioning {
+  --transition-duration: 300ms;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --stagger-delay: 50ms;
+}
+
+/* Disable transitions for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .layout-transitioning {
+    --transition-duration: 0ms;
+    --stagger-delay: 0ms;
+  }
+  
+  .layout-transitioning * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Main layout grid transitions */
+.main-layout-grid.layout-transitioning {
+  transition: grid-template-columns var(--transition-duration) var(--transition-easing),
+              grid-template-rows var(--transition-duration) var(--transition-easing);
+}
+
+/* Content area transitions */
+.content-area.layout-transitioning {
+  transition: grid-template-columns var(--transition-duration) var(--transition-easing),
+              gap var(--transition-duration) var(--transition-easing),
+              padding var(--transition-duration) var(--transition-easing);
+}
+
+/* Column transitions */
+.layout-column {
+  transition: opacity var(--transition-duration) var(--transition-easing),
+              transform var(--transition-duration) var(--transition-easing),
+              width var(--transition-duration) var(--transition-easing);
+}
+
+/* Staggered column animations */
+.layout-column-1 {
+  transition-delay: 0ms;
+}
+
+.layout-column-2 {
+  transition-delay: var(--stagger-delay);
+}
+
+.layout-column-3 {
+  transition-delay: calc(var(--stagger-delay) * 2);
+}
+
+/* Component transitions */
+.compact-component {
+  transition: height var(--transition-duration) var(--transition-easing),
+              opacity var(--transition-duration) var(--transition-easing),
+              transform var(--transition-duration) var(--transition-easing),
+              box-shadow var(--transition-duration) var(--transition-easing);
+  will-change: height, opacity, transform;
+}
+
+/* Breakpoint-specific transitions */
+
+/* Desktop to Laptop */
+.layout-transitioning.from-desktop.to-laptop .main-layout-grid {
+  animation: shrinkLayout var(--transition-duration) var(--transition-easing);
+}
+
+/* Laptop to Tablet */
+.layout-transitioning.from-laptop.to-tablet .content-area {
+  animation: collapseToTwoColumn var(--transition-duration) var(--transition-easing);
+}
+
+.layout-transitioning.from-laptop.to-tablet .layout-column-3 {
+  animation: slideDown var(--transition-duration) var(--transition-easing);
+}
+
+/* Tablet to Mobile */
+.layout-transitioning.from-tablet.to-mobile .layout-column {
+  animation: stackVertically var(--transition-duration) var(--transition-easing);
+}
+
+.layout-transitioning.from-tablet.to-mobile .sidebar {
+  animation: slideOut var(--transition-duration) var(--transition-easing);
+}
+
+/* Mobile to Tablet (reverse) */
+.layout-transitioning.from-mobile.to-tablet .layout-column {
+  animation: unstackVertically var(--transition-duration) var(--transition-easing);
+}
+
+.layout-transitioning.from-mobile.to-tablet .sidebar {
+  animation: slideIn var(--transition-duration) var(--transition-easing);
+}
+
+/* Tablet to Laptop (reverse) */
+.layout-transitioning.from-tablet.to-laptop .content-area {
+  animation: expandToThreeColumn var(--transition-duration) var(--transition-easing);
+}
+
+.layout-transitioning.from-tablet.to-laptop .layout-column-3 {
+  animation: slideUp var(--transition-duration) var(--transition-easing);
+}
+
+/* Laptop to Desktop (reverse) */
+.layout-transitioning.from-laptop.to-desktop .main-layout-grid {
+  animation: expandLayout var(--transition-duration) var(--transition-easing);
+}
+
+/* Component-specific transitions */
+
+/* File uploader transitions */
+.compact-component.file-uploader {
+  transition-delay: 0ms;
+}
+
+/* Waveform player transitions */
+.compact-component.waveform-player {
+  transition-delay: var(--stagger-delay);
+}
+
+/* Chat interface transitions */
+.compact-component.chat-interface {
+  transition-delay: calc(var(--stagger-delay) * 2);
+}
+
+/* File manager transitions */
+.compact-component.file-manager {
+  transition-delay: calc(var(--stagger-delay) * 3);
+}
+
+/* Keyframe animations */
+
+@keyframes shrinkLayout {
+  from {
+    grid-template-columns: 240px 1fr;
+  }
+  to {
+    grid-template-columns: 200px 1fr;
+  }
+}
+
+@keyframes expandLayout {
+  from {
+    grid-template-columns: 200px 1fr;
+  }
+  to {
+    grid-template-columns: 240px 1fr;
+  }
+}
+
+@keyframes collapseToTwoColumn {
+  from {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  to {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@keyframes expandToThreeColumn {
+  from {
+    grid-template-columns: 1fr 1fr;
+  }
+  to {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@keyframes stackVertically {
+  from {
+    grid-template-columns: 1fr 1fr;
+  }
+  to {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes unstackVertically {
+  from {
+    grid-template-columns: 1fr;
+  }
+  to {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-20px);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+    grid-column: 1 / -1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+    grid-column: 1 / -1;
+  }
+  50% {
+    transform: translateY(-20px);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+    width: 160px;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+    width: 0px;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+    width: 0px;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+    width: 160px;
+  }
+}
+
+/* Hover effects during transitions */
+.layout-transitioning .compact-component:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Focus states during transitions */
+.layout-transitioning .compact-component:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Loading states */
+.layout-transitioning .compact-component::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  animation: loadingBar var(--transition-duration) ease-in-out;
+  z-index: 10;
+}
+
+@keyframes loadingBar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  .layout-transitioning .compact-component {
+    border: 2px solid;
+    transition: border-color var(--transition-duration) var(--transition-easing);
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .layout-transitioning .compact-component::before {
+    background: linear-gradient(90deg, transparent, var(--primary-foreground), transparent);
+  }
+}
+
+/* Print styles - disable transitions */
+@media print {
+  .layout-transitioning,
+  .layout-transitioning * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
