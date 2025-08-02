@@ -1,0 +1,65 @@
+/* Compact File Uploader Styles */
+.compact-file-uploader {
+  height: 200px;
+  overflow: hidden;
+}
+
+.compact-file-uploader .tabs-content {
+  height: calc(100% - 32px); /* Account for tabs header */
+  overflow: hidden;
+}
+
+.compact-file-uploader .file-tab {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-file-uploader .drag-zone {
+  transition: all 0.2s ease-in-out;
+}
+
+.compact-file-uploader .drag-zone:hover {
+  border-color: hsl(var(--border));
+}
+
+.compact-file-uploader .drag-zone.drag-active {
+  border-color: hsl(var(--primary));
+  background-color: hsl(var(--primary) / 0.05);
+}
+
+.compact-file-uploader .drag-zone.drag-reject {
+  border-color: hsl(var(--destructive));
+  background-color: hsl(var(--destructive) / 0.05);
+}
+
+.compact-file-uploader .file-info {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: space-between;
+}
+
+.compact-file-uploader .tabs-list {
+  flex-shrink: 0;
+  max-width: calc(100% - 80px); /* Leave space for Clear All button */
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.compact-file-uploader .tabs-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .compact-file-uploader .file-tab {
+    max-width: 80px;
+  }
+  
+  .compact-file-uploader .tabs-list {
+    max-width: calc(100% - 60px);
+  }
+}
