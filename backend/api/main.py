@@ -1,6 +1,7 @@
 import sys
 import os
 import asyncio
+import json
 
 # Add the parent directory (backend) to sys.path for module discovery
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -676,6 +677,118 @@ async def chat_endpoint(request: Request):
             "content": "מצטער, אירעה שגיאה טכנית. אנא נסה שוב.",
             "error": str(e)
         })
+
+@app.post('/api/gemini/chat')
+async def gemini_chat_endpoint(request: Request):
+    """Dedicated Gemini chat endpoint with enhanced features"""
+    try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
+        
+        data = await request.json()
+        messages = data.get('messages', [])
+        model_id = data.get('model_id', 'gemini-1.5-pro')  # Default to latest Gemini
+        temperature = data.get('temperature', 0.7)
+        max_tokens = data.get('max_tokens', 2048)
+        
+        if not messages:
+            raise HTTPException(status_code=400, detail="No messages provided")
+        
+        # Set Gemini model as active if it's not already
+        current_model = llm_service.get_active_model()
+        if not current_model or not current_model.id.startswith('google-'):
+            # Try to set a Gemini model
+            gemini_models = ['google-gemini-1.5-pro', 'google-gemini-pro', 'gemini-1.5-pro', 'gemini-pro']
+            for gemini_model in gemini_models:
+                if llm_service.set_active_model(gemini_model):
+                    break
+        
+        # Update parameters for better Gemini experience
+        if llm_service.current_parameters:
+            llm_service.current_parameters.temperature = temperature
+            llm_service.current_parameters.max_tokens = max_tokens
+        
+        # Generate response using Gemini
+        response = llm_service.generate_chat_response(messages)
+        
+        if response and response.success:
+            return JSONResponse(content={
+                "success": True,
+                "content": response.content,
+                "model_id": response.model_used or model_id,
+                "model_name": "Gemini",
+                "tokens_used": response.tokens_used,
+                "response_time": response.response_time,
+                "cost": response.cost,
+                "metadata": response.metadata
+            })
+        else:
+            error_msg = response.error_message if response else "Unknown error"
+            return JSONResponse(content={
+                "success": False,
+                "content": "מצטער, לא הצלחתי להתחבר ל-Gemini. אנא בדוק את מפתח ה-API.",
+                "error": error_msg,
+                "model_id": model_id
+            })
+            
+    except Exception as e:
+        return JSONResponse(content={
+            "success": False,
+            "content": "מצטער, אירעה שגיאה בחיבור ל-Gemini.",
+            "error": str(e),
+            "model_id": model_id
+        })
+
+@app.post('/api/gemini/stream')
+async def gemini_stream_endpoint(request: Request):
+    """Streaming Gemini chat endpoint"""
+    try:
+        if llm_service is None:
+            raise HTTPException(status_code=503, detail="LLM service is not available")
+        
+        data = await request.json()
+        messages = data.get('messages', [])
+        model_id = data.get('model_id', 'gemini-1.5-pro')
+        temperature = data.get('temperature', 0.7)
+        max_tokens = data.get('max_tokens', 2048)
+        
+        if not messages:
+            raise HTTPException(status_code=400, detail="No messages provided")
+        
+        # Set Gemini model as active
+        current_model = llm_service.get_active_model()
+        if not current_model or not current_model.id.startswith('google-'):
+            gemini_models = ['google-gemini-1.5-pro', 'google-gemini-pro', 'gemini-1.5-pro', 'gemini-pro']
+            for gemini_model in gemini_models:
+                if llm_service.set_active_model(gemini_model):
+                    break
+        
+        async def stream_generator():
+            try:
+                if hasattr(llm_service, 'stream_chat_response'):
+                    async for chunk in llm_service.stream_chat_response(messages, timeout=60):
+                        if await request.is_disconnected():
+                            break
+                        yield f"data: {json.dumps({'content': chunk, 'type': 'content'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                else:
+                    # Fallback to regular response
+                    response = llm_service.generate_chat_response(messages)
+                    if response and response.success:
+                        yield f"data: {json.dumps({'content': response.content, 'type': 'content'})}\n\n"
+                        yield f"data: {json.dumps({'type': 'done', 'metadata': response.metadata})}\n\n"
+                    else:
+                        error_msg = response.error_message if response else "Unknown error"
+                        yield f"data: {json.dumps({'type': 'error', 'error': error_msg})}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+        
+        return StreamingResponse(stream_generator(), media_type='text/event-stream')
+        
+    except Exception as e:
+        async def error_generator():
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+        return StreamingResponse(error_generator(), media_type='text/event-stream')
 
 @app.post('/api/llm/chat/completion')
 async def chat_completion_endpoint(messages: List[Dict[str, str]]):

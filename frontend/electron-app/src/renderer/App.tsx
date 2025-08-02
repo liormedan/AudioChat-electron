@@ -14,6 +14,7 @@ import {
   ProfilePage,
   SettingsPage,
   ChatPage,
+  GeminiPage,
   TestingPage,
   TerminalPage
 } from './pages';
@@ -48,6 +49,7 @@ const AppContent: React.FC = () => {
             <Route path="stats" element={<StatsPage />} />
             <Route path="llm" element={<LLMPage />} />
             <Route path="chat" element={<ChatPage />} />
+            <Route path="gemini" element={<GeminiPage />} />
             <Route path="testing" element={<TestingPage />} />
             <Route path="terminal" element={<TerminalPage />} />
             <Route path="integrated-terminal" element={<IntegratedTerminalPage />} />

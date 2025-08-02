@@ -33,6 +33,7 @@ transformers>=4.35.0
 torch>=2.1.0
 numpy>=1.24.0
 scipy>=1.11.0
+google-generativeai>=0.3.0
 
 # Development and packaging
 pyinstaller>=6.0.0

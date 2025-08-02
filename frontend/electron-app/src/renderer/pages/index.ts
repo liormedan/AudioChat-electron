@@ -6,5 +6,6 @@ export { LLMPage } from './llm-page';
 export { ProfilePage } from './profile-page';
 export { SettingsPage } from './settings-page';
 export { ChatPage } from './chat-page';
+export { GeminiPage } from './gemini-page';
 export { TestingPage } from './testing-page';
 export { TerminalPage } from './terminal-page';

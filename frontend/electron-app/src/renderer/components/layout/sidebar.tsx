@@ -17,6 +17,7 @@ const Sidebar = () => {
           <li><NavLink to="/" className={navLinkClass}>{t('sidebar.home')}</NavLink></li>
           <li><NavLink to="/terminal" className={navLinkClass}>{t('sidebar.terminal')}</NavLink></li>
           <li><NavLink to="/chat" className={navLinkClass}>{t('sidebar.chat')}</NavLink></li>
+          <li><NavLink to="/gemini" className={navLinkClass}>{t('sidebar.gemini')}</NavLink></li>
           <li><NavLink to="/audio" className={navLinkClass}>{t('sidebar.audio')}</NavLink></li>
           <li><NavLink to="/export" className={navLinkClass}>{t('sidebar.export')}</NavLink></li>
           <li><NavLink to="/stats" className={navLinkClass}>{t('sidebar.stats')}</NavLink></li>

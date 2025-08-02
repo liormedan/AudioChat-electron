@@ -299,19 +299,19 @@ export const IntegratedTerminalPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-muted-foreground">Platform:</span>
-                    <span className="ml-2">{process.platform}</span>
+                    <span className="ml-2">{typeof process !== 'undefined' ? process.platform : 'Unknown'}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Node.js:</span>
-                    <span className="ml-2">{process.versions?.node || 'Unknown'}</span>
+                    <span className="ml-2">{typeof process !== 'undefined' ? process.versions?.node || 'Unknown' : 'Unknown'}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Electron:</span>
-                    <span className="ml-2">{process.versions?.electron || 'Unknown'}</span>
+                    <span className="ml-2">{typeof process !== 'undefined' ? process.versions?.electron || 'Unknown' : 'Unknown'}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Chrome:</span>
-                    <span className="ml-2">{process.versions?.chrome || 'Unknown'}</span>
+                    <span className="ml-2">{typeof process !== 'undefined' ? process.versions?.chrome || 'Unknown' : 'Unknown'}</span>
                   </div>
                 </div>
               </CardContent>
