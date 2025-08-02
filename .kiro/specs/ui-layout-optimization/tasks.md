@@ -29,14 +29,14 @@
   - הוספת תמיכה בריבוי קבצים עם tabs
   - _דרישות: 1.4, 2.1_
 
-- [] 2.2 יצירת CompactWaveformPlayer
+- [x] 2.2 יצירת CompactWaveformPlayer
   - שכתוב WaveformPlayer עם גובה מוגבל ל-300px
   - הקטנת waveform ל-120px גובה
   - יצירת בקרות מינימליות אך פונקציונליות
   - הסרת spectrogram במצב קומפקטי
   - _דרישות: 1.4, 2.3_
 
-- [ ] 2.3 יצירת CompactChatInterface
+- [x] 2.3 יצירת CompactChatInterface
   - שכתוב chat interface עם גובה קבוע של 400px
   - הוספת virtual scrolling לביצועים
   - יצירת הצעות פקודות מתחת לצ'אט
