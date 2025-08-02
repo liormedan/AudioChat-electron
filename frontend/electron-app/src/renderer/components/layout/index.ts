@@ -8,4 +8,6 @@ export {
   CompactComponent 
 } from './main-layout-grid';
 export { LayoutDemo } from './layout-demo';
+export { LayoutSettings } from './layout-settings';
+export { LayoutConfigurationDemo } from './layout-configuration-demo';
 export * from './types';

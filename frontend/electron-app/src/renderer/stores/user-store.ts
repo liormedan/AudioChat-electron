@@ -26,6 +26,27 @@ export interface UserPreferences {
     analytics: boolean;
     crashReports: boolean;
   };
+  layoutPreferences?: {
+    componentVisibility: {
+      fileUploader: boolean;
+      waveformPlayer: boolean;
+      chatInterface: boolean;
+      fileManager: boolean;
+      sidebar: boolean;
+    };
+    componentHeights: {
+      fileUploader: number;
+      waveformPlayer: number;
+      chatInterface: number;
+      fileManager: number;
+    };
+    sidebarCollapsed: boolean;
+    compactMode: boolean;
+    autoHideComponents: boolean;
+    columnOrder: [1, 2, 3] | [2, 1, 3] | [1, 3, 2] | [2, 3, 1] | [3, 1, 2] | [3, 2, 1];
+    mobileLayoutMode: 'stack' | 'tabs' | 'accordion';
+    tabletLayoutMode: 'two-column' | 'single-column';
+  };
 }
 
 export interface UserState {
