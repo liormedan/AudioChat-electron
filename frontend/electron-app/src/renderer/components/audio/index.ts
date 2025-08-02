@@ -1,6 +1,8 @@
 export { FileUploader } from './file-uploader';
 export { CompactFileUploader } from './compact-file-uploader';
 export { CompactFileUploaderDemo } from './compact-file-uploader-demo';
+export { CompactWaveformPlayer } from './compact-waveform-player';
+export { CompactWaveformPlayerDemo } from './compact-waveform-player-demo';
 export { AudioFileInfo } from './audio-file-info';
 export { AudioFileManager, type AudioFileData } from './audio-file-manager';
 export { AudioWorkspace } from './audio-workspace';

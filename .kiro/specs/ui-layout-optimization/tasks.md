@@ -2,19 +2,19 @@
 
 ## 1. הכנת תשתית הפריסה החדשה
 
-- [ ] 1.1 יצירת קומפוננט MainLayoutGrid
+- [x] 1.1 יצירת קומפוננט MainLayoutGrid
   - יצירת קומפוננט עם CSS Grid layout
   - הגדרת מבנה 3 עמודות עם sidebar
   - הוספת responsive breakpoints
   - _דרישות: 1.1, 1.3, 3.1_
 
-- [ ] 1.2 יצירת LayoutConfigurationProvider
+- [x] 1.2 יצירת LayoutConfigurationProvider
   - יצירת context לניהול תצורת הפריסה
   - הוספת hooks לגישה לתצורה
   - יצירת מנגנון לשמירת העדפות משתמש
   - _דרישות: 1.4, 4.1_
 
-- [ ] 1.3 יצירת ResponsiveLayoutHook
+- [x] 1.3 יצירת ResponsiveLayoutHook
   - יצירת hook לזיהוי גודל מסך
   - הוספת logic להתאמת פריסה
   - יצירת מנגנון לטיפול במעברים בין breakpoints
@@ -22,14 +22,14 @@
 
 ## 2. פיתוח רכיבים קומפקטיים
 
-- [ ] 2.1 יצירת CompactFileUploader
+- [x] 2.1 יצירת CompactFileUploader
   - שכתוב FileUploader עם גובה קבוע של 200px
   - הוספת מצב drag-and-drop בלבד
   - יצירת אינדיקטור ויזואלי מינימלי
   - הוספת תמיכה בריבוי קבצים עם tabs
   - _דרישות: 1.4, 2.1_
 
-- [ ] 2.2 יצירת CompactWaveformPlayer
+- [] 2.2 יצירת CompactWaveformPlayer
   - שכתוב WaveformPlayer עם גובה מוגבל ל-300px
   - הקטנת waveform ל-120px גובה
   - יצירת בקרות מינימליות אך פונקציונליות
