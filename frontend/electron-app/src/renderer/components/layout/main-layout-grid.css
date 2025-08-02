@@ -1,0 +1,208 @@
+/* Main Layout Grid Styles */
+.main-layout-grid {
+  --sidebar-width: 240px;
+  --header-height: 60px;
+  --content-gap: 20px;
+}
+
+/* RTL Support */
+.main-layout-grid.rtl {
+  direction: rtl;
+}
+
+.main-layout-grid.rtl .content-area {
+  direction: ltr; /* Keep content area LTR for better component layout */
+}
+
+/* Content Area Responsive Grid */
+.content-area {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-foreground) transparent;
+}
+
+.content-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content-area::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+  border-radius: 3px;
+}
+
+/* Column Styles */
+.layout-column {
+  min-height: 0; /* Allow flex children to shrink */
+}
+
+.layout-column-1 {
+  /* Upload & Files column */
+}
+
+.layout-column-2 {
+  /* Player & Info column */
+}
+
+.layout-column-3 {
+  /* Chat & Tools column */
+}
+
+/* Compact Component Styles */
+.compact-component {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.compact-component:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+/* Responsive Breakpoints */
+
+/* Desktop (1920px and above) - Default layout */
+@media (min-width: 1920px) {
+  .main-layout-grid {
+    --sidebar-width: 240px;
+  }
+  
+  .content-area {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Laptop (1366px to 1919px) */
+@media (max-width: 1919px) and (min-width: 1367px) {
+  .main-layout-grid {
+    --sidebar-width: 200px;
+  }
+  
+  .content-area {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 16px;
+  }
+}
+
+/* Small Laptop (1024px to 1366px) */
+@media (max-width: 1366px) and (min-width: 1025px) {
+  .main-layout-grid {
+    --sidebar-width: 180px;
+  }
+  
+  .content-area {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .layout-column-3 {
+    grid-column: 1 / -1;
+    max-height: 300px;
+  }
+}
+
+/* Tablet (768px to 1024px) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .main-layout-grid {
+    --sidebar-width: 160px;
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+  
+  .content-area {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .layout-column {
+    max-height: 400px;
+  }
+}
+
+/* Mobile (480px to 768px) */
+@media (max-width: 768px) {
+  .main-layout-grid {
+    --sidebar-width: 0px;
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--header-height) 1fr;
+  }
+  
+  .content-area {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 8px;
+    grid-column: 1;
+  }
+  
+  .layout-column {
+    max-height: 350px;
+  }
+  
+  .compact-component {
+    border-radius: 6px;
+  }
+}
+
+/* Small Mobile (up to 480px) */
+@media (max-width: 480px) {
+  .main-layout-grid {
+    --header-height: 50px;
+  }
+  
+  .content-area {
+    gap: 6px;
+    padding: 6px;
+  }
+  
+  .layout-column {
+    max-height: 300px;
+  }
+  
+  .compact-component {
+    border-radius: 4px;
+  }
+}
+
+/* Performance Optimizations */
+.main-layout-grid * {
+  box-sizing: border-box;
+}
+
+/* Smooth transitions for responsive changes */
+.main-layout-grid,
+.content-area,
+.layout-column,
+.compact-component {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .main-layout-grid,
+  .content-area,
+  .layout-column,
+  .compact-component {
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .compact-component {
+    border-width: 2px;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .compact-component {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+  }
+  
+  .compact-component:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  }
+}

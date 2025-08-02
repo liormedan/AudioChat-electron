@@ -9,3 +9,4 @@ export { ChatPage } from './chat-page';
 export { GeminiPage } from './gemini-page';
 export { TestingPage } from './testing-page';
 export { TerminalPage } from './terminal-page';
+export { LayoutDemoPage } from './layout-demo-page';
