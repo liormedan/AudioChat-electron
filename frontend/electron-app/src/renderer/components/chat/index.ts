@@ -1,6 +1,8 @@
 // Chat Components
 export { SessionManager } from './session-manager';
 export { ChatInterface } from './chat-interface';
+export { CompactChatInterface } from './compact-chat-interface';
+export { CompactChatInterfaceDemo } from './compact-chat-interface-demo';
 export { MessageList } from './message-list';
 export { InputArea } from './input-area';
 export { SessionSidebar } from './session-sidebar';
